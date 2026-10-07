@@ -1,0 +1,29 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "program2cell"
+version = "0.1.0"
+description = "Cell-state attribution of bulk-derived gene programs"
+readme = "README.md"
+requires-python = ">=3.10"
+authors = [{name = "Program2Cell contributors"}]
+dependencies = [
+    "numpy>=1.23",
+    "pandas>=1.5",
+    "scipy>=1.9",
+    "scikit-learn>=1.1",
+    "py-hdwgcna>=0.1.0",
+]
+
+[project.optional-dependencies]
+atlas = ["anndata>=0.9"]
+plot = ["matplotlib>=3.6", "seaborn>=0.12"]
+dev = ["pytest>=7", "coverage>=7"]
+
+[tool.setuptools.packages.find]
+include = ["program2cell*"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
