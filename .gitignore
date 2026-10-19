@@ -9,3 +9,5 @@ results/
 *.h5ad
 .claude/
 benchmarks/compare/work/
+logs/
+hpc/*.log

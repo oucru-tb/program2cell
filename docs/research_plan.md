@@ -48,7 +48,7 @@ Done (2026-10-19): `palm_bulk.core` (equations on numpy/JAX/torch, `estimate_del
 - **Covariates** (batch, sex, age; one-hot coding), **gene-wise dispersion**, **VI warm start**, optional **zero-sum reparameterisation**.
 - **Level-1 / level-2 support:** composition-only mode (`programs=None`), lineage-shared program shifts (`program_groups="lineage"`), `lineage_fractions()`, a warning above 20 cell types.
 - **Compute:** CPU/GPU, float64 option, parallel chains, sparsity speed-up (exact, ~1.4x), runtime estimator, batched attribution.
-- Tutorial notebook (new realistic demo, recovery checks, benchmark section), README, tests.
+- Tutorial notebook (new realistic demo, recovery checks, benchmark section), user guide (docs/user_guide.md), tests.
 
 ### 3.2 Key evidence so far
 

@@ -331,7 +331,7 @@ def blade(data, python=None, activity="delta", n_jobs=4, n_rep=3, grid="default"
 # ---- TOAST / TCA (R): cell-type-specific differential expression -----------------------------
 def _csde(method, data, fractions=None, rscript=None, timeout=None):
     if data.treatment is None:
-        raise ValueError("%s needs a treatment" % method)
+        raise MethodUnavailable("%s needs a two-group treatment contrast (none given)" % method)
     rs = rscript or find_rscript()
     if not rs:
         raise MethodUnavailable("Rscript not found (set PALM_RSCRIPT or add R to PATH)")

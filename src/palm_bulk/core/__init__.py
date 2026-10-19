@@ -5,4 +5,5 @@ from .equations import (cell_profiles, mix_profiles, expected_fractions, expecte
 from .scores import estimate_delta, bulk_delta
 from .data import (Reference, Inputs, build_reference, from_anndata, load_programs, select_genes,
                    encode_covariates, prepare_inputs, diagnose_inputs)
+from .pseudobulk import PseudobulkTable, PseudobulkBenchmark, make_benchmark
 from . import sim
