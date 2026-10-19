@@ -6,7 +6,8 @@ gene selection (prepare_inputs) and fit at several max_genes. Scored on quantiti
 their meaning for any gene subset:
   * beta, kappa: per-cell-type program activity (treatment shift, baseline shift);
   * read fractions recomputed on the selected genes.
-Usage: python run_gene_budget.py [reps] [out.json] [max_genes ...]
+Usage: python run_gene_budget.py [reps] [out.json] [max_genes ...] [--methods=groups,fisher]
+"--methods" compares gene-selection methods (prepare_inputs gene_selection) at each size.
 """
 import sys, time, json
 import numpy as np
@@ -15,9 +16,12 @@ import palm_bulk as pb
 from palm_bulk import sim
 from palm_bulk.core import cell_profiles
 
-REPS = int(sys.argv[1]) if len(sys.argv) > 1 else 2
-OUT = sys.argv[2] if len(sys.argv) > 2 else "gene_budget.json"
-SIZES = [int(x) for x in sys.argv[3:]] or [300, 600, 1000, 1500]
+OPTS = [a for a in sys.argv[1:] if a.startswith("--")]
+POS = [a for a in sys.argv[1:] if not a.startswith("--")]
+METHODS = next((o.split("=", 1)[1].split(",") for o in OPTS if o.startswith("--methods=")), ["groups"])
+REPS = int(POS[0]) if len(POS) > 0 else 2
+OUT = POS[1] if len(POS) > 1 else "gene_budget.json"
+SIZES = [int(x) for x in POS[2:]] or [300, 600, 1000, 1500]
 N, C, P, GN, PER_PROG = 40, 5, 4, 3000, 150
 
 
@@ -26,7 +30,7 @@ def cover(draws, truth, level=0.9):
     return float(((truth >= lo) & (truth <= hi)).mean())
 
 
-PROV = pb.provenance(reps=REPS, sizes=SIZES, N=N, C=C, P=P, genes=GN, genes_per_program=PER_PROG)
+PROV = pb.provenance(reps=REPS, sizes=SIZES, methods=METHODS, N=N, C=C, P=P, genes=GN, genes_per_program=PER_PROG)
 rows = []
 for r in range(REPS):
     rng = np.random.default_rng(2000 + r)
@@ -40,8 +44,8 @@ for r in range(REPS):
     samples = ["s%d" % i for i in range(N)]
     bulk = pd.DataFrame(s["Y"].T, index=genes, columns=samples)
     E_true = np.asarray(cell_profiles(B, G, s["delta"]))                           # (N,C,G)
-    for m in SIZES:
-        inp = pb.prepare_inputs(bulk, ref, progs, treatment=s["T"], max_genes=m)
+    for m, method in [(m, me) for m in SIZES for me in METHODS]:
+        inp = pb.prepare_inputs(bulk, ref, progs, treatment=s["T"], max_genes=m, gene_selection=method)
         gi = [genes.index(g) for g in inp.genes]
         w = s["pi"][:, :, None] * E_true[:, :, gi]
         pi_sub = w.sum(-1) / w.sum((-1, -2))[:, None]                               # true fractions on subset
@@ -51,7 +55,7 @@ for r in range(REPS):
         res = pb.run_palm(inp, use_m=True, num_warmup=300, num_samples=300, chains=1, check=False)   # as in the runs so far
         el = time.time() - t
         d = res.draws
-        row = dict(rep=r, max_genes=m, n_genes=len(inp.genes), time=el, mean_steps=d["mean_steps"],
+        row = dict(rep=r, max_genes=m, method=method, n_genes=len(inp.genes), time=el, mean_steps=d["mean_steps"],
                    divergences=d["divergences"], gene_sets=inp.info["gene_sets"]["sizes"],
                    pi_rmse=float(np.sqrt(((d["pi"].mean(0) - pi_sub[:, ci]) ** 2).mean())),
                    beta_mae=float(np.abs(np.median(d["beta"], 0) - s["beta"][np.ix_(ci, pj)]).mean()),
@@ -62,5 +66,5 @@ for r in range(REPS):
         print({k: (round(v, 4) if isinstance(v, float) else v) for k, v in row.items()}, flush=True)
         json.dump(dict(rows=rows, provenance=PROV), open(OUT, "w"), indent=1)
 
-df = pd.DataFrame(rows).drop(columns=["gene_sets"]).groupby("max_genes").mean(numeric_only=True)
+df = pd.DataFrame(rows).drop(columns=["gene_sets"]).groupby(["method", "max_genes"]).mean(numeric_only=True)
 print(df.drop(columns=["rep"]).round(4).to_string())

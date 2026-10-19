@@ -130,3 +130,68 @@ def test_covariates_with_missing_values_rejected():
     cov = pd.DataFrame({"age": [30.0, np.nan, 50.0]}, index=list("abc"))
     with pytest.raises(ValueError, match="missing"):
         pb.data.encode_covariates(cov, list("abc"))
+
+
+def test_fisher_design_matrix_matches_finite_differences():
+    from palm_bulk.core.data import design_matrix
+    rng = np.random.default_rng(2)
+    C, P, Gn = 3, 2, 60
+    B = rng.dirichlet(np.ones(Gn), C)
+    G = np.zeros((P, Gn)); G[:, :20] = rng.normal(0, 1, (P, 20))
+    pi = rng.dirichlet(np.ones(C))
+    A, f, labels = design_matrix(B, G, pi)
+
+    def share(eta, delta):
+        p = np.exp(eta) / np.exp(eta).sum()
+        return p @ np.asarray(pb.cell_profiles(B, G, delta))
+
+    eta0, d0, h = np.log(pi), np.zeros((C, P)), 1e-6
+    for j, lab in enumerate(labels):
+        e, d = eta0.copy(), d0.copy()
+        if lab.startswith("eta"):
+            e[int(lab[4:])] += h
+        else:
+            k, p = map(int, lab[6:].split(","))
+            d[k, p] += h
+        num = (share(e, d) - share(eta0, d0)) / h
+        np.testing.assert_allclose(A[:, j], num, atol=1e-6, err_msg=lab)
+
+
+def test_fisher_selection_properties():
+    from palm_bulk.core.data import select_genes_fisher
+    rng = np.random.default_rng(3)
+    C, P, Gn = 4, 3, 800
+    B, G = sim.make_reference(rng, C=C, P=P, Gn=Gn, genes_per_prog=40)
+    idx, info = select_genes_fisher(B, G, max_genes=150)
+    assert len(idx) == len(set(idx)) == 150 and info["stop"] == "max_genes"
+    for p in range(P):                                                   # every program represented
+        assert (G[p, idx] != 0).sum() >= 10
+    top = np.argmax(B[:, idx] / B[:, idx].mean(0), axis=0)               # and every cell type has genes
+    assert len(set(top)) == C
+    # greedy gains never increase (diminishing returns of log det)
+    idx2, info2 = select_genes_fisher(B, G, max_genes=40, min_gain=0)
+    # a gene made extremely noisy (tiny dispersion) is not chosen early
+    best = idx2[0]
+    theta = np.full(Gn, 30.0); theta[best] = 1e-3
+    idx3, _ = select_genes_fisher(B, G, max_genes=40, theta=theta)
+    assert best not in idx3
+    # shallow data: information saturates and selection stops by itself
+    idx4, info4 = select_genes_fisher(B, G, max_genes=800, depth=1e3, min_gain=0.01)
+    assert info4["stop"] == "min_gain" and len(idx4) < 800
+
+
+def test_fisher_gains_non_increasing():
+    from palm_bulk.core import data as dmod
+    rng = np.random.default_rng(4)
+    B, G = sim.make_reference(rng, C=3, P=2, Gn=300, genes_per_prog=30)
+    _, info = dmod.select_genes_fisher(B, G, max_genes=60, min_gain=0)
+    assert np.all(np.diff(info["gains"]) <= 1e-9)                      # submodular: each gene adds less
+
+
+def test_prepare_inputs_fisher(world):
+    rng, B, G, ref, prog, genes = world
+    s = sim.simulate_causal(rng, B, G, N=8)
+    bulk = pd.DataFrame(s["Y"].T, index=genes, columns=["s%d" % i for i in range(8)])
+    inp = pb.prepare_inputs(bulk, ref, prog, treatment=s["T"], max_genes=100, gene_selection="fisher")
+    assert len(inp.genes) <= 100 and inp.info["gene_sets"]["method"] == "fisher"
+    assert inp.Gmat.shape[0] == 2 and inp.info["gene_sets"]["design"]["unknowns"] == 3 + 3 * 2

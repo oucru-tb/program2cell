@@ -142,6 +142,18 @@ serving one job:
 | Highly variable genes in the reference | 10% | Catch cell-state variation that markers miss |
 | Anchors (well expressed, stable across types, in no program) | 15% | Hold the rescaling steady |
 
+**Where the simple story breaks:** the four shares are a hand-set rule. A principled alternative
+(`gene_selection="fisher"`) asks of every gene: *how much would adding you sharpen our estimates?* Each
+gene's answer depends on two things. The first is how strongly its expected count moves when a fraction or
+a program shift moves. The second is how noisy it is (its dispersion). Adding genes one at a time to
+maximise the total information (the determinant of the Fisher information, a "D-optimal design") recovers
+the four roles without fixing their shares:
+program genes inform the shifts, markers inform the fractions, and stable genes become valuable because
+they separate a program change from a composition change. Noisy genes are down-weighted automatically.
+Selection stops when the next gene would add almost nothing, so the number of genes comes from the data.
+In a first simulation it chose about 1,040 genes instead of the fixed 1,500. Whether this improves
+accuracy is being tested in the gene-budget study; until then the four groups stay the default.
+
 Genes must be expressed in the reference (a gene absent from the baseline cannot be "induced") and
 detected in at least 20% of bulk samples. The second filter is lenient, so genes switched on in one arm only
 are kept.

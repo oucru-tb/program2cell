@@ -164,9 +164,123 @@ def _round_robin(ranked_lists, budget, taken):
     return out
 
 
+PRIOR_SD_ETA, PRIOR_SD_DELTA = 1.5, 0.5     # prior scales of the composition logits and program shifts
+
+
+def design_matrix(B, G, pi, groups=None):
+    """Sensitivity of each gene's expected share to the per-sample unknowns, at programs off.
+
+    B (C, Gn) profiles (rows normalised here), G (P, Gn) program weights, pi (C,) fractions.
+    Unknowns: composition logits eta (C) and program shifts delta (C x P, or groups x P).
+    With E = rows of B, f = pi @ E (expected share of each gene):
+      d f_g / d eta_k     = pi_k (E_kg - f_g)
+      d f_g / d delta_kp  = pi_k E_kg (G_pg - sum_h E_kh G_ph)      (the second term: renormalisation)
+    Returns (A (Gn, D) derivatives, f (Gn,), column labels)."""
+    E = B / B.sum(1, keepdims=True)
+    C = E.shape[0]
+    f = pi @ E
+    cols = [pi[k] * (E[k] - f) for k in range(C)]
+    labels = ["eta:%d" % k for k in range(C)]
+    if G is not None and G.shape[0]:
+        Gbar = E @ G.T                                                       # (C, P)
+        dd = pi[:, None, None] * E[:, None, :] * (G[None] - Gbar[:, :, None])  # (C, P, Gn)
+        if groups is not None:
+            groups = np.asarray(groups, int)
+            dd = np.stack([dd[groups == j].sum(0) for j in range(groups.max() + 1)])
+        for k in range(dd.shape[0]):
+            for p in range(dd.shape[1]):
+                cols.append(dd[k, p])
+                labels.append("delta:%d,%d" % (k, p))
+    return np.column_stack(cols), f, labels
+
+
+def gene_dispersion(Y, default=30.0, shrink=0.5):
+    """Negative-binomial dispersion theta per gene from bulk counts (samples x genes), by moments on
+    library-size-scaled counts, shrunk towards the median on the log scale; `default` if < 4 samples."""
+    if Y is None or Y.shape[0] < 4:
+        return np.full(Y.shape[1] if Y is not None else 1, default)
+    lib = Y.sum(1, keepdims=True)
+    Z = Y / lib * np.median(lib)
+    m, v = Z.mean(0), Z.var(0, ddof=1)
+    phi = np.clip((v - m) / np.maximum(m, 1e-9) ** 2, 1e-3, 10.0)
+    lphi = np.log(phi)
+    lphi = shrink * lphi + (1 - shrink) * np.median(lphi)
+    return 1.0 / np.exp(lphi)
+
+
+def select_genes_fisher(B, G, Y=None, max_genes=1500, groups=None, min_gain=1e-3, pi=None, depth=None,
+                        theta=None):
+    """Greedy Bayesian D-optimal gene selection.
+
+    Each gene g adds information J_g = w_g a_g a_g^T about the per-sample unknowns (a_g from
+    design_matrix), with w_g = L / (f_g (1 + L f_g / theta_g)) the inverse negative-binomial variance
+    of its share at library size L. Starting from the prior precision, genes are added one at a time
+    to maximise log det(prior + sum J_g); because log det is submodular, the greedy choice is within
+    (1 - 1/e) of the best set of that size. Sherman-Morrison keeps each step O(genes x unknowns).
+    Program genes (for program shifts), markers (for fractions) and stable genes that separate the
+    two (the renormalisation term) are all valued by the same criterion, and noisy genes are
+    down-weighted through theta, so no group shares need to be fixed in advance.
+
+    Y (samples x genes) bulk counts set the design point: mean NNLS fractions (floored at 2% so
+    rare types still count), median library size and gene-wise dispersion; pi, depth, theta override.
+    Without Y: equal fractions, depth 1e7, theta 30. Stops at max_genes or when the best gain is
+    below min_gain. Returns (indices in selection order, info)."""
+    C, Gn = B.shape
+    if Y is not None:
+        from scipy.optimize import nnls
+        frac = Y / np.maximum(Y.sum(1, keepdims=True), 1)
+        Bn = B / B.sum(1, keepdims=True)
+        est = np.array([nnls(Bn.T, fr)[0] for fr in frac])
+        est = est / np.maximum(est.sum(1, keepdims=True), 1e-12)
+        pi = est.mean(0) if pi is None else pi
+        depth = float(np.median(Y.sum(1))) if depth is None else depth
+        theta = gene_dispersion(Y) if theta is None else theta
+    pi = np.full(C, 1.0 / C) if pi is None else np.asarray(pi, float)
+    pi = np.maximum(pi, 0.02)
+    pi = pi / pi.sum()
+    depth = 1e7 if depth is None else depth
+    theta = np.broadcast_to(30.0 if theta is None else theta, (Gn,)).astype(float)
+    A, f, labels = design_matrix(B, G, pi, groups)
+    f = np.maximum(f, 1e-12)
+    w = depth / (f * (1 + depth * f / theta))
+    D = A.shape[1]
+    prior = np.array([1 / PRIOR_SD_ETA ** 2 if l.startswith("eta") else 1 / PRIOR_SD_DELTA ** 2 for l in labels])
+    Minv = np.diag(1 / prior)
+    s = np.einsum("gd,de,ge->g", A, Minv, A)                                 # a_g^T M^-1 a_g
+    gain = np.log1p(w * s)
+    chosen, gains = [], []
+    avail = np.ones(Gn, bool)
+    for _ in range(min(max_genes, Gn)):
+        cand = np.where(avail, gain, -np.inf)
+        j = int(np.argmax(cand))
+        if not np.isfinite(cand[j]) or cand[j] < min_gain:
+            break
+        chosen.append(j)
+        gains.append(float(cand[j]))
+        avail[j] = False
+        u = Minv @ A[j]
+        c = w[j] / (1 + w[j] * A[j] @ u)
+        Minv -= c * np.outer(u, u)
+        s -= c * (A @ u) ** 2
+        gain = np.log1p(w * np.maximum(s, 0))
+    stop = "max_genes" if len(chosen) == min(max_genes, Gn) else "min_gain"
+    info = dict(n_selected=len(chosen), stop=stop, logdet_gain=float(np.sum(gains)),
+                gain_first=gains[0] if gains else None, gain_last=gains[-1] if gains else None, gains=gains,
+                design=dict(pi=pi.round(3).tolist(), depth=depth, theta_median=float(np.median(theta)),
+                            unknowns=D))
+    return np.array(chosen, int), info
+
+
 def select_genes(ref, bulk, programs=None, max_genes=1500, budget=None, min_ref_cpm=2.0,
-                 min_bulk_detect=0.2, return_info=False):
-    """Choose the modelled genes as a union of four sets, each serving one part of the model:
+                 min_bulk_detect=0.2, return_info=False, method="groups", groups=None, min_gain=1e-3):
+    """Choose the modelled genes. Two methods share the eligibility filters below:
+
+    method='fisher': Bayesian D-optimal design, see select_genes_fisher. Genes are added one at a
+    time by how much they increase the information about the fractions and program shifts, given
+    each gene's noise; stops at `max_genes` or when a gene adds less than `min_gain` (log-det units).
+    `groups` (C,) shares program shifts within lineages, as in prepare_inputs.
+
+    method='groups' (default for now): a union of four sets, each serving one part of the model:
 
     * programs (45%): top genes of each program by |weight|, taken in turn so every program is
       represented -> program activity and attribution;
@@ -193,6 +307,19 @@ def select_genes(ref, bulk, programs=None, max_genes=1500, budget=None, min_ref_
         elig &= det >= min_bulk_detect
     genes_e = [g for g, e in zip(ref.genes, elig) if e]
     Be = ref.B[:, elig]
+    if method == "fisher":
+        Y = bulk.reindex(genes_e).fillna(0).values.T if isinstance(bulk, pd.DataFrame) else None
+        Gm = None if programs is None else programs.reindex(columns=genes_e).fillna(0.0).values
+        idx, info = select_genes_fisher(Be, Gm, Y, max_genes=max_genes, groups=groups, min_gain=min_gain)
+        genes = [genes_e[i] for i in idx]
+        if not return_info:
+            return genes
+        info.update(n_eligible=int(elig.sum()), method="fisher",
+                    sizes=dict(program_genes=int((np.abs(Gm[:, idx]) > 0).any(0).sum()) if Gm is not None else 0,
+                               other=len(idx) - (int((np.abs(Gm[:, idx]) > 0).any(0).sum()) if Gm is not None else 0)))
+        return genes, info
+    if method != "groups":
+        raise ValueError("method must be 'groups' or 'fisher'")
     taken, sets = set(), {}
 
     # programs: per program, eligible genes by |weight|
@@ -273,9 +400,11 @@ MAX_TYPES_FULL_MODEL = 20
 
 
 def prepare_inputs(bulk, ref, programs, treatment=None, max_genes=1500, min_program_genes=5,
-                   gene_budget=None, covariates=None, program_groups=None, **select_kw):
+                   gene_budget=None, covariates=None, program_groups=None, gene_selection="groups", **select_kw):
     """Align bulk counts, reference and programs on a common gene set (see select_genes).
     bulk: genes x samples DataFrame of raw counts. treatment: Series/array of 0/1 per sample, optional.
+    gene_selection: 'groups' (four fixed shares, see select_genes) or 'fisher' (D-optimal design:
+    genes chosen by the information they add about fractions and program shifts; max_genes is then a cap).
     gene_budget: override the share of programs / markers / hvg / anchors, e.g. {"programs": 0.5}.
     covariates: optional DataFrame indexed by sample (e.g. batch, sex, age) adjusted for in both
     composition and program activity; treatment effects are then for a sample at the covariate mean.
@@ -305,8 +434,8 @@ def prepare_inputs(bulk, ref, programs, treatment=None, max_genes=1500, min_prog
     elif program_groups is not None:
         raise ValueError("program_groups must be None or 'lineage'")
     n_prog_in = programs.shape[0]
-    genes, gene_info = select_genes(ref, bulk, programs, max_genes, budget=gene_budget,
-                                    return_info=True, **select_kw)
+    genes, gene_info = select_genes(ref, bulk, programs, max_genes, budget=gene_budget, return_info=True,
+                                    method=gene_selection, groups=groups, **select_kw)
     gi = {g: i for i, g in enumerate(ref.genes)}
     B = ref.B[:, [gi[g] for g in genes]]
     B = B / B.sum(axis=1, keepdims=True)

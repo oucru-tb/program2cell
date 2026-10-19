@@ -38,9 +38,10 @@ def gene_budget(path):
     rows = rows["rows"] if isinstance(rows, dict) else rows          # older files: a bare list
     keys = ["pi_rmse", "beta_mae", "kappa_mae", "beta_cov90", "kappa_cov90", "mean_steps", "time"]
     out = []
-    for m in sorted({r["max_genes"] for r in rows}):
-        rs = [r for r in rows if r["max_genes"] == m]
-        out.append(dict(max_genes=m, **{k: round(float(np.mean([r[k] for r in rs])), 4) for k in keys}))
+    for me, m in sorted({(r.get("method", "groups"), r["max_genes"]) for r in rows}):
+        rs = [r for r in rows if r.get("method", "groups") == me and r["max_genes"] == m]
+        out.append(dict(method=me, max_genes=m, n_genes=round(float(np.mean([r["n_genes"] for r in rs])), 1),
+                        **{k: round(float(np.mean([r[k] for r in rs])), 4) for k in keys}))
     note = ("Accuracy and cost versus MAX_GENES (3000-gene transcriptome, 40 samples, 5 cell types, 4 programs of "
             "150 genes, %d replicates). beta/kappa: per-cell-type program activity; lower error and coverage near "
             "0.90 are better." % len({r["rep"] for r in rows}))
