@@ -40,7 +40,13 @@ def test_python_baselines_and_scoring(study):
     # naive: the same activity for every cell type, so it cannot rank cell types
     assert np.allclose(naive.activity[:, 0], naive.activity[:, 1])
     assert compare.score(naive, truth)["eff_auroc"] == 0.5
+
+
+def test_ulm_activity(study):
+    pytest.importorskip("decoupler")                      # optional extra: palm-bulk[progeny]
+    _, data, truth = study
     ulm = compare.reallocation(data, activity="ulm")
+    assert ulm.activity.shape == truth["delta"].shape and np.isfinite(ulm.activity).any()
     assert ulm.activity_scale == "score" and "act_mae" not in compare.score(ulm, truth)
 
 
@@ -63,7 +69,8 @@ def test_effects_from_logfc_recovers_program_shift(study):
 
 def test_unavailable_methods_reported(study, monkeypatch):
     _, data, _ = study
-    monkeypatch.delenv("PALM_RSCRIPT", raising=False)
+    for var in ("PALM_RSCRIPT", "PALM_BLADE_PYTHON", "CIBERSORTX_USER", "CIBERSORTX_TOKEN"):
+        monkeypatch.delenv(var, raising=False)                  # never launch the real tools here
     monkeypatch.setattr("palm_bulk.compare.methods.find_rscript", lambda: None)
     for name in ["bayesprism", "toast", "cibersortx", "blade"]:
         res, err = compare.run_method(name, data)

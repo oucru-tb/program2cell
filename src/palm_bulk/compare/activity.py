@@ -26,7 +26,10 @@ def activity_from_expression(type_expr, inputs, how="delta", programs=None, scal
         act = estimate_delta(X, B, Gm, scale_to=scale_to)
         return np.where(bad[..., None], np.nan, act), "delta"
     if how == "ulm":
-        import decoupler as dc
+        try:
+            import decoupler as dc
+        except ImportError as e:
+            raise ImportError("activity='ulm' needs decoupler: pip install 'palm-bulk[progeny]'") from e
         W = programs if programs is not None else pd.DataFrame(Gm, index=inputs.programs, columns=genes)
         W = W.reindex(index=inputs.programs, columns=genes).fillna(0.0)
         net = W.stack().rename("weight").reset_index()

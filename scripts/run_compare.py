@@ -12,6 +12,7 @@ Usage: python scripts/run_compare.py [--reps 1] [--N 24] [--cell-types 5] [--pro
 """
 import argparse
 import dataclasses
+import importlib.util
 import json
 import os
 import time
@@ -42,6 +43,9 @@ pb.configure_compute("cpu", parallel_chains=args.chains, precision=args.precisio
 from palm_bulk import compare, sim
 
 methods = args.methods.split(",")
+HAS_DECOUPLER = importlib.util.find_spec("decoupler") is not None
+if not HAS_DECOUPLER:
+    print("decoupler not installed: skipping the '+ulm' variants (pip install 'palm-bulk[progeny]')")
 rows, skipped = [], {}
 t_all = time.time()
 for r in range(args.reps):
@@ -65,7 +69,7 @@ for r in range(args.reps):
             print("  skipped:", err, flush=True)
             continue
         results = [(m, res)]
-        if res.type_expression is not None:          # same deconvolution, decoupler ULM instead of delta
+        if res.type_expression is not None and HAS_DECOUPLER:   # same deconvolution, ULM instead of delta
             act, scale = compare.activity_from_expression(res.type_expression, inp, "ulm", data.programs)
             results.append((m + "+ulm", dataclasses.replace(
                 res, activity=act, activity_scale=scale, effects=compare.effects_from_activity(act, data.treatment),

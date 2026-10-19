@@ -107,7 +107,7 @@ Against a two-step baseline (NNLS fractions, then reference program scores), the
 `palm_bulk.compare` runs PALM and competing methods on the same inputs and scores them against truth
 (`scripts/run_compare.py` on a simulated study; real pseudo-bulk next). Methods that output per-sample
 per-cell-type expression get program activity on the model's own scale (`pb.estimate_delta`), or with
-decoupler's ULM (`activity="ulm"`, the usual "deconvolve, then PROGENy" route).
+decoupler's ULM (`activity="ulm"`, the usual "deconvolve, then PROGENy" route; needs `pip install "palm-bulk[progeny]"`).
 
 | Method | Runs via | Needs |
 |---|---|---|
