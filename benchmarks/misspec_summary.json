@@ -1,0 +1,42 @@
+{
+  "well_specified": {
+    "intrinsic_total_MAE": 0.005885797242323558,
+    "composition_total_MAE": 0.0051197683852579855,
+    "intrinsic_total_90cov": 0.8888888888888888,
+    "composition_total_90cov": 0.8888888888888888,
+    "intrinsic_total_mean_90width": 0.01974683937927087,
+    "intrinsic_share_L1": 0.167464437480602,
+    "beta_90cov": 1.0,
+    "divergences": 0
+  },
+  "platform_no_m": {
+    "intrinsic_total_MAE": 0.010734881170921855,
+    "composition_total_MAE": 0.009965340555128124,
+    "intrinsic_total_90cov": 0.6666666666666666,
+    "composition_total_90cov": 0.6666666666666666,
+    "intrinsic_total_mean_90width": 0.022595688079794247,
+    "intrinsic_share_L1": 0.8267750748329692,
+    "beta_90cov": 0.7222222222222222,
+    "divergences": 0
+  },
+  "platform_with_m": {
+    "intrinsic_total_MAE": 0.003986192246278127,
+    "composition_total_MAE": 0.0057300311099323965,
+    "intrinsic_total_90cov": 1.0,
+    "composition_total_90cov": 0.8888888888888888,
+    "intrinsic_total_mean_90width": 0.022300373141964275,
+    "intrinsic_share_L1": 0.2030757288965914,
+    "beta_90cov": 0.9444444444444445,
+    "divergences": 0
+  },
+  "hidden_cell": {
+    "intrinsic_total_MAE": 0.025088886212971475,
+    "composition_total_MAE": 0.012022718062831296,
+    "intrinsic_total_90cov": 0.0,
+    "composition_total_90cov": 0.5555555555555555,
+    "intrinsic_total_mean_90width": 0.02155432974298795,
+    "intrinsic_share_L1": null,
+    "beta_90cov": null,
+    "divergences": 0
+  }
+}

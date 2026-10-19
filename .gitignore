@@ -1,0 +1,11 @@
+__pycache__/
+*.egg-info/
+.ipynb_checkpoints/
+data/
+data_demo/
+results/
+*.log
+.pytest_cache/
+*.h5ad
+.claude/
+benchmarks/compare/work/

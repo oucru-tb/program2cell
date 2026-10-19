@@ -1,0 +1,4 @@
+{"precision": {"note": "60 bulk samples, 5 cell types, 4 programs, 800 genes, 20M reads per sample, 200 warmup + 100 draws, 1 chain. In float32 the rounding error of the log-likelihood (~1e6-1e7 in size) forces NUTS to a tiny step size, so the sampler barely moves even at the 1023-step cap. float64 restores a normal step size. On the small calibration problem (benchmarks/calibration) float64 gave the same accuracy at 1.9x wall time, so use it for large real datasets.",
+ "table": [
+  {"precision": "float32", "step_size": 2.0e-05, "steps_per_iter": 1023, "accept_prob": 0.90, "divergences": 0, "fraction_rmse": 0.0182, "seconds": 4209},
+  {"precision": "float64", "step_size": 6.6e-03, "steps_per_iter": 1018, "accept_prob": 0.90, "divergences": 0, "fraction_rmse": 0.0105, "seconds": 6080}]}}

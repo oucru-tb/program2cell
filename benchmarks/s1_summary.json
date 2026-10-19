@@ -1,0 +1,26 @@
+{
+  "identifiable": {
+    "n_sample_program_pairs": 52,
+    "attribution_L1_PALM": 0.2522372007369995,
+    "attribution_L1_prior_only_B0": 0.22244690358638763,
+    "attribution_90pct_coverage": 0.8605769230769231,
+    "attribution_mean_90pct_width": 0.2245031074853614,
+    "pi_90pct_coverage": 0.8854166666666666,
+    "delta_90pct_coverage": 0.8784722222222222,
+    "pi_RMSE": 0.011131697377224458,
+    "program_activity_corr": 0.9938413330147383,
+    "divergences": 0
+  },
+  "shared": {
+    "n_sample_program_pairs": 59,
+    "attribution_L1_PALM": 0.9576637744903564,
+    "attribution_L1_prior_only_B0": 0.18966686725616455,
+    "attribution_90pct_coverage": 0.9194915254237288,
+    "attribution_mean_90pct_width": 0.8099500920181557,
+    "pi_90pct_coverage": 0.9166666666666666,
+    "delta_90pct_coverage": 0.923611111111111,
+    "pi_RMSE": 0.02992483304815406,
+    "program_activity_corr": 0.9944990508028432,
+    "divergences": 0
+  }
+}

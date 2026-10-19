@@ -1,29 +1,37 @@
 [build-system]
-requires = ["setuptools>=68", "wheel"]
+requires = ["setuptools>=68"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "program2cell"
+name = "palm-bulk"
 version = "0.1.0"
-description = "Cell-state attribution of bulk-derived gene programs"
+description = "Bayesian joint inference of cell fractions, per-cell-type program activity and program attribution from bulk RNA-seq (CPU)"
 readme = "README.md"
 requires-python = ">=3.10"
-authors = [{name = "Program2Cell contributors"}]
+license = { text = "MIT" }
 dependencies = [
-    "numpy>=1.23",
-    "pandas>=1.5",
-    "scipy>=1.9",
-    "scikit-learn>=1.1",
-    "py-hdwgcna>=0.1.0",
+  "numpy>=1.26",
+  "scipy>=1.11",
+  "pandas>=2.0",
+  "jax>=0.4.30",
+  "jaxlib>=0.4.30",
+  "numpyro>=0.15",
+  "matplotlib>=3.7",
 ]
 
 [project.optional-dependencies]
-atlas = ["anndata>=0.9"]
-plot = ["matplotlib>=3.6", "seaborn>=0.12"]
-dev = ["pytest>=7", "coverage>=7"]
+sc = ["anndata>=0.10"]
+progeny = ["decoupler>=2.0"]
+gpu = ["jax[cuda12]>=0.4.30"]   # NVIDIA GPU, Linux or WSL2 only
+torch = ["torch>=2.2"]          # core equations on torch tensors (Paper 2 training)
+dev = ["pytest>=7", "nbformat>=5", "nbconvert>=7", "ipykernel>=6", "anndata>=0.10"]
 
 [tool.setuptools.packages.find]
-include = ["program2cell*"]
+where = ["src"]
+
+[tool.setuptools.package-data]
+palm_bulk = ["compare/R/*.R", "compare/external/*.py"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
+markers = ["slow: runs NUTS (minutes); skip with -m \"not slow\""]

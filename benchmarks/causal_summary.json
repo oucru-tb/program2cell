@@ -1,0 +1,19 @@
+{
+  "programs_evaluated": 12,
+  "total_effect_MAE_palm": 0.00793104525655508,
+  "total_effect_MAE_naive_bulk": 0.012086496670276475,
+  "intrinsic_total_MAE_palm": 0.004306614398956299,
+  "intrinsic_total_MAE_two_step": 0.018089718094075356,
+  "composition_total_MAE_palm": 0.004109222907572985,
+  "composition_total_MAE_two_step": 0.018514473585555014,
+  "intrinsic_share_L1_palm": 0.19830910861492157,
+  "intrinsic_share_L1_B0_reference_prior": 1.4723763898364848,
+  "intrinsic_share_90pct_coverage": 0.9583333333333334,
+  "I_cp_90pct_coverage": 0.9375,
+  "K_cp_90pct_coverage": 1.0,
+  "beta_90pct_coverage": 0.9166666666666666,
+  "gamma_90pct_coverage": 1.0,
+  "divergences": 0,
+  "reps": 4,
+  "N_per_rep": 24
+}

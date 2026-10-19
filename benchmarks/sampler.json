@@ -1,0 +1,6 @@
+{"sampler": {"note": "Demo-size problem (16 samples, 4 cell types, 3 programs, 400 genes), 4 chains x 400 draws. Efficiency = effective samples per 1000 gradient evaluations (higher is better). The zero-sum parameterisation (reparam=True) halves the steps and is about 1.3-1.6x more efficient for fractions and program shifts but less for the worst treatment effect; centred variants were worse and were not adopted. On a 60-sample problem reparam=True still needed 511 steps per iteration, so it is not the fix for large data.",
+ "table": [
+  {"variant": "original (default)", "steps_per_iter": 511, "fractions_median": 0.52, "fractions_worst": 0.27, "program_shift_median": 1.04, "effects_worst": 0.72},
+  {"variant": "zero-sum (reparam=True)", "steps_per_iter": 319, "fractions_median": 0.69, "fractions_worst": 0.35, "program_shift_median": 1.70, "effects_worst": 0.55},
+  {"variant": "zero-sum + centred composition", "steps_per_iter": 314, "fractions_median": 0.40, "fractions_worst": 0.17, "program_shift_median": 1.56, "effects_worst": 1.12},
+  {"variant": "zero-sum + centred composition and shifts", "steps_per_iter": 127, "fractions_median": 0.57, "fractions_worst": 0.28, "program_shift_median": 0.82, "effects_worst": 0.21}]}}

@@ -1,0 +1,20 @@
+name: tests
+on: [push, pull_request]
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        include:
+          - python-version: "3.10"
+            pytest-args: -m "not slow"     # quick checks of equations and data preparation
+          - python-version: "3.12"
+            pytest-args: ""                # full suite, including NUTS fits
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+      - run: pip install -e ".[dev]"
+      - run: pip install torch --index-url https://download.pytorch.org/whl/cpu   # backend parity tests
+      - run: pytest -q ${{ matrix.pytest-args }}
