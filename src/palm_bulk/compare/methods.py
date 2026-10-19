@@ -255,30 +255,64 @@ def _looks_log2(v):
 
 
 # ---- BLADE (separate Python environment) ----------------------------------------------------
+def _blade_prior_cells(data):
+    """BLADE's prior as its authors describe it: mean and sd across single cells of log(1 + CPM)."""
+    inp = data.inputs
+    gi = {g: i for i, g in enumerate(data.sc_genes)}
+    cols = [gi[g] for g in inp.genes]
+    X = data.sc_csr()
+    lib = np.maximum(np.asarray(X.sum(1)).ravel(), 1)
+    Xg = (sp.diags(1e6 / lib) @ X)[:, cols].tocsr()
+    mean, sd = [], []
+    for c in inp.cell_types:
+        lx = np.log1p(Xg[data.sc_cell_types == c].toarray())
+        mean.append(lx.mean(0)); sd.append(lx.std(0) + 1e-3)
+    return mean, sd
+
+
+def _blade_prior(data, min_sd=0.1):
+    """Alternative prior: mean and sd over donors of log(1 + CPM) of each cell type's per-donor
+    pseudo-bulk (closer to bulk-scale profiles, but a tight sd when donors are few; on a simulated
+    study with 4 donors and platform bias it gave worse fractions than the cell-level prior).
+    With one donor the sd is `min_sd`."""
+    inp = data.inputs
+    gi = {g: i for i, g in enumerate(data.sc_genes)}
+    cols = [gi[g] for g in inp.genes]
+    X = data.sc_csr()
+    donors = data.sc_donors if data.sc_donors is not None else np.zeros(len(data.sc_cell_types))
+    donors = np.asarray(donors).astype(str)
+    mean, sd = [], []
+    for c in inp.cell_types:
+        in_c = data.sc_cell_types == c
+        prof = []
+        for dn in np.unique(donors[in_c]):
+            s = np.asarray(X[in_c & (donors == dn)].sum(0)).ravel()
+            if s.sum() > 0:
+                prof.append(np.log1p(s[cols] / s.sum() * 1e6))
+        prof = np.array(prof)
+        mean.append(prof.mean(0))
+        sd.append(np.maximum(prof.std(0, ddof=1) if len(prof) > 1 else 0.0, min_sd))
+    return mean, sd
+
+
 def blade(data, python=None, activity="delta", n_jobs=4, n_rep=3, grid="default", marker_genes=None,
-          timeout=None):
+          prior="cells", min_sd=0.1, timeout=None):
     """BLADE (Andrade Barbosa et al. 2021). Its package pins old dependencies, so it runs in its own
     environment: pip install BLADE_Deconvolution there and pass that interpreter as `python` (or
-    set PALM_BLADE_PYTHON). Inputs: per-type mean and sd of log(1 + CPM) across reference cells and
-    bulk 1 + CPM (BLADE models bulk = sum_c F_c exp(Nu_c) on the linear scale), on the modelled
-    genes; `marker_genes` restricts the fraction fit. grid='small' searches 8 hyperparameter
-    settings instead of 54 (quick tests)."""
+    set PALM_BLADE_PYTHON). Inputs on the modelled genes: the prior of each cell type's expression
+    (prior='cells': mean and sd across cells of log(1 + CPM), the authors' recipe; prior='donors':
+    per-donor pseudo-bulk, see _blade_prior) and bulk 1 + CPM (BLADE models bulk =
+    sum_c F_c exp(Nu_c) on the linear scale); `marker_genes` restricts the fraction fit.
+    grid='small' searches 8 hyperparameter settings instead of 54."""
     py = python or os.environ.get("PALM_BLADE_PYTHON")
     if not py:
         raise MethodUnavailable("BLADE needs its own Python environment (python=... or PALM_BLADE_PYTHON)")
     t0 = time.time()
     d = data.method_dir("blade")
     inp = data.inputs
-    gi = {g: i for i, g in enumerate(data.sc_genes)}
-    cols = [gi[g] for g in inp.genes]
-    X = data.sc_csr()
-    lib = np.maximum(np.asarray(X.sum(1)).ravel(), 1)
-    Xg = (sp.diags(1e6 / lib) @ X)[:, cols].tocsc()
-    mean, sd = [], []
-    for c in inp.cell_types:
-        lx = Xg[data.sc_cell_types == c].toarray()
-        lx = np.log1p(lx)
-        mean.append(lx.mean(0)); sd.append(lx.std(0) + 1e-3)
+    if prior not in ("cells", "donors"):
+        raise ValueError("prior must be 'cells' or 'donors'")
+    mean, sd = _blade_prior_cells(data) if prior == "cells" else _blade_prior(data, min_sd)
     bulk = data.bulk.reindex(inp.genes).fillna(0).values
     bulk_lin = 1.0 + bulk / data.bulk.sum(axis=0).values * 1e6
     marker = np.isin(inp.genes, marker_genes) if marker_genes is not None else np.ones(len(inp.genes), bool)

@@ -8,8 +8,10 @@ run on real PBMC pseudo-bulk once its truth tables exist.
 Usage: python scripts/run_compare.py [--reps 1] [--N 24] [--cell-types 5] [--programs 4] [--genes 1500]
                                      [--max-genes 600] [--methods palm,naive_two_step,...]
                                      [--warmup 200] [--samples 200] [--out benchmarks/compare/compare_sim.json]
+                                     [--method-kw JSON]
 """
 import argparse
+import dataclasses
 import json
 import os
 import time
@@ -28,7 +30,10 @@ p.add_argument("--chains", type=int, default=2)
 p.add_argument("--precision", default="float32")
 p.add_argument("--out", default="benchmarks/compare/compare_sim.json")
 p.add_argument("--workdir", default="benchmarks/compare/work")
+p.add_argument("--method-kw", default="{}",
+               help='JSON of extra arguments per method, e.g. \'{"blade": {"grid": "small", "n_rep": 1}}\'')
 args = p.parse_args()
+method_kw = json.loads(args.method_kw)
 
 import numpy as np
 import pandas as pd
@@ -52,17 +57,23 @@ for r in range(args.reps):
     truth = sim.truth_on_genes(st, inp.genes, inp.cell_types, inp.programs)
     for m in methods:
         kw = dict(num_warmup=args.warmup, num_samples=args.samples, chains=args.chains) if m == "palm" else {}
-        variants = [("", kw)] + ([("+ulm", dict(activity="ulm"))] if m in ("reallocation", "bayesprism",
-                                                                         "cibersortx", "blade") else [])
-        for suffix, vkw in variants:
-            res, err = compare.run_method(m, data, **vkw)
-            if res is None:
-                skipped[m] = err
-                break
-            row = dict(rep=r, **compare.score(res, truth))
-            row["method"] = m + suffix
-            if m == "palm":
-                row["notes"] = res.notes
+        kw.update(method_kw.get(m, {}))
+        print("running %s %s" % (m, kw or ""), flush=True)
+        res, err = compare.run_method(m, data, **kw)
+        if res is None:
+            skipped[m] = err
+            print("  skipped:", err, flush=True)
+            continue
+        results = [(m, res)]
+        if res.type_expression is not None:          # same deconvolution, decoupler ULM instead of delta
+            act, scale = compare.activity_from_expression(res.type_expression, inp, "ulm", data.programs)
+            results.append((m + "+ulm", dataclasses.replace(
+                res, activity=act, activity_scale=scale, effects=compare.effects_from_activity(act, data.treatment),
+                effects_scale=scale)))
+        for name, rr in results:
+            row = dict(rep=r, **compare.score(rr, truth))
+            row["method"] = name
+            row["notes"] = rr.notes
             rows.append(row)
             print({k: (round(v, 3) if isinstance(v, float) else v) for k, v in row.items() if k != "notes"},
                   flush=True)

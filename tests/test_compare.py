@@ -107,3 +107,18 @@ def test_r_wrappers_file_handoff(study, tmp_path):
         r = method(data, rscript=rs)
         np.testing.assert_allclose(r.effects, beta, atol=1e-6)
         assert compare.score(r, truth)["eff_pearson"] > 0.999
+
+
+def test_blade_prior_uses_donor_pseudobulk(study):
+    from palm_bulk.compare.methods import _blade_prior
+    st, data, _ = study
+    data2 = compare.CompareData(**{**data.__dict__, "sc_donors": st["sc_donors"]})
+    mean, sd = _blade_prior(data2)
+    c = data.inputs.cell_types[0]
+    gi = [st["genes"].index(g) for g in data.inputs.genes]
+    prof = []
+    for dn in np.unique(st["sc_donors"]):
+        s = st["sc_counts"][(st["sc_cell_types"] == c) & (st["sc_donors"] == dn)].sum(0)
+        prof.append(np.log1p(s[gi] / s.sum() * 1e6))
+    np.testing.assert_allclose(mean[0], np.mean(prof, 0))
+    assert (np.asarray(sd) >= 0.1).all()
