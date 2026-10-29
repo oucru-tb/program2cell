@@ -129,14 +129,23 @@ def from_anndata(adata, celltype_key, donor_key=None, layer=None, lineage_key=No
     return build_reference(X, adata.var_names, adata.obs[celltype_key].values, donors, lineages=lin, **kw)
 
 
-def load_programs(source, scale="median_abs"):
+MITO_RIBO = r"^(MT-|mt-|RPL|RPS|Rpl|Rps|MRPL|MRPS|Mrpl|Mrps)"
+
+
+def load_programs(source, scale="median_abs", exclude=MITO_RIBO):
     """Return a programs x genes DataFrame. `source`: path to CSV, long DataFrame
     [program, gene, weight], or wide DataFrame. scale: 'median_abs' rescales each program so the
-    median |weight| of its genes is 1 (recommended; keeps delta ~ O(1)); None leaves weights as is."""
+    median |weight| of its genes is 1 (recommended; keeps delta ~ O(1)); None leaves weights as is.
+    exclude: regex of genes dropped from every program (default: mitochondrial and ribosomal genes;
+    None keeps all). They carry a large share of reads but little program information, and one of them
+    can anchor a program: PROGENy's p53 footprint gives MT-ND4 a weight of -24 (median-scaled), which
+    held the estimated p53 activity at ~0 even under idasanutlin in TP53-wild-type cells."""
     df = pd.read_csv(source) if isinstance(source, (str, bytes)) or hasattr(source, "__fspath__") else source
     if {"program", "gene", "weight"} <= set(df.columns):
         df = df.pivot_table(index="program", columns="gene", values="weight", aggfunc="mean").fillna(0.0)
     df = df.astype(float)
+    if exclude:
+        df = df.loc[:, ~df.columns.astype(str).str.match(exclude)]
     if scale == "median_abs":
         for p in df.index:
             nz = np.abs(df.loc[p].values[df.loc[p].values != 0])
@@ -272,15 +281,17 @@ def select_genes_fisher(B, G, Y=None, max_genes=1500, groups=None, min_gain=1e-3
 
 
 def select_genes(ref, bulk, programs=None, max_genes=1500, budget=None, min_ref_cpm=2.0,
-                 min_bulk_detect=0.2, return_info=False, method="groups", groups=None, min_gain=1e-3):
+                 min_bulk_detect=0.2, return_info=False, method="fisher", groups=None, min_gain=1e-3):
     """Choose the modelled genes. Two methods share the eligibility filters below:
 
-    method='fisher': Bayesian D-optimal design, see select_genes_fisher. Genes are added one at a
-    time by how much they increase the information about the fractions and program shifts, given
-    each gene's noise; stops at `max_genes` or when a gene adds less than `min_gain` (log-det units).
-    `groups` (C,) shares program shifts within lineages, as in prepare_inputs.
+    method='fisher' (default): Bayesian D-optimal design, see select_genes_fisher. Genes are added
+    one at a time by how much they increase the information about the fractions and program shifts,
+    given each gene's noise; stops at `max_genes` or when a gene adds less than `min_gain` (log-det
+    units). `groups` (C,) shares program shifts within lineages, as in prepare_inputs. On the
+    gene-budget study (benchmarks/gene_budget_methods.json) it matched or beat 'groups' and, with a
+    1500 cap, stopped near 1050 genes at half the fit time.
 
-    method='groups' (default for now): a union of four sets, each serving one part of the model:
+    method='groups': a union of four sets with fixed shares, each serving one part of the model:
 
     * programs (45%): top genes of each program by |weight|, taken in turn so every program is
       represented -> program activity and attribution;
@@ -308,6 +319,8 @@ def select_genes(ref, bulk, programs=None, max_genes=1500, budget=None, min_ref_
     genes_e = [g for g, e in zip(ref.genes, elig) if e]
     Be = ref.B[:, elig]
     if method == "fisher":
+        if budget:
+            warnings.warn("gene_budget only applies to gene_selection='groups'; ignored by 'fisher'")
         Y = bulk.reindex(genes_e).fillna(0).values.T if isinstance(bulk, pd.DataFrame) else None
         Gm = None if programs is None else programs.reindex(columns=genes_e).fillna(0.0).values
         idx, info = select_genes_fisher(Be, Gm, Y, max_genes=max_genes, groups=groups, min_gain=min_gain)
@@ -400,12 +413,13 @@ MAX_TYPES_FULL_MODEL = 20
 
 
 def prepare_inputs(bulk, ref, programs, treatment=None, max_genes=1500, min_program_genes=5,
-                   gene_budget=None, covariates=None, program_groups=None, gene_selection="groups", **select_kw):
+                   gene_budget=None, covariates=None, program_groups=None, gene_selection="fisher", **select_kw):
     """Align bulk counts, reference and programs on a common gene set (see select_genes).
     bulk: genes x samples DataFrame of raw counts. treatment: Series/array of 0/1 per sample, optional.
-    gene_selection: 'groups' (four fixed shares, see select_genes) or 'fisher' (D-optimal design:
-    genes chosen by the information they add about fractions and program shifts; max_genes is then a cap).
-    gene_budget: override the share of programs / markers / hvg / anchors, e.g. {"programs": 0.5}.
+    gene_selection: 'fisher' (default; D-optimal design: genes chosen by the information they add about
+    fractions and program shifts; max_genes is then a cap) or 'groups' (four fixed shares, see select_genes).
+    gene_budget: with gene_selection='groups', override the share of programs / markers / hvg / anchors,
+    e.g. {"programs": 0.5}.
     covariates: optional DataFrame indexed by sample (e.g. batch, sex, age) adjusted for in both
     composition and program activity; treatment effects are then for a sample at the covariate mean.
     programs=None: composition-only inputs (fractions only; fast even for many cell types).

@@ -57,7 +57,7 @@ def test_attribution_batching_matches_single_batch():
     res._attr = None
     many = res._attribution_draws(max_elements=6 * 3 * 80 * 7)   # batches of 7 draws
     for a, b in zip(one, many):
-        np.testing.assert_allclose(a, b, rtol=1e-5, atol=1e-7)
+        np.testing.assert_allclose(a, b, rtol=1e-4, atol=1e-6)     # float32; batching reorders sums
 
 
 PARALLEL_SCRIPT = """
@@ -134,4 +134,40 @@ def test_lineage_shared_programs():
     assert set(res.cell_type_activity().cell_type) == {"B", "Myeloid", "T"}
     assert res.attribution().cell_type.nunique() == 6          # attribution stays per fine cell type
     assert len(res.effects()) == 2 * 6 * 2
+
+
+
+def test_speed_options_fit():
+    # dense mass for the globals, fixed per-gene dispersion and a tree-depth cap together
+    rng = np.random.default_rng(11)
+    B, G = sim.make_reference(rng, C=3, P=2, Gn=120, genes_per_prog=15)
+    s = sim.simulate_causal(rng, B, G, N=12)
+    res = pb.fit(s["Y"], s["L"], s["T"], B, G, num_warmup=150, num_samples=150, dispersion="fixed",
+                 dense_mass="globals", max_tree_depth=6)
+    assert np.sqrt(((res["pi"].mean(0) - s["pi"]) ** 2).mean()) < 0.06
+    assert res["mean_steps"] <= 63
+    assert "theta" not in res["convergence"]
+
+
+def test_shared_activity_fit():
+    rng = np.random.default_rng(12)
+    B, G = sim.make_reference(rng, C=3, P=2, Gn=120, genes_per_prog=15)
+    s = sim.simulate_causal(rng, B, G, N=12)
+    res = pb.fit(s["Y"], s["L"], s["T"], B, G, num_warmup=150, num_samples=150, activity="shared")
+    assert res["delta"].shape == (150, 12, 3, 2)
+    assert np.sqrt(((res["pi"].mean(0) - s["pi"]) ** 2).mean()) < 0.06
+
+
+def test_fast_stage2_gaussian():
+    from palm_bulk.bayes.twostage import fit_fast
+    rng = np.random.default_rng(13)
+    B, G = sim.make_reference(rng, C=3, P=2, Gn=120, genes_per_prog=15)
+    s = sim.simulate_causal(rng, B, G, N=24)
+    kw = dict(activity="common", use_m=False, num_samples=200, likelihood="quasi", vi_steps=3000)
+    fits = {k: fit_fast(s["Y"], s["L"], s["T"], B, G, stage2=k, **kw) for k in ("vi", "laplace")}
+    for k, r in fits.items():
+        assert r["pi"].shape == (400, 24, 3) and r["stage2"] == k
+        assert np.sqrt(((r["pi"].mean(0) - s["pi"]) ** 2).mean()) < 0.05
+        assert r["stage2_fit"]["rel_change"] < 1e-3
+    assert np.abs(fits["vi"]["pi"].mean(0) - fits["laplace"]["pi"].mean(0)).max() < 0.03
 

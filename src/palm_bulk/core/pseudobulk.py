@@ -11,6 +11,12 @@ cell type and number of cells (e.g. scripts/build_pbmc_pseudobulk.py output). Fr
     and program activity delta = estimate_delta(that specimen's rows, reference profiles), i.e. the
     model's own definition; with a two-group contrast, beta = difference in mean delta.
 
+With truth_split=True each test count is split at random into two independent halves (binomial
+thinning; exact for Poisson counts, close for overdispersed ones): the bulk and the read fractions come
+from one half and delta/beta from the other. Otherwise the truth's own sampling noise is also in the
+bulk, which rewards methods that copy the bulk's noise (e.g. a bulk shift copied to every cell type) and
+penalises shrinkage, and interval coverage is scored against a noisy target.
+
 The same tables serve as Paper 2's Teacher 1 labels.
 """
 from dataclasses import dataclass, field
@@ -78,6 +84,7 @@ class PseudobulkBenchmark:
     meta: pd.DataFrame                    # one row per test specimen
     treatment: np.ndarray = None          # 0/1 per test specimen for the contrast, or None
     reference_rows: dict = field(default_factory=dict)   # counts, cell_types, donors of the reference rows
+    truth_counts: np.ndarray = None       # (N, C, G) held-out half for delta (truth_split=True), else None
 
     @property
     def cell_types(self):
@@ -94,7 +101,8 @@ class PseudobulkBenchmark:
         out = dict(pi=tot / tot.sum(1, keepdims=True),
                    cell_fractions=self.cell_counts[:, ci] / self.cell_counts[:, ci].sum(1, keepdims=True))
         if inputs.Gmat.shape[0]:
-            out["delta"] = estimate_delta(Z, inputs.B, inputs.Gmat)
+            Zd = Z if self.truth_counts is None else self.truth_counts[:, ci][:, :, gi]
+            out["delta"] = estimate_delta(Zd, inputs.B, inputs.Gmat)
             if self.treatment is not None:
                 T = self.treatment
                 out["beta"] = out["delta"][T == 1].mean(0) - out["delta"][T == 0].mean(0)
@@ -102,7 +110,8 @@ class PseudobulkBenchmark:
 
 
 def make_benchmark(table, cell_types=None, min_cells=30, n_test=None, test_frac=0.5, contrast=None,
-                   ref_min_cells=10, projects=None, seed=0):
+                   ref_min_cells=10, projects=None, seed=0, truth_split=False, ref_filter=None,
+                   all_test_specimens=False):
     """Split donors into test and reference and build bulk, reference and truth.
 
     cell_types: types to use (default: all in the table). A test specimen needs >= min_cells cells in
@@ -112,7 +121,12 @@ def make_benchmark(table, cell_types=None, min_cells=30, n_test=None, test_frac=
     contrast: optional (column, treated_value, control_value), e.g. ("disease", "COVID-19", "HC"):
         test specimens are restricted to the two groups and `treatment` is set (1 = treated).
     ref_min_cells: reference rows with fewer cells are ignored (too noisy as profiles).
-    projects: optional list restricting test and reference to these projects."""
+    projects: optional list restricting test and reference to these projects.
+    truth_split: build bulk and truth from independent halves of each test count (see module doc).
+    ref_filter: optional (column, value): reference rows must have obs[column] == value, e.g.
+        ("label", "ctrl") for a resting reference in a perturbation study.
+    all_test_specimens: use every eligible specimen of a test donor (e.g. paired stim / ctrl samples,
+        or pseudo-replicates) instead of one at random."""
     rng = np.random.default_rng(seed)
     obs = table.obs.copy()
     if projects is not None:
@@ -134,7 +148,11 @@ def make_benchmark(table, cell_types=None, min_cells=30, n_test=None, test_frac=
     test_donors = set(donors[:n])
     test_spec = [rng.choice(np.array(elig.index[elig["donor_id"].astype(str) == d], dtype=object))
                  for d in sorted(test_donors)]
+    if all_test_specimens:
+        test_spec = sorted(s_ for s_ in elig.index if str(elig.loc[s_, "donor_id"]) in test_donors)
     ref_mask = ~obs["donor_id"].astype(str).isin(test_donors) & (obs["n_cells"] >= ref_min_cells)
+    if ref_filter is not None:
+        ref_mask &= (obs[ref_filter[0]] == ref_filter[1]).values
     X = _csr(table.counts)
     pos = {k: i for i, k in enumerate(table.obs.index)}
 
@@ -167,6 +185,10 @@ def make_benchmark(table, cell_types=None, min_cells=30, n_test=None, test_frac=
             r = rows[rows["cell_type"] == c]
             tc[i, k] = np.asarray(X[[pos[j] for j in r.index]].sum(0)).ravel()
             cells[i, k] = r["n_cells"].sum()
+    held = None
+    if truth_split:                 # own generator: the donor split above does not change with the flag
+        half = np.random.default_rng(seed + 1).binomial(tc.astype(np.int64), 0.5).astype(np.float32)
+        tc, held = half, tc - half
     names = ["%s" % s for s in test_spec]
     bulk = pd.DataFrame(tc.sum(1).T, index=pd.Index(table.genes, name="gene"), columns=names)
     meta = spec.loc[test_spec].copy()
@@ -179,4 +201,4 @@ def make_benchmark(table, cell_types=None, min_cells=30, n_test=None, test_frac=
         T = (meta[contrast[0]] == contrast[1]).astype(float).values
     ref_rows = dict(counts=X[[pos[i] for i in ref.index]], cell_types=ref["cell_type"].values,
                     donors=ref["donor_id"].astype(str).values)
-    return PseudobulkBenchmark(reference, bulk, tc, cells, meta, T, ref_rows)
+    return PseudobulkBenchmark(reference, bulk, tc, cells, meta, T, ref_rows, held)

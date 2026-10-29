@@ -130,6 +130,19 @@ def test_estimate_delta_recovers_shift():
     np.testing.assert_allclose(est_n, est[1:], atol=1e-6)
 
 
+def test_estimate_delta_large_weights_converge():
+    # Raw PROGENy-like weights (up to ~17) and an interferon-sized shift: a capped Newton step
+    # cycled between 0 and 1 here and returned 0; the line search must reach the true shift
+    rng = np.random.default_rng(5)
+    Gn = 300
+    B = rng.dirichlet(np.ones(Gn))[None]
+    G = np.zeros((1, Gn))
+    G[0, :30] = rng.uniform(1, 17, 30)
+    E = np.asarray(pb.cell_profiles(B, G, np.array([[[0.3]]])))[0, 0]
+    X = rng.multinomial(5_000_000, E / E.sum())[None, None].astype(float)
+    assert abs(pb.estimate_delta(X, B, G)[0, 0, 0] - 0.3) < 0.01
+
+
 def test_bulk_delta_shared_shift():
     rng = np.random.default_rng(4)
     B, G = sim.make_reference(rng, C=3, P=2, Gn=300, genes_per_prog=30)
@@ -159,3 +172,132 @@ def test_convergence_ignores_invalid_ess(monkeypatch):
     conv = dg.convergence(dict(x=np.random.default_rng(0).normal(size=(2, 100, 3))))
     assert conv["x"]["ess_min"] == 300 and conv["x"]["n_ess_invalid"] == 1
     assert any("not estimable" in m for m in dg.convergence_problems(conv, chains=1))
+
+
+def test_negbin_log_prob_matches_numpyro():
+    import jax
+    import jax.numpy as jnp
+    import numpyro.distributions as dist
+    from palm_bulk.bayes.model import _NegBin2
+    rng = np.random.default_rng(3)
+    mu = jnp.array(rng.gamma(2.0, 20.0, (6, 50)))
+    th = jnp.array(rng.gamma(2.0, 10.0, 50))
+    y = jnp.array(rng.poisson(np.asarray(mu)).astype(float))
+    ref = lambda m, t: dist.NegativeBinomial2(m, t).log_prob(y).sum()
+    new = lambda m, t: _NegBin2(m, t).log_prob(y).sum()
+    np.testing.assert_allclose(new(mu, th), ref(mu, th), rtol=1e-5)
+    for a, b in zip(jax.grad(new, (0, 1))(mu, th), jax.grad(ref, (0, 1))(mu, th)):
+        np.testing.assert_allclose(a, b, rtol=1e-4, atol=1e-4)     # float32: theta-gradient terms cancel
+
+
+def test_mass_blocks_dense_globals():
+    import jax.numpy as jnp
+    from palm_bulk.bayes.fit import _mass_blocks
+    inv = {("a",): jnp.array([1.0, 2.0]), ("sigma_d",): jnp.array([3.0]), ("zres",): jnp.ones(5)}
+    out, dense = _mass_blocks(inv)
+    assert dense == [("a", "sigma_d")]
+    np.testing.assert_allclose(out[("a", "sigma_d")], np.diag([1.0, 2.0, 3.0]))
+    assert ("zres",) in out and ("a",) not in out
+
+
+def test_activity_models_trace():
+    import jax
+    import jax.numpy as jnp
+    from numpyro import handlers
+    from palm_bulk.bayes.model import make_model
+    rng = np.random.default_rng(5)
+    N, C, P, Gn = 5, 3, 2, 30
+    B = jnp.array(rng.dirichlet(np.ones(Gn), C))
+    G = jnp.array(rng.normal(0, 1, (P, Gn)))
+    Y = jnp.array(rng.poisson(20, (N, Gn)).astype(float))
+    args = (Y, Y.sum(1), jnp.array([0.0, 1, 0, 1, 1]), B, G)
+    want = {"independent": {"zres"}, "common": {"lam", "u", "zres"}, "shared": {"lam", "u", "zres"},
+            "shared_only": {"lam", "u"}}
+    for act, sites in want.items():
+        tr = handlers.trace(handlers.seed(make_model(theta=30.0, activity=act), 0)).get_trace(*args)
+        assert sites <= set(tr) and not ({"lam", "u", "zres"} - sites) & set(tr)
+        assert tr["delta"]["value"].shape == (N, C, P)
+    with pytest.raises(ValueError):
+        make_model(activity="nope")
+
+
+def test_gauss_marginal_matches_closed_form():
+    # log integral of exp(-x'Lam x/2 + h'x) N(x; mu, S): compare with the textbook form (S invertible)
+    import jax.numpy as jnp
+    from palm_bulk.bayes.twostage import _gauss_marginal
+    rng = np.random.default_rng(7)
+    D = 4
+    A = rng.normal(size=(D, D)); S = A @ A.T + 0.5 * np.eye(D)
+    Bm = rng.normal(size=(2, D, D)); Lam = Bm @ np.swapaxes(Bm, 1, 2)
+    h, mu = rng.normal(size=(2, D)), rng.normal(size=(2, D))
+    ll, mean, _ = _gauss_marginal(jnp.array(mu), jnp.array(S), jnp.array(Lam), jnp.array(h))
+    Si = np.linalg.inv(S)
+    for i in range(2):
+        P = Si + Lam[i]; b = Si @ mu[i] + h[i]
+        ref = (0.5 * b @ np.linalg.solve(P, b) - 0.5 * mu[i] @ Si @ mu[i]
+               - 0.5 * np.linalg.slogdet(S)[1] - 0.5 * np.linalg.slogdet(P)[1])
+        np.testing.assert_allclose(ll[i], ref, rtol=1e-4)
+        np.testing.assert_allclose(mean[i], np.linalg.solve(P, b), rtol=1e-4, atol=1e-5)
+
+
+@pytest.mark.parametrize("activity", ["independent", "shared_only"])
+def test_latent_draws_match_gaussian_conditional(activity):
+    # perturb-and-solve draws have the exact conditional mean and covariance (S may be singular)
+    import jax.numpy as jnp
+    from palm_bulk.bayes.twostage import _draw_latents, _prior_moments
+    rng = np.random.default_rng(1)
+    C, P, N, n = 2, 2, 2, 40000
+    D = C + C * P
+    A = rng.normal(size=(N, D, D)); Lam = A @ np.swapaxes(A, 1, 2) / D
+    h, T = rng.normal(size=(N, D)), np.array([0.0, 1.0])
+    p = dict(a=np.array([0.3, -0.3]), gamma=np.array([0.5, -0.5]), s_eta=0.7,
+             kappa=np.array([[0.1, -0.2], [0.0, 0.3]]), beta=np.array([[0.2, 0.0], [-0.1, 0.1]]))
+    p.update(sigma_d=0.4) if activity == "independent" else p.update(lam=np.array([[0.5, 0.2], [0.3, 0.6]]))
+    post = {k: jnp.repeat(jnp.asarray(v, float)[None], n, 0) for k, v in p.items()}
+    x = _draw_latents(post, jnp.asarray(Lam), jnp.asarray(h), jnp.asarray(T), None, C, P, None, activity, 0)
+    mu, S = (np.asarray(v) for v in _prior_moments({k: jnp.asarray(v, float) for k, v in p.items()},
+                                                     jnp.asarray(T), None, C, P, None, activity))
+    for i in range(N):
+        M = np.eye(D) + S @ Lam[i]
+        cov = np.linalg.solve(M, S)
+        mean = mu[i] + cov @ (h[i] - Lam[i] @ mu[i])
+        np.testing.assert_allclose(x[:, i].mean(0), mean, atol=0.02)
+        np.testing.assert_allclose(np.cov(x[:, i].T), 0.5 * (cov + cov.T), atol=0.02)
+
+
+def test_sandwich_matches_model_when_model_is_right():
+    # Poisson data from the model itself: robust and model-based variances agree (inflation ~ 1)
+    import jax
+    import jax.numpy as jnp
+    from palm_bulk.bayes.twostage import sample_summaries, gene_blocks
+    rng = np.random.default_rng(4)
+    C, P, Gn, N = 3, 2, 400, 6
+    B = rng.dirichlet(np.full(Gn, 0.5), C)
+    G = np.where(rng.random((P, Gn)) < 0.15, rng.normal(0, 1, (P, Gn)), 0.0)
+    pi = rng.dirichlet(np.ones(C), N)
+    d = rng.normal(0, 0.3, (N, C, P))
+    E = np.exp(np.log(B)[None] + np.einsum("ncp,pg->ncg", d, G)); E /= E.sum(-1, keepdims=True)
+    L = np.full(N, 2e6)
+    Y = rng.poisson(L[:, None] * np.einsum("nc,ncg->ng", pi, E)).astype(float)
+    args = [jnp.asarray(v) for v in (Y, L, B, G)]
+    blocks = gene_blocks(B, G, 80)
+    q = sample_summaries(*args, jnp.full(Gn, 1e8), likelihood="quasi", sandwich=True, blocks=blocks)
+    assert 0.6 < float(np.median(q["inflation"])) < 1.6
+
+
+def test_fixed_eta_summaries():
+    """fix_eta holds the fractions at eta0, gives no information about eta and still finds delta."""
+    import jax.numpy as jnp
+    from palm_bulk.bayes.twostage import sample_summaries, _two_step_summaries
+    rng = np.random.default_rng(3)
+    B, G = sim.make_reference(rng, C=3, P=2, Gn=150, genes_per_prog=20)
+    s = sim.simulate_causal(rng, B, G, N=6)
+    eta = jnp.log(jnp.asarray(s["pi"]))
+    Y, L, B_, G_ = (jnp.asarray(v, float) for v in (s["Y"], s["L"], B, G))
+    out = sample_summaries(Y, L, B_, G_, 50.0, eta0=eta, likelihood="quasi", fix_eta=True)
+    np.testing.assert_allclose(np.asarray(out["x_hat"][:, :3]), np.asarray(eta))
+    assert np.abs(np.asarray(out["Lam"][:, :3, :])).max() == 0
+    assert float(out["grad_norm"].max()) < 0.05            # float32 floor (exactly 0 in float64)
+    two = _two_step_summaries(Y, L, B_, G_, 50.0, None, eta, 3.0, 1.0, 80, "quasi", False, None)
+    w = np.linalg.eigvalsh(np.asarray(two["Lam"]))
+    assert (w.min(1) > -1e-6 * w.max(1)).all()             # PSD (zero only along the softmax shift)

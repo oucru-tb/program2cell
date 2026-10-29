@@ -17,7 +17,7 @@ import sys, time, json
 
 # Settings are explicit (not package defaults) so saved results stay reproducible. "baseline" is the
 # original sampler; the package defaults (init='svi', dispersion='gene') were chosen from these runs.
-BASE = dict(init="median", dispersion="shared")
+BASE = dict(init="median", dispersion="shared", reparam=False)   # the original sampler
 CONFIGS = {
     "baseline": dict(scenario="standard", fit=dict(BASE)),
     "reparam": dict(scenario="standard", fit=dict(BASE, reparam=True)),

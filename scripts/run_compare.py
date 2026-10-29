@@ -39,6 +39,8 @@ g.add_argument("--pseudobulk", help="specimen x cell-type h5ad (scripts/build_pb
 g.add_argument("--keep-types", default="B cell,Monocyte,NK cell,T cell")
 g.add_argument("--label-map", default="{}", help='JSON, e.g. \'{"DC": "Monocyte"}\'')
 g.add_argument("--min-cells", type=int, default=20)
+g.add_argument("--truth-split", action="store_true",
+               help="bulk and truth from independent halves of the counts (binomial thinning)")
 g.add_argument("--n-test", type=int, default=None)
 g.add_argument("--contrast", default="disease,COVID-19,HC", help="column,treated,control or 'none'")
 g.add_argument("--programs-csv", default="data/progeny_human_top500.csv")
@@ -102,7 +104,8 @@ def pseudobulk(r):
     if TABLE is None:
         TABLE = PseudobulkTable.from_h5ad(args.pseudobulk, json.loads(args.label_map), args.keep_types.split(","))
     contrast = None if args.contrast == "none" else tuple(args.contrast.split(","))
-    b = make_benchmark(TABLE, min_cells=args.min_cells, n_test=args.n_test, contrast=contrast, seed=r)
+    b = make_benchmark(TABLE, min_cells=args.min_cells, n_test=args.n_test, contrast=contrast, seed=r,
+                       truth_split=args.truth_split)
     prog = pb.load_programs(args.programs_csv)
     if args.program_list:
         prog = prog.loc[args.program_list.split(",")]
@@ -127,7 +130,7 @@ for r in range(args.reps):
     data, truth = pseudobulk(r) if args.pseudobulk else simulated(r)
     inp = data.inputs
     for m in methods:
-        kw = dict(num_warmup=args.warmup, num_samples=args.samples, chains=args.chains) if m == "palm" else {}
+        kw = dict(num_warmup=args.warmup, num_samples=args.samples, chains=args.chains) if m in ("palm", "palm_fast") else {}
         kw.update(method_kw.get(m, {}))
         print("running %s %s" % (m, kw or ""), flush=True)
         res, err = compare.run_method(m, data, **kw)
@@ -148,6 +151,10 @@ for r in range(args.reps):
             rows.append(row)
             print({k: (round(v, 3) if isinstance(v, float) else v) for k, v in row.items() if k != "notes"},
                   flush=True)
+    # progress so far, so a long run that dies later keeps its finished reps
+    os.makedirs(os.path.dirname(args.out) or ".", exist_ok=True)
+    json.dump(dict(provenance=pb.provenance(**vars(args)), skipped=skipped, rows=rows, finished_reps=r + 1),
+              open(os.path.splitext(args.out)[0] + ".partial.json", "w"), indent=1, default=float)
 
 df = pd.DataFrame(rows)
 cols = [c for c in ["frac_rmse", "frac_pearson", "frac_cov90", "act_spearman_across_samples",

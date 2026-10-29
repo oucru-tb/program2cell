@@ -12,8 +12,31 @@ import jax.numpy as jnp
 import numpy as np
 import numpyro
 import numpyro.distributions as dist
+from jax.scipy.special import gammaln, xlogy
 
 from ..core.equations import expected_fractions
+
+
+class _NegBin2(dist.NegativeBinomial2):
+    """NegativeBinomial2 (mean mu, concentration theta) with the log density written out directly.
+    Same value and gradient as numpyro's, which goes through GammaPoisson and costs ~8x more per
+    gradient on CPU; the likelihood is most of the gradient cost, so this speeds up NUTS ~2-3x."""
+
+    def log_prob(self, value):
+        mu, th = self.mean, self.concentration
+        return (gammaln(value + th) - gammaln(th) - gammaln(value + 1) + th * jnp.log(th)
+                + xlogy(value, mu) - (value + th) * jnp.log(mu + th))
+
+
+class _NegBin2Kernel(_NegBin2):
+    """As _NegBin2 but only the terms that depend on mu, for a fixed (data, not sampled) theta.
+    The log density is off by a constant, so posteriors and gradients are unchanged, but the
+    log-gamma terms, most of the remaining likelihood cost, are skipped. Do not use its values for
+    model comparison."""
+
+    def log_prob(self, value):
+        mu, th = self.mean, self.concentration
+        return xlogy(value, mu) - (value + th) * jnp.log(mu + th)
 
 
 def _horseshoe(name, shape, tau_scale, slab2=1.0):
@@ -37,9 +60,13 @@ def _iid_normal(name, shape, scale, zero_sum):
     return numpyro.sample(name, dist.Normal(0, scale).expand(list(shape)).to_event(len(shape)))
 
 
+ACTIVITY_MODELS = ("independent", "common", "shared", "shared_only")
+
+
 def make_model(use_m=False, sigma_m=0.3, theta=None, reparam=False, dispersion="shared", n_prog=None,
-               groups=None):
-    """Build the model function. `theta=None` -> dispersion is sampled (LogNormal(log 30, 1)).
+               groups=None, activity="independent"):
+    """Build the model function. `theta=None` -> dispersion is sampled (LogNormal(log 30, 1));
+    otherwise a fixed scalar or (G,) per-gene dispersion, in the model's gene order.
     reparam=True samples a, gamma, eps (softmax inputs) and zm (renormalised) as zero-sum
     Normals: same posterior for pi, delta, effects and fits; the reported a and gamma are then
     centred over cell types. reparam=False is the original sampler.
@@ -50,8 +77,23 @@ def make_model(use_m=False, sigma_m=0.3, theta=None, reparam=False, dispersion="
     groups: optional (C,) integer array mapping each cell type to a group (e.g. lineage). Program
     shifts (kappa, beta, delta, D) are then estimated per group and shared by its cell types, while
     composition stays at cell-type level. With no programs (G has 0 rows) the model is
-    composition-only: profiles are the reference baselines."""
+    composition-only: profiles are the reference baselines.
+    activity: how a sample's program shift varies around kappa + beta*T across samples.
+      'independent': sigma_d * z_icp, independent for every sample, cell type and program.
+      'shared': lam_cp * u_ip + sigma_d,c * z_icp. u_ip ~ N(0,1) is sample i's level of program p,
+          shared by all cell types; lam_cp >= 0 is how strongly type c follows it. One bulk sample
+          cannot separate C independent shifts per program, but it can see the shared one in every
+          cell type's genes; on PBMC one such factor per program explains 60-92% of the true
+          across-sample variation, with loadings of one sign. The residual scale is per cell type.
+      'shared_only': lam_cp * u_ip with no residual (fewest parameters, no residual funnel).
+      'common': lam_p * u_ip + sigma_d,c * z_icp: one sample-level shift per program that every cell type
+          shares equally (the structure of a bulk-level score), plus per-type deviations."""
     groups = None if groups is None else np.asarray(groups, int)
+    if activity not in ACTIVITY_MODELS:
+        raise ValueError("activity must be one of %s" % (ACTIVITY_MODELS,))
+
+    if theta is not None:
+        theta = jnp.asarray(theta)
 
     def model(Y, L, T, B, G, X=None):
         N, Gn = Y.shape
@@ -70,24 +112,38 @@ def make_model(use_m=False, sigma_m=0.3, theta=None, reparam=False, dispersion="
             Lg = C if groups is None else int(groups.max()) + 1
             kappa = numpyro.deterministic("kappa", _horseshoe("kappa", (Lg, P), 0.3))
             beta = numpyro.deterministic("beta", _horseshoe("beta", (Lg, P), 0.3))
-            sigma_d = numpyro.sample("sigma_d", dist.HalfNormal(0.3))
-            zr = numpyro.sample("zres", dist.Normal(0, 1).expand([N, Lg, P]).to_event(3))
-            shift = kappa + beta * T[:, None, None] + sigma_d * zr
+            shift = kappa + beta * T[:, None, None]
+            if activity == "independent":
+                sigma_d = numpyro.sample("sigma_d", dist.HalfNormal(0.3))
+                zr = numpyro.sample("zres", dist.Normal(0, 1).expand([N, Lg, P]).to_event(3))
+                shift = shift + sigma_d * zr
+            else:
+                lshape = [P] if activity == "common" else [Lg, P]
+                lam = numpyro.sample("lam", dist.HalfNormal(0.3).expand(lshape).to_event(len(lshape)))
+                u = numpyro.sample("u", dist.Normal(0, 1).expand([N, P]).to_event(2))
+                shift = shift + lam * u[:, None, :]
+                if activity in ("shared", "common"):
+                    sigma_d = numpyro.sample("sigma_d", dist.HalfNormal(0.3).expand([Lg]).to_event(1))
+                    zr = numpyro.sample("zres", dist.Normal(0, 1).expand([N, Lg, P]).to_event(3))
+                    shift = shift + sigma_d[:, None] * zr
             if X is not None:
                 D = numpyro.sample("D_cov", dist.Normal(0, 0.3).expand([K, Lg, P]).to_event(3))
                 shift = shift + jnp.einsum("ik,kcp->icp", X, D)
             delta = numpyro.deterministic("delta", shift)
             delta_ct = delta if groups is None else delta[:, groups, :]
-        m = jnp.exp(sigma_m * _iid_normal("zm", (Gn,), 1.0, reparam)) if use_m else None
+        m = None
+        if use_m:                          # sigma_m='auto': the scale's size is learned (HalfNormal(0.3))
+            sm = numpyro.sample("sigma_m", dist.HalfNormal(0.3)) if sigma_m == "auto" else sigma_m
+            m = jnp.exp(sm * _iid_normal("zm", (Gn,), 1.0, reparam))
         frac = expected_fractions(pi, B, G, delta_ct, m, n_prog)
-        if theta is not None:
-            th = theta
-        else:
-            th = numpyro.sample("theta", dist.LogNormal(np.log(30.0), 1.0))
-            if dispersion == "gene":
-                s_th = numpyro.sample("s_theta", dist.HalfNormal(0.5))
-                zt = numpyro.sample("ztheta", dist.Normal(0, 1).expand([Gn]).to_event(1))
-                th = th * jnp.exp(s_th * zt)
-        numpyro.sample("Y", dist.NegativeBinomial2(L[:, None] * frac, th).to_event(2), obs=Y)
+        if theta is not None:            # fixed dispersion (scalar or per gene): mu-dependent terms only
+            numpyro.sample("Y", _NegBin2Kernel(L[:, None] * frac, theta).to_event(2), obs=Y)
+            return
+        th = numpyro.sample("theta", dist.LogNormal(np.log(30.0), 1.0))
+        if dispersion == "gene":
+            s_th = numpyro.sample("s_theta", dist.HalfNormal(0.5))
+            zt = numpyro.sample("ztheta", dist.Normal(0, 1).expand([Gn]).to_event(1))
+            th = th * jnp.exp(s_th * zt)
+        numpyro.sample("Y", _NegBin2(L[:, None] * frac, th).to_event(2), obs=Y)
 
     return model

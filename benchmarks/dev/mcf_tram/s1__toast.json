@@ -1,0 +1,27 @@
+[
+ {
+  "config": "toast",
+  "row": "model",
+  "method": "toast",
+  "runtime": 6.840498924255371,
+  "frac_rmse": 0.05812144303889579,
+  "frac_pearson": 0.8435376754956726,
+  "frac_r_per_type": 0.897487965453189,
+  "eff_pearson": 0.708400063238941,
+  "eff_auroc": 0.7573529411764706,
+  "eff_sign_agree": 0.75,
+  "eff_localise": 0.0,
+  "eff_mae": 0.10851702084648669,
+  "ulm_act_spearman_across_samples": null,
+  "ulm_act_spearman_shared": null,
+  "ulm_act_spearman_specific": null,
+  "ulm_act_spearman_across_types": null,
+  "ulm_act_leakage": null,
+  "ulm_act_prog_leakage": null,
+  "ulm_act_coupling": null,
+  "time": 6.850293874740601,
+  "dataset": "mcf_tram",
+  "split": 1,
+  "act_specific_share": 0.41072675592754365
+ }
+]

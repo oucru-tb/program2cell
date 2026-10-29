@@ -40,6 +40,9 @@ def test_python_baselines_and_scoring(study):
     # naive: the same activity for every cell type, so it cannot rank cell types
     assert np.allclose(naive.activity[:, 0], naive.activity[:, 1])
     assert compare.score(naive, truth)["eff_auroc"] == 0.5
+    sn = compare.score(naive, truth)
+    assert np.isfinite(sn["act_spearman_shared"]) and np.isnan(sn["act_spearman_specific"])   # shared only
+    assert 0 < sn["act_specific_share"] < 1
 
 
 def test_ulm_activity(study):
@@ -57,6 +60,39 @@ def test_score_of_truth_is_perfect(study):
     s = compare.score(perfect, truth)
     assert s["frac_rmse"] == 0 and s["act_mae"] == 0 and s["eff_mae"] == 0
     assert s["eff_pearson"] > 0.999 and s["eff_sign_agree"] == 1 and s["eff_cov90"] == 1 and s["eff_auroc"] == 1
+    assert s["act_spearman_shared"] > 0.999 and s["act_spearman_specific"] > 0.999
+    assert abs(s["act_gain"] - 1) < 1e-6 and s["act_leakage"] < 1e-6 and s["act_coupling"] < 1e-9
+    assert s["eff_localise"] == 1 and np.isclose(s["eff_iscore"], 0.2)
+
+
+def test_leakage_and_localisation_expose_copied_activity(study):
+    """A bulk shift copied to every cell type mixes all types' signal into each and cannot say which type
+    responds; one type's truth leaked into another's estimate shows up as leakage, not as gain."""
+    _, data, truth = study
+    t, b = truth["delta"], truth["beta"]
+    C = t.shape[1]
+    copied = np.repeat(t.mean(1, keepdims=True), C, axis=1)
+    s = compare.score(compare.MethodResult("copied", activity=copied, effects=copied[:, 0].mean(0)[None].repeat(C, 0)),
+                      truth)
+    assert s["act_leakage"] > 0.05 and s["act_gain"] < 0.9
+    assert np.isclose(s["eff_localise"], 1 / C)                  # all types tie: 1/C credit each
+    leak = t + 0.8 * np.roll(t, 1, axis=1)                       # each type gets its neighbour's activity
+    sl = compare.score(compare.MethodResult("leaky", activity=leak), truth)
+    assert sl["act_leakage"] > 0.05 and abs(sl["act_gain"] - 1) < 1e-6
+
+
+def test_interval_score_and_false_sign_rate():
+    t = dict(pi=np.full((4, 2), 0.5), beta=np.array([[0.5, 0.0], [-0.5, 0.05]]))
+    e = np.array([[0.4, 0.2], [0.3, 0.05]])
+    iv = (e - 0.1, e + 0.1)                                      # calls: (0,0) right, (0,1) null, (1,0) wrong sign
+    s = compare.score(compare.MethodResult("m", effects=e, intervals=dict(effects=iv)), t)
+    assert s["eff_n_called"] == 3 and np.isclose(s["eff_fsr"], 2 / 3) and np.isclose(s["eff_fdr"], 2 / 3)
+    s2 = compare.score(compare.MethodResult("m", effects=e, intervals=dict(effects=(e - 0.01, e + 0.01))),
+                       dict(t, beta=np.array([[0.5, 0.05], [0.5, 0.05]])))   # right signs; two effects too small
+    assert s2["eff_fsr"] == 0 and np.isclose(s2["eff_fdr"], 0.5)
+    # interval score: width 0.2 everywhere, plus 20 x miss distance where the truth is outside
+    miss = np.array([[0.0, 0.1], [0.7, 0.0]])
+    assert np.isclose(s["eff_iscore"], np.mean(0.2 + 20 * miss))
 
 
 def test_effects_from_logfc_recovers_program_shift(study):
@@ -129,3 +165,19 @@ def test_blade_prior_uses_donor_pseudobulk(study):
         prof.append(np.log1p(s[gi] / s.sum() * 1e6))
     np.testing.assert_allclose(mean[0], np.mean(prof, 0))
     assert (np.asarray(sd) >= 0.1).all()
+
+
+@pytest.mark.slow
+def test_cellgeometry(study):
+    """Runs only where R with cellGeometry is set up (PALM_RSCRIPT); skipped otherwise."""
+    import subprocess
+    from palm_bulk.compare.base import find_rscript, _env_for
+    rs = find_rscript()
+    if not rs or subprocess.run([rs, "-e", "library(cellGeometry)"], env=_env_for(rs), capture_output=True,
+                                timeout=120).returncode != 0:
+        pytest.skip("R with cellGeometry not available")
+    _, data, truth = study
+    r = compare.cellgeometry(data)
+    assert r.fractions.shape == truth["pi"].shape and np.allclose(r.fractions.sum(1), 1)
+    s = compare.score(r, truth)
+    assert s["frac_rmse"] < 0.1 and r.activity.shape == truth["delta"].shape

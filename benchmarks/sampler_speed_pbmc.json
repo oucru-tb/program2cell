@@ -1,0 +1,477 @@
+{
+ "note": "PALM sampler options on the PBMCpedia pseudo-bulk benchmark (rep 0: 38 test specimens, 4 cell types, 7 PROGENy programs, 1000 Fisher-selected genes), 2 chains x (500 warmup + 500 draws), float64, CPU, three fits at a time on a 12-core machine (times comparable within this table only). Configs other than 'noreparam' use reparam=True. eff_* is the in-sample treated-minus-control program shift. long_*: 1000 warmup + 1000 draws, two fits at a time. Decision: dispersion='fixed', reparam=False (long_fixed_noreparam: R-hat 1.013, min ESS 176, best ESS per minute).",
+ "rows": {
+  "noreparam": {
+   "n_genes": 1000,
+   "time_s": 12864,
+   "mean_steps": 1020,
+   "divergences": 5,
+   "rhat_max": 1.084,
+   "ess_min": 16,
+   "ess_min_per_min": 0.08,
+   "frac_rmse": 0.0709,
+   "frac_cov90": 0.671,
+   "delta_mae": 0.078,
+   "delta_cov90": 0.848,
+   "eff_mae": 0.0234,
+   "eff_cov90": 0.857,
+   "conv": {
+    "a": [
+     1.002,
+     552
+    ],
+    "gamma": [
+     1.013,
+     433
+    ],
+    "pi": [
+     1.059,
+     16
+    ],
+    "kappa": [
+     1.052,
+     29
+    ],
+    "beta": [
+     1.026,
+     119
+    ],
+    "delta": [
+     1.084,
+     31
+    ],
+    "theta": [
+     1.013,
+     119
+    ],
+    "I": [
+     1.029,
+     120
+    ],
+    "K": [
+     1.026,
+     108
+    ]
+   },
+   "config": {
+    "reparam": false
+   }
+  },
+  "reparam": {
+   "n_genes": 1000,
+   "time_s": 9125,
+   "mean_steps": 490,
+   "divergences": 54,
+   "rhat_max": 1.115,
+   "ess_min": 15,
+   "ess_min_per_min": 0.1,
+   "frac_rmse": 0.0717,
+   "frac_cov90": 0.658,
+   "delta_mae": 0.0779,
+   "delta_cov90": 0.848,
+   "eff_mae": 0.0226,
+   "eff_cov90": 0.893,
+   "conv": {
+    "a": [
+     1.047,
+     31
+    ],
+    "gamma": [
+     1.026,
+     75
+    ],
+    "pi": [
+     1.106,
+     18
+    ],
+    "kappa": [
+     1.115,
+     15
+    ],
+    "beta": [
+     1.016,
+     104
+    ],
+    "delta": [
+     1.105,
+     17
+    ],
+    "theta": [
+     1.03,
+     57
+    ],
+    "I": [
+     1.02,
+     78
+    ],
+    "K": [
+     1.029,
+     63
+    ]
+   },
+   "config": {
+    "reparam": true
+   }
+  },
+  "dense": {
+   "n_genes": 1000,
+   "time_s": 6066,
+   "mean_steps": 251,
+   "divergences": 33,
+   "rhat_max": 1.325,
+   "ess_min": 2,
+   "ess_min_per_min": 0.02,
+   "frac_rmse": 0.0705,
+   "frac_cov90": 0.651,
+   "delta_mae": 0.0781,
+   "delta_cov90": 0.845,
+   "eff_mae": 0.0231,
+   "eff_cov90": 0.893,
+   "conv": {
+    "a": [
+     1.116,
+     17
+    ],
+    "gamma": [
+     1.05,
+     80
+    ],
+    "pi": [
+     1.087,
+     8
+    ],
+    "kappa": [
+     1.304,
+     3
+    ],
+    "beta": [
+     1.325,
+     2
+    ],
+    "delta": [
+     1.121,
+     7
+    ],
+    "theta": [
+     1.074,
+     46
+    ],
+    "I": [
+     1.211,
+     3
+    ],
+    "K": [
+     1.112,
+     6
+    ]
+   },
+   "config": {
+    "dense_mass": "globals"
+   }
+  },
+  "fixedtheta": {
+   "n_genes": 1000,
+   "time_s": 2952,
+   "mean_steps": 252,
+   "divergences": 23,
+   "rhat_max": 1.067,
+   "ess_min": 55,
+   "ess_min_per_min": 1.13,
+   "frac_rmse": 0.0612,
+   "frac_cov90": 0.658,
+   "delta_mae": 0.0736,
+   "delta_cov90": 0.869,
+   "eff_mae": 0.0255,
+   "eff_cov90": 0.821,
+   "conv": {
+    "a": [
+     1.059,
+     58
+    ],
+    "gamma": [
+     1.038,
+     96
+    ],
+    "pi": [
+     1.034,
+     63
+    ],
+    "kappa": [
+     1.018,
+     83
+    ],
+    "beta": [
+     1.017,
+     170
+    ],
+    "delta": [
+     1.024,
+     55
+    ],
+    "I": [
+     1.017,
+     151
+    ],
+    "K": [
+     1.067,
+     59
+    ]
+   },
+   "config": {
+    "dispersion": "fixed"
+   }
+  },
+  "depth8": {
+   "n_genes": 1000,
+   "time_s": 3425,
+   "mean_steps": 245,
+   "divergences": 63,
+   "rhat_max": 1.258,
+   "ess_min": 5,
+   "ess_min_per_min": 0.09,
+   "frac_rmse": 0.0719,
+   "frac_cov90": 0.664,
+   "delta_mae": 0.0786,
+   "delta_cov90": 0.841,
+   "eff_mae": 0.0231,
+   "eff_cov90": 0.857,
+   "conv": {
+    "a": [
+     1.206,
+     15
+    ],
+    "gamma": [
+     1.163,
+     20
+    ],
+    "pi": [
+     1.229,
+     8
+    ],
+    "kappa": [
+     1.178,
+     5
+    ],
+    "beta": [
+     1.047,
+     30
+    ],
+    "delta": [
+     1.258,
+     6
+    ],
+    "theta": [
+     1.047,
+     32
+    ],
+    "I": [
+     1.029,
+     31
+    ],
+    "K": [
+     1.235,
+     18
+    ]
+   },
+   "config": {
+    "max_tree_depth": 8
+   }
+  },
+  "all": {
+   "n_genes": 1000,
+   "time_s": 2168,
+   "mean_steps": 190,
+   "divergences": 8,
+   "rhat_max": 1.357,
+   "ess_min": 2,
+   "ess_min_per_min": 0.05,
+   "frac_rmse": 0.0626,
+   "frac_cov90": 0.632,
+   "delta_mae": 0.0759,
+   "delta_cov90": 0.85,
+   "eff_mae": 0.0264,
+   "eff_cov90": 0.821,
+   "conv": {
+    "a": [
+     1.095,
+     9
+    ],
+    "gamma": [
+     1.074,
+     80
+    ],
+    "pi": [
+     1.056,
+     31
+    ],
+    "kappa": [
+     1.357,
+     2
+    ],
+    "beta": [
+     1.266,
+     3
+    ],
+    "delta": [
+     1.088,
+     6
+    ],
+    "I": [
+     1.222,
+     3
+    ],
+    "K": [
+     1.065,
+     67
+    ]
+   },
+   "config": {
+    "dense_mass": "globals",
+    "dispersion": "fixed",
+    "max_tree_depth": 8
+   }
+  },
+  "long_fixed": {
+   "n_genes": 1000,
+   "time_s": 3646,
+   "mean_steps": 251,
+   "divergences": 46,
+   "rhat_max": 1.047,
+   "ess_min": 104,
+   "ess_min_per_min": 1.71,
+   "frac_rmse": 0.0614,
+   "frac_cov90": 0.658,
+   "delta_mae": 0.0734,
+   "delta_cov90": 0.862,
+   "eff_mae": 0.0251,
+   "eff_cov90": 0.821,
+   "conv": {
+    "a": [
+     1.012,
+     295
+    ],
+    "gamma": [
+     1.006,
+     249
+    ],
+    "pi": [
+     1.024,
+     146
+    ],
+    "kappa": [
+     1.047,
+     104
+    ],
+    "beta": [
+     1.005,
+     231
+    ],
+    "delta": [
+     1.025,
+     149
+    ],
+    "I": [
+     1.005,
+     241
+    ],
+    "K": [
+     1.015,
+     185
+    ]
+   },
+   "config": {
+    "dispersion": "fixed",
+    "warmup": 1000,
+    "samples": 1000
+   }
+  },
+  "long_fixed_noreparam": {
+   "n_genes": 1000,
+   "time_s": 4381,
+   "mean_steps": 508,
+   "divergences": 28,
+   "rhat_max": 1.013,
+   "ess_min": 176,
+   "ess_min_per_min": 2.41,
+   "frac_rmse": 0.0619,
+   "frac_cov90": 0.658,
+   "delta_mae": 0.0737,
+   "delta_cov90": 0.865,
+   "eff_mae": 0.0249,
+   "eff_cov90": 0.821,
+   "conv": {
+    "a": [
+     1.0,
+     1321
+    ],
+    "gamma": [
+     1.0,
+     1415
+    ],
+    "pi": [
+     1.013,
+     176
+    ],
+    "kappa": [
+     1.006,
+     219
+    ],
+    "beta": [
+     1.007,
+     483
+    ],
+    "delta": [
+     1.01,
+     243
+    ],
+    "I": [
+     1.007,
+     473
+    ],
+    "K": [
+     1.004,
+     597
+    ]
+   },
+   "config": {
+    "dispersion": "fixed",
+    "reparam": false,
+    "warmup": 1000,
+    "samples": 1000
+   }
+  }
+ },
+ "provenance": {
+  "git_commit": "5bf3956f53fd98d3f99ad239b1dec05f45ba0ebb",
+  "git_dirty": true,
+  "versions": {
+   "palm-bulk": "0.1.0",
+   "numpy": "2.5.3",
+   "scipy": "1.18.1",
+   "pandas": "3.0.6",
+   "jax": "0.11.2",
+   "jaxlib": "0.11.2",
+   "numpyro": "0.22.0",
+   "anndata": "0.13.4",
+   "decoupler": "2.2.0",
+   "torch": "2.10.0"
+  },
+  "python": "3.12.15",
+  "os": "Windows-11-10.0.26100-SP0",
+  "platform": "cpu",
+  "precision": "float32",
+  "time": "2026-10-20T16:52:10",
+  "argv": [
+   "-",
+   "C:/Users/duy.pham/AppData/Local/Temp/claude/c--Users-duy-pham-Documents-dev-program2cell/b875f444-1629-495a-aa3c-bfbe4949eb3b/scratchpad"
+  ],
+  "settings": {
+   "data": "pbmc_broad_clean.h5ad",
+   "seed": 0,
+   "warmup": 500,
+   "samples": 500,
+   "chains": 2,
+   "max_genes": 1000
+  }
+ }
+}

@@ -7,7 +7,7 @@ per-cell-type expression another method outputs (BayesPrism Z, CIBERSORTx high-r
 All are then compared on one scale.
 """
 import numpy as np
-from scipy.special import softmax
+from scipy.special import logsumexp, softmax
 
 
 def estimate_delta(X, B, G, ridge=1e-3, scale_to=None, min_total=0.0, max_iter=100, tol=1e-8):
@@ -20,8 +20,10 @@ def estimate_delta(X, B, G, ridge=1e-3, scale_to=None, min_total=0.0, max_iter=1
     scale_to: rescale every profile to this many pseudo-counts first (for normalised expression,
         e.g. 1e5); None uses X as given, which weights each profile by its real depth.
     min_total: profiles with total below this (e.g. a cell type absent from a sample) give nan.
-    Returns delta (..., C, P). The log-likelihood is concave, so Newton steps converge; steps are
-    capped at 1 per coordinate for safety far from the optimum."""
+    Returns delta (..., C, P). The log-likelihood is concave; Newton steps with backtracking (halve the
+    step of a profile until its penalised log-likelihood does not decrease) converge from any start.
+    A fixed cap on the step does not: with program weights of ~10 or more (raw PROGENy weights), a
+    capped step of 1 moves genes by e^10 and the iteration can cycle (it did on IFN-beta data)."""
     X = np.asarray(X, float)
     G = np.asarray(G, float)
     logB = np.log(np.broadcast_to(np.asarray(B, float), X.shape))
@@ -33,15 +35,33 @@ def estimate_delta(X, B, G, ridge=1e-3, scale_to=None, min_total=0.0, max_iter=1
     d = np.zeros(X.shape[:-1] + (P,))
     eye = np.eye(P)
     GX = np.einsum("pg,...g->...p", G, X)
+    XlogB = np.einsum("...g,...g->...", X, np.where(X > 0, logB, 0.0))
+
+    def objective(dd):
+        eta = logB + np.einsum("...p,pg->...g", dd, G)
+        return (XlogB + np.einsum("...p,...p->...", dd, GX) - n * logsumexp(eta, axis=-1)
+                - 0.5 * ridge * np.einsum("...p,...p->...", dd, dd))
+
+    f = objective(d)
     for _ in range(max_iter):
         E = softmax(logB + np.einsum("...p,pg->...g", d, G), axis=-1)
         GE = np.einsum("pg,...g->...p", G, E)
         grad = GX - n[..., None] * GE - ridge * d
         H = n[..., None, None] * (np.einsum("pg,qg,...g->...pq", G, G, E, optimize=True)
                                   - GE[..., :, None] * GE[..., None, :]) + ridge * eye
-        step = np.clip(np.linalg.solve(H, grad[..., None])[..., 0], -1.0, 1.0)
-        d = d + step
-        if np.abs(step).max(initial=0.0) < tol:
+        step = np.linalg.solve(H, grad[..., None])[..., 0]
+        alpha = np.ones(d.shape[:-1])
+        for _ in range(40):                                    # backtracking, per profile
+            cand = d + alpha[..., None] * step
+            fc = objective(cand)
+            bad = ~(fc >= f - 1e-9 * np.abs(f))
+            if not bad.any():
+                break
+            alpha = np.where(bad, alpha / 2, alpha)
+        alpha = np.where(bad, 0.0, alpha)                       # no ascent found: stay (at the optimum)
+        d = d + alpha[..., None] * step
+        f = np.where(bad, f, fc)
+        if np.abs(alpha[..., None] * step).max(initial=0.0) < tol:
             break
     return np.where((n > min_total)[..., None] if min_total > 0 else (n > 0)[..., None], d, np.nan)
 

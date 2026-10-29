@@ -67,7 +67,7 @@ def test_select_genes_union_when_programs_exceed_budget():
         W[p, rng.choice(Gn, 600, replace=False)] = rng.normal(0, 1, 600)
     prog = pd.DataFrame(W, index=["P%d" % p for p in range(P)], columns=genes)
     bulk = pd.DataFrame(rng.poisson(50, (Gn, 6)), index=genes)
-    sel, info = pb.select_genes(ref, bulk, prog, max_genes=400, return_info=True)
+    sel, info = pb.select_genes(ref, bulk, prog, max_genes=400, return_info=True, method="groups")
     assert len(sel) == len(set(sel)) == 400
     assert info["sizes"] == {"programs": 180, "markers": 120, "hvg": 40, "anchors": 60}
     per_prog = (prog[sel].abs() > 0).sum(axis=1)
@@ -83,9 +83,10 @@ def test_select_genes_filters_unexpressed_and_undetected(world):
     _, B, G, ref, prog, genes = world
     bulk = pd.DataFrame(np.ones((len(genes), 5)), index=genes)
     bulk.iloc[0] = 0                                              # never detected in bulk
-    sel = pb.select_genes(ref, bulk, prog, max_genes=150)
-    assert genes[0] not in sel
-    assert all(ref.B[:, genes.index(g)].max() * 1e6 >= 2 for g in sel)
+    for method in ("fisher", "groups"):
+        sel = pb.select_genes(ref, bulk, prog, max_genes=150, method=method)
+        assert genes[0] not in sel
+        assert all(ref.B[:, genes.index(g)].max() * 1e6 >= 2 for g in sel)
 
 
 def test_hvg_scores_rank_variable_gene_first():

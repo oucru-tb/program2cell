@@ -14,6 +14,10 @@ sc <- readMM(file.path(wd, "sc_counts.mtx"))
 genes <- readLines(file.path(wd, "sc_genes.txt"))
 labels <- readLines(file.path(wd, "sc_labels.txt"))
 sc <- t(as.matrix(sc))                       # cells x genes (BayesPrism wants dense)
+# cleanup.genes matches symbols ignoring case and fails on duplicates (e.g. C15orf37 and C15ORF37 in
+# McFarland): keep the first of each case-insensitive name
+keep <- !duplicated(toupper(genes))
+sc <- sc[, keep, drop = FALSE]; genes <- genes[keep]
 colnames(sc) <- genes
 rownames(sc) <- paste0("cell", seq_len(nrow(sc)))
 bulk <- read.csv(file.path(wd, "bulk_counts.csv"), row.names = 1, check.names = FALSE)

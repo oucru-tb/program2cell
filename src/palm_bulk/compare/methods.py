@@ -6,6 +6,8 @@
                   (the expectation step of BayesPrism with a fixed reference), then programs
                   per cell type; pure Python, no extra software
   bayesprism      BayesPrism (R)                        -> per-type expression -> programs
+  cellgeometry    cellGeometry (R, CRAN)                -> fractions; activity by reallocation
+  cibersort       CIBERSORT (R script v1.02, nu-SVR)    -> fractions; activity by reallocation
   cibersortx      CIBERSORTx fractions + high-resolution (Docker, needs a token) -> programs
   blade           BLADE (Python, run in its own environment)                     -> programs
   toast, tca      cell-type-specific differential expression (R) -> program effects only
@@ -108,12 +110,13 @@ def _write_sc_mtx(data, d, cells, genes_mask=None):
 
 
 # ---- PALM ---------------------------------------------------------------------------
-def palm(data, **run_kw):
-    """PALM-bulk on data.inputs (keyword arguments go to run_palm)."""
+def palm(data, fast=False, **run_kw):
+    """PALM-bulk on data.inputs (keyword arguments go to run_palm, or to run_palm_fast if fast=True)."""
     from ..bayes.pipeline import run_palm
+    from ..bayes.twostage import run_palm_fast
     from ..bayes.diagnostics import interval
     t0 = time.time()
-    res = run_palm(data.inputs, **run_kw)
+    res = (run_palm_fast if fast else run_palm)(data.inputs, **run_kw)
     d = res.draws
     iv = dict(fractions=interval(d["pi"]))
     act = eff = None
@@ -124,8 +127,16 @@ def palm(data, **run_kw):
         if res.has_treatment:
             beta = d["beta"] if not res.grouped else d["beta"][:, data.inputs.groups]
             eff, iv["effects"] = np.median(beta, 0), interval(beta)
-    return MethodResult("palm", fractions=np.median(d["pi"], 0), activity=act, effects=eff, intervals=iv,
-                        runtime=time.time() - t0, notes="diagnostics: %s" % res.diagnostics())
+    notes = "diagnostics: %s" % res.diagnostics()
+    if fast:
+        notes += "; stage1: %s; timing: %s" % (d["stage1"], d["timing"])
+    return MethodResult("palm_fast" if fast else "palm", fractions=np.median(d["pi"], 0), activity=act,
+                        effects=eff, intervals=iv, runtime=time.time() - t0, notes=notes)
+
+
+def palm_fast(data, **run_kw):
+    """Two-stage PALM (bayes.twostage.run_palm_fast); keyword arguments go to it."""
+    return palm(data, fast=True, **run_kw)
 
 
 # ---- pure-Python baselines --------------------------------------------------------------
@@ -187,6 +198,112 @@ def bayesprism(data, n_cores=4, max_cells_per_type=1000, activity="delta", speci
     Z = _align_type_expression(per_type, data)
     return _finish("bayesprism", data, frac, Z, activity, t0,
                    notes="%d reference cells; %d genes after cleanup" % (len(cells), len(used)))
+
+
+# ---- cellGeometry (R) ---------------------------------------------------------------------
+def cellgeometry(data, arith_mean=True, use_filter=False, npass=1, nsubclass=25, max_cells_per_type=None,
+                 activity="realloc", rscript=None, timeout=None):
+    """cellGeometry (Lau et al., Nat Commun 2026; CRAN). Needs R with cellGeometry (and ComplexHeatmap,
+    ensembldb from Bioconductor). Non-negative geometric deconvolution: signature genes by vector angle,
+    projection with per-type compensation shrunk to keep counts >= 0.
+    arith_mean/use_filter: the authors' settings for simulated pseudo-bulk (arithmetic-mean signature,
+    no noise filter); for real bulk they recommend arith_mean=False, use_filter=True. npass > 1 removes
+    outlier genes (|Z| > 4 on the residual variance) over that many passes.
+    Output is cells per type; it is turned into read fractions on the modelled genes with each type's
+    reads per cell on the signature genes. cellGeometry gives no per-type expression, so activity is
+    'realloc' (bulk counts split by its fractions x the reference profiles, then per-type programs, as
+    in `reallocation`) or None."""
+    rs = rscript or find_rscript()
+    if not rs:
+        raise MethodUnavailable("Rscript not found (set PALM_RSCRIPT or add R to PATH)")
+    t0 = time.time()
+    d = data.method_dir("cellgeometry")
+    cells = data.subsample_cells(max_cells_per_type)
+    _write_sc_mtx(data, d, cells)
+    fwd, back = safe_names(data.inputs.cell_types, "ct")
+    pd.Series([fwd[c] for c in data.sc_cell_types[cells]]).to_csv(os.path.join(d, "sc_labels.txt"),
+                                                                  index=False, header=False)
+    _write_bulk(data, os.path.join(d, "bulk_counts.csv"))
+    run_command(_as_cmd(rs) + [os.path.join(HERE, "R", "run_cellgeometry.R"), d, int(arith_mean), int(use_filter),
+                               npass, nsubclass], d, "cellgeometry", timeout)
+    out = pd.read_csv(os.path.join(d, "output.csv"), index_col=0).rename(columns=back)
+    sig = pd.read_csv(os.path.join(d, "signature.csv"), index_col=0).rename(columns=back)
+    out.index = data.bulk.columns                                  # deconvolute keeps the bulk column order
+    cells_per_type = out.reindex(columns=data.inputs.cell_types).clip(lower=0).values
+    # reads from each type = cells x that type's mean reads per reference cell (all genes); the signature
+    # is on cellGeometry's internal scale (columns sum to about the same), so it cannot give the depth
+    X = data.sc_csr()[cells]
+    lib = np.asarray(X.sum(1)).ravel()
+    labs = data.sc_cell_types[cells]
+    reads = cells_per_type * np.array([lib[labs == c].mean() for c in data.inputs.cell_types])[None, :]
+    frac = reads / reads.sum(1, keepdims=True)
+    frac = to_modelled_read_fractions(frac, data)
+    frac = pd.DataFrame(frac, index=data.bulk.columns).reindex(data.inputs.samples).values
+    Z = None
+    if activity == "realloc":
+        inp = data.inputs
+        w = frac[:, :, None] * inp.B[None]
+        Z = inp.Y[:, None, :] * w / w.sum(1, keepdims=True)
+    return _finish("cellgeometry", data, frac, Z, "delta", t0,
+                   notes="%d signature genes; arith_mean=%s use_filter=%s npass=%d" % (len(sig), arith_mean,
+                                                                                      use_filter, npass))
+
+
+# ---- CIBERSORT (R) ----------------------------------------------------------------------------
+def cibersort_signature(data, n_markers=100, min_cpm=10.0, max_cells_per_type=None):
+    """(genes, S): marker genes and their reference profiles (C columns, reads per million over all
+    genes). Markers: for each cell type the n_markers genes with the largest log2 fold change of its
+    profile over the highest other type, among genes with >= min_cpm in that type. The CIBERSORT R
+    script cannot build signatures (that is CIBERSORTx), so this is the LM22-style stand-in."""
+    cells = data.subsample_cells(max_cells_per_type)
+    X = data.sc_csr()[cells]
+    labs = data.sc_cell_types[cells]
+    prof = np.array([np.asarray(X[labs == c].sum(0)).ravel() for c in data.inputs.cell_types])
+    prof = prof / prof.sum(1, keepdims=True) * 1e6                              # (C, G) CPM
+    lp = np.log2(prof + 1)
+    pick = set()
+    for c in range(len(prof)):
+        other = np.delete(lp, c, axis=0).max(0)
+        lfc = np.where(prof[c] >= min_cpm, lp[c] - other, -np.inf)
+        top = np.argsort(-lfc)[:n_markers]
+        pick.update(top[np.isfinite(lfc[top])].tolist())
+    idx = np.array(sorted(pick))
+    return [data.sc_genes[i] for i in idx], prof[:, idx].T
+
+
+def cibersort(data, n_markers=100, qn=False, max_cells_per_type=None, activity="realloc", rscript=None,
+              timeout=None):
+    """CIBERSORT (Newman et al., Nat Methods 2015), the published R script (compare/R/CIBERSORT.R:
+    nu-SVR with a linear kernel, nu in {0.25, 0.5, 0.75}, best by RMSE). Needs R with e1071 and
+    preprocessCore. Signature: cibersort_signature (marker genes, reference CPM over all genes);
+    mixture: bulk CPM over all genes; qn=False, as advised for RNA-seq. Because the signature columns
+    are shares of all reads, the normalised weights are read fractions over all genes; they are moved
+    to the modelled genes. No per-type expression, so activity is 'realloc' as for cellGeometry."""
+    rs = rscript or find_rscript()
+    if not rs:
+        raise MethodUnavailable("Rscript not found (set PALM_RSCRIPT or add R to PATH)")
+    t0 = time.time()
+    d = data.method_dir("cibersort")
+    genes, S = cibersort_signature(data, n_markers, max_cells_per_type=max_cells_per_type)
+    fwd, back = safe_names(data.inputs.cell_types, "ct")
+    pd.DataFrame(S, index=genes, columns=[fwd[c] for c in data.inputs.cell_types]).to_csv(
+        os.path.join(d, "signature.txt"), sep="\t", index_label="gene")
+    mix = data.bulk / data.bulk.sum(axis=0) * 1e6
+    mix.reindex(genes).dropna().to_csv(os.path.join(d, "mixture.txt"), sep="\t", index_label="gene")
+    run_command(_as_cmd(rs) + [os.path.join(HERE, "R", "run_cibersort.R"), d,
+                               os.path.join(HERE, "R", "CIBERSORT.R"), int(qn)], d, "cibersort", timeout)
+    w = pd.read_csv(os.path.join(d, "fractions.csv"), index_col=0).rename(columns=back)
+    w.index = mix.columns
+    frac = w.reindex(index=data.inputs.samples, columns=data.inputs.cell_types).fillna(0).values
+    frac = frac / np.clip(frac.sum(1, keepdims=True), 1e-12, None)
+    frac = to_modelled_read_fractions(frac, data)
+    Z = None
+    if activity == "realloc":
+        inp = data.inputs
+        wt = np.clip(frac, 1e-4, None)[:, :, None] * inp.B[None]
+        Z = inp.Y[:, None, :] * wt / wt.sum(1, keepdims=True)
+    return _finish("cibersort", data, frac, Z, "delta", t0,
+                   notes="%d signature genes (%d markers per type); QN=%s" % (len(genes), n_markers, qn))
 
 
 # ---- CIBERSORTx (Docker) --------------------------------------------------------------------
@@ -367,7 +484,8 @@ def tca(data, fractions=None, **kw):
     return _csde("tca", data, fractions, **kw)
 
 
-METHODS = dict(palm=palm, naive_two_step=naive_two_step, reallocation=reallocation, bayesprism=bayesprism,
+METHODS = dict(palm=palm, palm_fast=palm_fast, naive_two_step=naive_two_step, reallocation=reallocation, bayesprism=bayesprism,
+               cellgeometry=cellgeometry, cibersort=cibersort,
                cibersortx=cibersortx, blade=blade, toast=toast, tca=tca)
 
 

@@ -206,7 +206,8 @@ class PalmResult:
         return outdir
 
 
-def estimate_runtime(inputs, use_m=True, dispersion="gene", num_warmup=200, num_samples=400,
+def estimate_runtime(inputs, use_m=True, dispersion="fixed", num_warmup=200, num_samples=400, reparam=False,
+                     activity="independent",
                      chains=2, n_eval=10):
     """Predict fit time before fitting: times one gradient of the model on these inputs and
     multiplies by the gradients NUTS needs. NUTS uses 2^k - 1 gradients per iteration; small
@@ -215,7 +216,13 @@ def estimate_runtime(inputs, use_m=True, dispersion="gene", num_warmup=200, num_
     once (configure_compute(parallel_chains=...) or a GPU)."""
     from numpyro.infer.util import initialize_model
     args, n_prog, _ = model_args(inputs.Y, inputs.L, inputs.T, inputs.B, inputs.Gmat, inputs.X)
-    model = make_model(use_m, dispersion=dispersion, n_prog=n_prog, groups=getattr(inputs, "groups", None))
+    theta = None
+    if dispersion == "fixed":
+        from ..core.data import gene_dispersion
+        from .fit import gene_order
+        theta = gene_dispersion(np.asarray(inputs.Y, float))[gene_order(inputs.Gmat)]
+    model = make_model(use_m, theta=theta, reparam=reparam, dispersion=dispersion, n_prog=n_prog,
+                       groups=getattr(inputs, "groups", None), activity=activity)
     info = initialize_model(jax.random.PRNGKey(0), model, model_args=args)
     f = jax.jit(jax.value_and_grad(info.potential_fn))
     z = info.param_info.z
@@ -236,18 +243,22 @@ FLOAT32_WARN_SIZE = 20000     # samples x genes above which float32 rounding dis
 
 
 def run_palm(inputs, use_m=True, theta=None, num_warmup=200, num_samples=400, chains=2, seed=0,
-             level=0.9, progress_bar=False, chain_method="auto", dispersion="gene", reparam=False,
-             init="svi", svi_steps=3000, check=True):
+             level=0.9, progress_bar=False, chain_method="auto", dispersion="fixed", reparam=False,
+             init="svi", svi_steps=3000, check=True, dense_mass=False, max_tree_depth=10,
+             activity="independent"):
     """Fit the Bayesian model on prepared inputs (see palm_bulk.data.prepare_inputs).
     use_m=True fits a gene-wise platform scale (recommended for real bulk vs scRNA references).
-    theta=None samples the NB dispersion; pass a float to fix it. dispersion='gene' (default) gives
-    each gene its own dispersion. Covariates and lineage grouping set in prepare_inputs are used
+    activity: 'independent' (default), 'shared' or 'shared_only'; see bayes.model.make_model.
+    dispersion='fixed' (default) estimates one NB dispersion per gene from the bulk counts and keeps it
+    fixed; 'gene' samples them (slower, wider effect intervals); theta= fixes them to given values. Covariates and lineage grouping set in prepare_inputs are used
     automatically. init='svi' (default) starts NUTS from a short VI fit, so warmup can be short.
     chain_method='auto' runs chains in parallel when `configure_compute` made enough devices
-    available (or batched on a GPU), else one after another. reparam: see bayes.fit.fit.
+    available (or batched on a GPU), else one after another. reparam, dense_mass, max_tree_depth:
+    sampler options, see bayes.fit.fit; on the PBMC benchmark none of them beat the defaults
+    (benchmarks/sampler_speed_pbmc.json).
     chains=2 by default so R-hat can detect chains that disagree; check=True warns when R-hat,
     effective sample size or divergences fail (see res.diagnostics() and res.convergence()).
-    Defaults follow benchmarks/calibration."""
+    Defaults follow benchmarks/calibration and benchmarks/sampler_speed_pbmc.json."""
     if not jax.config.jax_enable_x64 and inputs.Y.size >= FLOAT32_WARN_SIZE:
         warnings.warn("float32 with %d samples x %d genes: rounding error in the likelihood can shrink the "
                       "NUTS step size and degrade results. Call pb.configure_compute(precision='float64') at the "
@@ -256,7 +267,8 @@ def run_palm(inputs, use_m=True, theta=None, num_warmup=200, num_samples=400, ch
                 num_warmup=num_warmup, num_samples=num_samples, chains=chains, seed=seed,
                 progress_bar=progress_bar, chain_method=chain_method, dispersion=dispersion,
                 reparam=reparam, init=init, svi_steps=svi_steps, X=inputs.X,
-                groups=getattr(inputs, "groups", None))
+                groups=getattr(inputs, "groups", None), dense_mass=dense_mass, max_tree_depth=max_tree_depth,
+                activity=activity)
     res = PalmResult(inputs, draws, level=level)
     if check:
         problems = res.diagnostics()["problems"]

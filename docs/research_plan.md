@@ -1,6 +1,6 @@
 # PALM-bulk research plan: two papers
 
-*Status as of 2026-10-16. Owner: Duy Pham.*
+*Status as of 2026-10-29. Owner: Duy Pham.*
 
 ## 1. Summary
 
@@ -61,11 +61,14 @@ Done (2026-10-19): `palm_bulk.core` (equations on numpy/JAX/torch, `estimate_del
 | New defaults combined (VI + gene dispersion) | coverage 0.91–0.94; ~40% faster per fit | calibration |
 | float32 breaks at real-data scale | step size 330x smaller; fraction RMSE 0.018 vs 0.0105 in float64 | benchmarks/precision.json |
 | Zero-sum reparameterisation | mixed: fractions 1.8x more efficient, worst effect 2x worse; kept opt-in | calibration, sampler.json |
+| Fixed per-gene dispersion (PBMC) | 4x faster than sampled; min ESS 16 → 176 at R-hat 1.013; effect coverage 0.89 → 0.82 | sampler_speed_pbmc.json |
+| Dense mass for globals / tree depth 8 (PBMC) | cheaper iterations but chains disagree (R-hat 1.26–1.36); not used | sampler_speed_pbmc.json |
+| Direct NB log density | same values and gradients as numpyro's; gradient 9–12 ms → 3.5–4.3 ms | test_core, profiling |
 | Demo recovery | fraction RMSE 0.012; per-cell-type response coverage 95% | tutorial |
 
 ### 3.3 Defaults (decided)
 
-`init="svi"`, `num_warmup=200`, `dispersion="gene"`, `precision="float64"` for real data (float32 only for small problems), covariates whenever known, `reparam=False`.
+`init="svi"`, `num_warmup=200`, `dispersion="fixed"` (per-gene NB dispersion estimated once from the bulk; `"gene"` samples it), `precision="float64"` for real data (float32 only for small problems), covariates whenever known, `reparam=False`, `gene_selection="fisher"` (gene-budget study). The dispersion and reparam choices come from benchmarks/sampler_speed_pbmc.json (2026-10-20): fixed dispersion gave 15–25x more effective draws per minute and R-hat 1.013 at 1000+1000 draws; reparam, a dense mass block and a tree-depth cap did not help. Cost: effect-interval coverage 0.89 → 0.82, so final analyses may use `dispersion="gene"`.
 Annotation level: up to ~20 cell types → full model. More than 20 → two stages (composition-only fine fractions, then full model on a level-1 reference) or `program_groups="lineage"`.
 
 ### 3.4 Remaining work for Paper 1
@@ -90,21 +93,394 @@ Annotation level: up to ~20 cell types → full model. More than 20 → two stag
 - Require ~50–100 cells per cell type per sample for per-type program truth.
 - **Never** build the reference from the test donors (leakage).
 
-### 3.6 Paper 1 outline
+### 3.6 Positioning and claims (revised 2026-10-28, after the literature check)
 
-1. Introduction: bulk cohorts are large; one bulk program score confounds "which cells" and "how active"; two-step approaches lack uncertainty and effect decomposition.
-2. Results: model overview → calibration and identifiability limits (E1) → PBMC pseudo-bulk vs competitors and level guidance (E2) → known stimulation (E3) → paired tissue real bulk (E4) → (application) → practical guidance and scaling.
-3. Discussion: what bulk can and cannot identify; missing cell types; causal limits.
-4. Methods; code and data (package, tutorial, benchmark scripts, Zenodo).
+**Positioning.** Cell-type-specific program activity is already inferred from bulk data, but only
+indirectly, never against a ground truth, and without uncertainty. PALM is the first framework that
+measures how wrong those estimates are, corrects them, and gives valid intervals.
 
-### 3.7 Novelty positioning (from quick literature search)
+**One-sentence claim:**
+> PALM estimates the activity of prior-defined gene programs (pathways, TF regulons) in each cell type of
+> each bulk sample, with calibrated uncertainty, and comes with a ground-truth benchmark showing the
+> errors of current practice and how to correct them.
 
-- Existing: fractions only (CIBERSORTx, MuSiC, Bisque); fractions + gene-level per-cell-type expression (BayesPrism, BLADE, BayesPrism-DWLS, BLUE, EPIC-unmix, TCA, bMIND, ENIGMA); csDE from bulk (TOAST, CellDMC, CARseq, TCA); two-step cell-type pathway analysis (IPF preprint 2024; GTM-decon); within-type states in spatial data (DestVI).
-- Our difference: program-level latent structure (far fewer unknowns than gene-level); attribution with uncertainty; exact intrinsic/composition split with intervals; calibration as a design goal.
-- Main reviewer question: "Isn't this BayesPrism + PROGENy?" Answer with a head-to-head comparison.
-- To do before writing: a systematic literature search (PubMed, bioRxiv, Scholar, 2023–2026).
+**Contributions, strongest first.** Numbers are from the dev splits; final numbers come from the held-out
+splits 10+.
+
+1. **The first ground-truth benchmark for program deconvolution, and the failure modes it reveals.**
+   - **Current practice is unchecked.** People deconvolve and then score pathways (CIBERSORTx, BayesPrism,
+     BLADE), or correlate NMF programs with fractions. Nobody has tested these against a truth.
+   - **Our truth:** held-out halves of real cells (binomial thinning) on PBMC/COVID, OneK1K and Kang IFN-β,
+     a real stimulation.
+   - **Attenuation:** a cell type's own shift is recovered at about 0.4× even with perfect fractions.
+   - **Leakage:** other cell types' shifts contaminate minor types.
+   - **Localisation:** bulk-level scoring finds the right cell type only at chance (0.25 with 4 types);
+     reallocation reaches 0.7–1.0.
+2. **Calibrated uncertainty at program level, for the first time.**
+   - Uncorrected intervals cover 15–22%, and 17–25% of "significant" effects have the wrong sign.
+   - Calibration on the reference donors reaches activity coverage of about 0.87–0.90 (PBMC, OneK1K).
+   - The leakage-aware effect interval reaches 0.88–0.96 coverage, with a PBMC false sign rate of about
+     0.05.
+   - It works with any fraction source: posterior draws, a rerunnable method, or a point estimate (with a
+     PALM-lite proxy for its error).
+3. **Fractions are the lever, and PALM's are the best.**
+   - **Kang:** fraction RMSE 0.025–0.031 vs 0.057–0.082 for cellGeometry and CIBERSORT, so 2–3× lower.
+     Activity reaches the true-fraction ceiling.
+   - **Activity ρ:** never worse than any competitor; +0.02 to +0.03 over cellGeometry and CIBERSORT, up to
+     +0.20 over NNLS with rich priors.
+   - **Type-specific ρ:** +0.06 to +0.09 over PALM-lite, which is what the Bayesian fit buys.
+4. **Fit once, use any prior set.** Fractions fitted with PROGENy-7 and reused under Hallmark or CollecTRI
+   match a native fit (ρ 0.789 vs 0.787) at about 1/15 of the cost. The program set becomes an analysis
+   choice.
+5. **A module for any deconvolution output.** `program_deconvolution` turns PALM, PALM-lite (under 1 s) or
+   any method's fractions into calibrated program activity and effects. It answers "why not CIBERSORTx?"
+   by improving it.
+
+**Framing against prior work:**
+- **CIBERSORTx, BayesPrism, BLADE, CODEFACS, EPIC-unmix, BLUE:** recover per-type expression, then score
+  pathways. We show this attenuates and leaks, and we calibrate it. Our reallocation step belongs to this
+  family, done with better fractions.
+- **BayesPrism's embedding module, EcoTyper, Statescope:** unsupervised NMF programs or states. Correlating
+  them with fractions can't say which cell type carries a named program, or how strongly. We give named
+  programs per cell type, with intervals.
+- **Cell-type-specific differential expression (TOAST, TCA, CARseq, CellDMC; Brief Bioinform 2023
+  benchmark):** gene-level, with no program structure and no calibrated program effects.
+- **Single-cell or spatial methods with programs or states (Spectra, Tripso, DestVI):** a different data
+  type. They supply program definitions and motivation.
+
+**Claims to avoid:**
+- "First cell-type-specific pathway activity from bulk": BLADE and the IPF preprint (2024) claim it.
+- "Much more accurate": the gains over good competitors are +0.02 to +0.03.
+- Anything resting on the joint model's own δ: reallocation beats it.
+
+**Required before writing:**
+- A systematic search (PubMed, bioRxiv, Scholar, 2023–2026). Read the final Statescope paper (Nat Commun
+  2026), the IPF preprint's methods and the latest BLADE.
+- **Two explicit baselines:**
+  1. BayesPrism's per-type expression scored with PROGENy/decoupleR (already the `bayesprism` row).
+  2. NMF programs correlated with fractions, as in BayesPrism's embedding module.
+- PBMC numbers recomputed with the fixed `estimate_delta` (v2 run).
+- Kang activity coverage (0.70–0.83) is either fixed or reported as the limit of calibrating from a resting
+  reference.
+- Final numbers from the held-out splits 10+.
+
+### 3.7 Paper 1 outline and venue
+
+**Two arms:**
+- **Quantitative:** the benchmark above.
+- **Qualitative:** in-house disease cohorts from the lab, PALM vs one strong existing pipeline (e.g.
+  BayesPrism or CIBERSORTx expression + PROGENy, or cellGeometry + reallocation).
+
+**Outline:**
+1. **Introduction.** Bulk cohorts are large, and the question is "which cells change which programs". Current
+   answers are indirect and unvalidated, and nobody knows how wrong they are.
+2. **Results**
+   - **Framework:** fractions (PALM, PALM-lite or any method) → reallocation → calibration → effects.
+     Fit once, use any prior.
+   - **Ground truth and failure modes:** attenuation, leakage and localisation (PBMC, OneK1K), with
+     simulations for identifiability.
+   - **Head-to-head accuracy:** fractions, activity and effects vs NNLS, CIBERSORT, cellGeometry,
+     BayesPrism and NMF-correlation, across 4 prior sets.
+   - **Calibration:** coverage, false sign rate and interval score; uncorrected vs calibrated; behaviour
+     under null contrasts (OneK1K sex).
+   - **Real perturbation:** Kang IFN-β, a known answer (interferon programs in all types, strongest in
+     monocytes).
+   - **Disease applications (in-house):**
+     - Show where PALM and the existing pipeline disagree, and which is right. Use orthogonal evidence:
+       matched scRNA-seq or flow, sorted-cell data, histology, or a known biology anchor.
+     - Report effects with intervals, and how many effects the existing pipeline calls with the wrong sign
+       or in the wrong cell type.
+   - **Practical guidance:** when fractions matter, the gene budget, the choice of prior set, the
+     calibration set size (the Kang lesson), and runtime.
+3. **Discussion.** What bulk can and cannot identify (attenuation ceiling), missing cell types, a resting
+   reference vs perturbed samples, and causal limits.
+4. **Methods; code and data:** package, tutorial, benchmark scripts, Zenodo; the Kang and OneK1K builds
+   reproducible from public data.
+
+**The disease arm must be falsifiable, not anecdotal.**
+
+**Available data (2026-10-28):** in-house bulk RNA-seq and scRNA-seq of the same disease, from different
+patients (unpaired).
+- The scRNA-seq has both disease and control samples (confirmed), so all steps below use in-house data
+  only.
+
+**Validation design with unpaired data, in order of strength:**
+1. **In-domain ground truth.**
+   - Run the dev_bench design on the in-house scRNA-seq: per-donor pseudo-bulk with thinned held-out
+     halves, and reference donors separate from test donors.
+   - This shows that accuracy and calibration hold in this disease's cell types.
+2. **Cross-cohort replication.** This is the main quantitative-to-qualitative bridge.
+   - **scRNA-seq side:** true per-cell-type program shifts, disease vs control, computed with
+     `estimate_delta` on per-type pseudo-bulk.
+   - **Bulk side:** effects from PALM and from the existing pipeline, disease vs control.
+   - **Scores:** sign agreement, localisation (the same cell type carries each program), and correlation
+     over cell type × program.
+   - Both methods face the same cohort difference, so the comparison is fair.
+   - The larger bulk cohort can show effects with intervals that the scRNA-seq is underpowered to detect.
+3. **In-silico spike-ins in disease tissue.** Add a known program shift to one cell type of the scRNA-seq,
+   mix, and test localisation and calibration in this tissue.
+4. **Clinical utility.**
+   - Per-cell-type activity (PALM vs the existing pipeline vs plain bulk program scores) predicting
+     severity or outcome on held-out bulk samples.
+   - This shows value, not truth.
+5. **Optional targeted wet lab.** Confirm one or two calls where the methods disagree (IHC, flow, or qPCR
+   on sorted cells from archived samples). This is what makes the reach tier plausible.
+
+**Practical points:**
+- Use the scRNA-seq **control** donors as the PALM reference and calibration set; that's the realistic
+  resting reference.
+- Expect the Kang issue if disease effects are strong: activity coverage may fall short. Measure it in
+  step 1 and report it.
+
+**Tier by design:**
+- Steps 1 + 2 + 3: Genome Biology / Nature Communications.
+- Plus step 5: Nature Methods becomes plausible.
+- Without step 2: the arm is descriptive, which means the Cell Reports Methods / NAR tier.
+
+**Venue (decide after the held-out splits and the first disease cohort):**
+
+| Tier | Journals | What it needs |
+|---|---|---|
+| Reach | Nature Methods, Nature Biotechnology | A striking disease finding confirmed orthogonally; broad benchmark including spatial or more tissues; clear "current practice misleads" message |
+| **Main target** | **Nature Communications**, **Genome Biology** | The benchmark + calibration + module story with 3 public datasets + 1–2 disease cohorts with validation. Genome Biology is the natural home for methods with benchmarks (EPIC-unmix appeared there). Nature Communications published BLADE and Statescope. |
+| Solid | Cell Reports Methods, Cell Genomics, NAR, Briefings in Bioinformatics | The methods and benchmark alone, or disease arm without orthogonal validation |
+| Methods-only fallback | Bioinformatics, PLoS Computational Biology, NAR Genomics and Bioinformatics | If the disease arm is delayed |
+
+**Recommendation:** write for **Genome Biology** or **Nature Communications**. Present a reach submission
+to Nature Methods only if the disease arm yields a finding that the existing pipeline gets wrong (e.g.
+wrong cell type or wrong sign) and it is confirmed independently. The benchmark + calibration story is
+strong but incremental on accuracy (+0.02 to +0.03), so the "current practice is miscalibrated and
+mislocalises effects" message and the disease validation carry the impact.
+
+### 3.8 PALM as a program-deconvolution module on any method's fractions (design, 2026-10-27)
+
+**Idea.** Separate *composition* from *program deconvolution*. Any deconvolution method (cellGeometry,
+BayesPrism, CIBERSORTx, MuSiC, PALM itself) supplies the fractions. The PALM module turns bulk counts
+plus those fractions into per-sample, per-cell-type program activity δ, and design effects β, with
+calibrated intervals.
+
+This repositions PALM: it complements the fraction tools instead of competing with them. It also
+answers the reviewer question "isn't this BayesPrism + PROGENy?", because the module can be run on
+BayesPrism's own fractions.
+
+**Feasibility: already shown on the dev benchmark** (PBMC, 10 splits, PROGENy-7; posterior
+reallocation on each method's fractions):
+
+| Fractions from | Fraction RMSE | Activity ρ | Type-specific ρ | Effect r |
+|---|---|---|---|---|
+| NNLS | 0.117 | 0.791 | 0.23 | 0.44 |
+| BayesPrism (split 0 only; reference is pseudobulk rows) | 0.17 | 0.807 | 0.42 | 0.46 |
+| cellGeometry | 0.096 | 0.832 | 0.43 | 0.58 |
+| multinomial EM ("PALM-lite", 5–15 s per split) | 0.076 | 0.830 | 0.40 | 0.62 |
+| PALM | 0.062 | 0.849 | 0.48 | 0.65 |
+| truth (oracle) | 0 | 0.869 | 0.53 | 0.62 |
+
+- The module works with any fractions, and its activity accuracy rises with fraction accuracy.
+- PALM's own fractions are the best plug-in so far.
+- BayesPrism's own per-type expression gives ρ 0.69 on that split. The module on BayesPrism's
+  fractions gives 0.81, so the module also improves on BayesPrism's native expression output.
+
+**Pipeline.** Every step is closed form or a vectorised Newton step, so it runs in seconds.
+
+1. **Unit harmonisation.** Methods report different quantities:
+   - read fractions on their own gene set (BayesPrism θ);
+   - cell fractions (CIBERSORTx, MuSiC);
+   - cell amounts (cellGeometry).
+
+   All are converted to read fractions on the modelled genes, using the reference's RNA per cell and
+   each type's read mass on the gene sets (`compare.methods.to_modelled_read_fractions`, plus the
+   library-size conversion used for cellGeometry). A wrong unit was the cellGeometry bug: fraction
+   RMSE 0.229 against 0.093 after the fix. The module must therefore require a declared
+   `fraction_kind`.
+2. **Reallocation.** Bulk counts are split by π_ic B_cg / Σ_c π_ic B_cg.
+3. **Per-type program activity.** `estimate_delta` (the multinomial program shift relative to B_c) on
+   each type's share. ULM, or another decoupler method, is offered as an alternative scale.
+4. **Calibration on reference donors** (section 5c of `docs/benchmarking.md`).
+   - Cross-fitted pseudobulks from reference donors give an empirical map from reallocated δ̂ to true δ.
+   - A per (c,p) ridge corrects attenuation and leakage, and split-conformal residuals give activity
+     intervals.
+   - First result (calibration on true π): activity coverage 0.17 → 0.88, effect coverage 0.21 → 0.77.
+   - **Fraction-method error has to enter the calibration.** Three options, best first:
+     - (a) The user gives a callable `fraction_fn(bulk, reference)`, which the module runs on the
+       calibration pseudobulks. This captures that method's bias; cellGeometry takes about 1 minute,
+       BayesPrism about 25.
+     - (b) The method's own uncertainty (draws or standard errors, such as cellGeometry `se()`) is
+       propagated by resampling π.
+     - (c) Neither is available: calibrate on true π and report that the intervals ignore fraction
+       error.
+5. **Effects.** Regress calibrated δ on the design and covariates per (c,p), with OLS and sandwich
+   errors (or the calibrated variance), plus the coefficient uncertainty bootstrapped over calibration
+   donors.
+6. **Diagnostics,** estimated on the calibration set and reported to the user:
+   - own-type gain and leakage per (c,p);
+   - the effective detection limit per cell type: minor types such as B and NK cells have gain ≈ 0.15,
+     against 0.5 for monocytes and T cells.
+
+**API sketch:**
+
+```python
+res = pb.program_deconvolution(bulk, reference, programs, fractions,
+                               fraction_kind="cell" | "read" | "amount",
+                               fraction_genes=None, fraction_fn=None, fraction_draws=None,
+                               design=None, covariates=None, calibrate="reference_donors")
+res.activity, res.activity_interval, res.effects, res.effects_interval, res.diagnostics
+```
+
+`compare` would get a matching wrapper for each method ("X + PALM module"), so the benchmark becomes
+a matrix: fraction method × activity module. The activity modules are naive, BayesPrism Z,
+reallocation + ULM, and the PALM module.
+
+**Requirements and limits:**
+
+- The reference has to cover the same cell types as the fractions, and type names have to match.
+  Fractions for types missing from the reference cannot be used.
+- Calibration needs per-donor, per-type counts for several reference donors (pseudobulk by donor).
+  With a single-donor reference, the module falls back to cell-level bootstraps, and the intervals are
+  then weaker.
+- Systematic fraction bias (as with BayesPrism on our pseudobulk-row reference) passes into δ. Only
+  option (a) captures it.
+- Activity is relative to the reference profile B_c, so δ = 0 means "as in the reference donors".
+
+**Relation to full PALM.** The Bayesian model stays the joint route, for fractions with uncertainty
+and the stage-2 hierarchy. External fractions can also enter it as an informative prior on π, centred
+at the external estimate with its standard error. That is a second way to use other methods' output
+and is untested.
+
+**Next steps:**
+1. Implement `program_deconvolution` with calibration options (a)–(c).
+2. Wrappers in `compare` for cellGeometry, BayesPrism and NNLS fractions.
+3. Dev-bench rows "X + module" on 10 splits, both datasets, all four prior sets.
 
 ---
+
+### 3.9 Perturbation benchmarks, causal module and known-answer metrics (2026-10-28)
+
+**Why perturbation data.** Held-out thinning gives a truth for activity, but only interventions give a known
+*answer*: which cell type responds, with which program, and with what causal effect. They test our weak
+spots: strong shifts outside the calibration range, leakage under shared responses, and localisation.
+
+**Datasets (`pertpy`; `data/pert/`).** Each answers one question that the others cannot.
+
+| Dataset | Design | Question | Metric |
+|---|---|---|---|
+| Kang 2018 (done) | PBMC, IFN-β vs control, 8 donors, paired | Strong shared response; causal under randomisation | Activity / effect accuracy, coverage |
+| McFarland 2020 (MIX-Seq) | Pooled cancer lines, idasanutlin etc.; lines as "cell types", replicates by subsampling | **Localisation with a known answer:** p53 only in TP53-wild-type lines | `responder_auroc`, `leakage_fpr`, `responder_tpr` |
+| Zhang 2021 | TNBC patients' immune cells before and after paclitaxel ± atezolizumab (22 patients) | **Real clinical intervention, in vivo,** paired pre/post; weaker effects | Paired estimator (`groups=patient`), coverage, calls |
+| ~~Dong 2023 (CINEMA-OT)~~ | Dropped: 773 log-normalised genes, one donor | — | — |
+| Zhao 2021 (optional) | Drug-treated slices of resected tumours | Intervention in solid tissue | As Zhang |
+
+**Known-answer datasets to add (decided 2026-10-28; do not forget).** Selection rule: biology fixes which cell
+type should move which program, and in which direction. Programs are never derived from the same dataset.
+
+| Priority | Dataset | Design | Known answer | Notes |
+|---|---|---|---|---|
+| 1 | **sci-Plex 3** (Srivatsan 2020; `pt.data.srivatsan_2020_sciplex3`) | A549, K562, MCF7; 188 compounds × 4 doses | Line-specific responses by genotype or receptor (check which compounds: TP53-null K562 vs wild-type A549/MCF7; glucocorticoid receptor); HDAC inhibitors in all lines | Build like `build_mcfarland.py` (lines = "cell types"). Doses give the dose-response metric. |
+| 2 | **Monaco 2019** (GSE107011) | Real PBMC bulk + 29 sorted types + flow, same donors (4, plus an extended cohort of 13) | Fractions measured by flow in **real bulk**; activity truth from the sorted bulk of the same donor | Closes the "pseudobulk only" gap. One real-bulk set is enough for fractions. |
+| 3 | **Parse 10M PBMC cytokines** (2024) | 12 donors × 90 cytokines + PBS, 24 h, 18 cell types | Receptor-defined responders: IL-4 → STAT6 (B, monocytes), IL-2 → T/NK, GM-CSF → monocytes, IFN-γ → JAK-STAT (mostly myeloid) | Primary immune cells: the closest to the disease arm. **Check the licence first** (listed both as an open release and as a commercial product). |
+| 4 | **OP3 / NeurIPS PBMC** (Szałata 2024) | 144–146 compounds, 3 donors, PBMC | Compound targets (weaker answers) | Optional |
+| 4 | **1M-scBloodNL** (Oelen 2022) | 120 donors × 3 pathogens × 3 h / 24 h | Monocytes respond most; IFN at 3 h in monocytes | Realistic n for calibration and power; check raw-data access (likely EGA) |
+| 4 | **Immune Dictionary** (Cui 2024, Nature) | Mouse lymph node in vivo, 86 cytokines × 17 types | Strongly cell-type-specific responses | Mouse; never use its own signatures (IREA) as programs (circular) |
+| 4 | **Haber 2017** (`pt.data.haber_2017_regions`) | Mouse gut, Salmonella / H. polygyrus | Known composition shift (tuft and goblet expansion) | Tests the intrinsic / composition decomposition |
+| later | Tahoe-100M (2025, CC0) | 50 pooled cancer lines × ~1,100 drugs × 3 doses | Mutation-defined responders (TP53, KRAS/BRAF/EGFR) | Parked: very large. Would be McFarland at scale. |
+
+Not suitable: Papalexi, Frangieh, Norman, Replogle (knockouts within one line, no distinct cell types).
+
+**New metric for the dose datasets:** dose response. In responder types, the effect rises with dose (Spearman
+with dose); in non-responder types it stays flat. To add to `compare.known_answer`.
+
+**Causal module (`palm_bulk.causal`, wired into `program_deconvolution`):**
+
+| Piece | What | Assumption for a causal reading |
+|---|---|---|
+| `estimator_weights` | Every estimator is linear in the outcome (β = Σ w_n activity_n), so calibration and `lk` intervals carry over. Options: `diff`; `ols` (covariates and/or `groups` = donor ids → paired / within-donor); `ipw` (Hajek); `aipw` (doubly robust) | `diff`: randomisation. `ols`/`ipw`/`aipw`: conditional ignorability given the covariates |
+| `decompose` | Shapley split of each bulk program effect into **intrinsic** (cells change state) and **composition** (the mix changes), per cell type, with bootstrap intervals | Natural direct/indirect effects under the usual mediation assumptions |
+| `robustness_value` | Cinelli & Hazlett (2020): how strong an unmeasured confounder must be to remove an effect (or its significance) | Sensitivity analysis for observational cohorts |
+
+Tests in `tests/test_causal.py`:
+- Under confounding, the difference of means is biased (+0.9), while `ols`/`ipw`/`aipw` are within 0.15 of the true effect.
+- `aipw` stays right when the outcome model is wrong.
+- The within-donor estimator removes donor effects in unbalanced designs.
+- The decomposition is exact (I + K = arm contrast) and attributes pure composition and pure intrinsic
+  effects correctly.
+
+**Comparing methods (`compare.known_answer`):**
+- `paired_test`: per dataset, the difference over splits with a bootstrap CI, Wilcoxon and t p-values, and
+  the win rate.
+- `holm`: Holm correction across metrics.
+- `random_effects`: DerSimonian–Laird pooling of the per-dataset differences, giving one pooled effect with
+  CI and p, plus heterogeneity (I²).
+
+This turns "+0.02–0.03 per dataset" into one significance statement across 5–6 datasets.
+
+**What the paper can claim causally:**
+- **Kang, McFarland, sci-Plex, Parse:** randomised in vitro, so effects are causal.
+- **Zhang:** a randomised trial with paired samples, so effects are causal in patients.
+- **In-house disease cohort:** adjusted associations with robustness values, plus the intrinsic/composition
+  decomposition. The decomposition is causal only under the mediation assumptions; it should be stated as
+  such.
+- **Not claimed:** cell–cell causal structure, or individual-level effects.
+
+**Decomposition truth for benchmarks:** `causal.decompose` on the true read fractions and the true activity
+(thinned half) gives true I and K; `decomposition_accuracy` scores the estimate.
+
+**Role of the causal part (decided 2026-10-28): supporting, not the theme of Paper 1.**
+- **Where causality comes from:** the designs (randomisation), not the model. The estimators and the
+  sensitivity analysis are standard.
+- **PALM's contribution is measurement:** calibration is regression calibration for an outcome measured with
+  error, which makes cell-type causal estimands estimable from bulk with valid intervals.
+- **Paper 1 Results section** "From measurement to causal estimands":
+  - randomised effects (Kang, Zhang);
+  - adjusted effects with robustness values (in-house cohort);
+  - the decomposition, stated with its mediation assumptions.
+- **Wording:** "causal effects under randomisation" and "adjusted associations with sensitivity analysis";
+  never "a causal model".
+- **A causal-first paper (Paper 3, optional) would need:**
+  - measurement-error theory for estimated mediators (attenuation and leakage biasing the natural
+    direct/indirect effects);
+  - defensible mediation assumptions;
+  - causal validation;
+  - a clinical outcome.
+  - Natural vehicle: Mendelian randomisation with cell-type program QTLs on OneK1K genotypes.
+
+### 3.10 Beating the competitors: where and how (2026-10-29)
+
+**Where we stand.**
+- **Causal intervals pass on three of four perturbation datasets** (method_spec 4.5b). The setting is now the
+  default: `estimator="auto"` with `pev` and `misfit`.
+- **Fractions:** PALM's are 2–3× more accurate (Kang).
+- **Effect point estimates are a tie.** On Kang the correlation with the true effect is 0.976 for PALM and
+  0.979 for CIBERSORT, and plain reallocation reaches 0.980. Effect accuracy cannot be the headline.
+- **Our edge is valid inference:**
+  - which cell type responds;
+  - calls that are right and intervals that cover;
+  - competitors give no intervals at all.
+
+  That edge has not been measured against what users do today.
+
+**Experiments, in order:**
+
+| # | Experiment | What it shows | Status |
+|---|---|---|---|
+| C1 | **Current practice with standard tests on the known-answer datasets.** Competitors: BayesPrism, CIBERSORT(x), cellGeometry and BLADE (each scored per type with PROGENy, then a t-test or limma per type and program, BH-corrected), TOAST/TCA (cell-type-specific DE, then program enrichment), and bulk PROGENy with no deconvolution. Datasets: McFarland ida/tram, Kang, Zhang (and sci-Plex once built). | The headline. We expect their calls to leak to non-responder types (the same pairs every split), so false calls on null pairs and wrong localisation rise. Metrics: `fpr_null`, `tpr_t`, responder AUROC, localisation, coverage where an interval exists. | BayesPrism, cellGeometry and CIBERSORT fractions exist for Kang; only CIBERSORT for McFarland and Zhang; no tests yet |
+| C2 | **The PALM module on each competitor's fractions** (`fractions=`, default settings) | "PALM improves any method": the same fractions turned from invalid calls into valid ones | Wiring exists; not yet run |
+| C3 | **Pooled significance:** `known_answer.paired_test`, Holm, random-effects pooling over datasets × splits | One statement across datasets instead of +0.02 per dataset | Code exists |
+| C4 | **Held-out splits 10+** for every final number | No tuning on the reported splits | Pending |
+| C5 | **Power vs design:** `design_check` over the number of samples, the spread of composition and the cell type's read share | Explains Kang (B 4% of reads, little spread) and tells users how many samples they need. No competitor can say this. | New |
+| C6 | **New known answers:** sci-Plex 3 (dose response), Monaco (real bulk with flow fractions), Parse cytokines | Generality; real bulk; primary immune cells | Planned (3.9) |
+| C7 | **Speed of the default:** about 5 min per study, mainly `misfit_sd` Monte Carlo and the design check | Fewer draws, or vectorise across cohorts; keep `diff` as the fast setting | Optional |
+
+**Claims C1 and C2 would support:**
+- Pathway scoring after deconvolution makes confident calls in cell types that did not respond.
+- PALM's calls are right at the stated rate, on any method's fractions.
+- PALM reports which cell types the bulk cannot resolve, instead of guessing.
+
+**Open method questions** (keep all engines; add, don't remove):
+- Power for minor, low-variance types (Kang B/NK). Options:
+  - a prior that shares the response across types (hierarchical over types);
+  - gene-level information, with a `misfit` term for the direct engine (direct has power but invalid
+    intervals).
+- The disease setting: the response varies between patients, so check the coverage of `misfit` when
+  effects are heterogeneous (simulate it, then run on the in-house cohort).
 
 ## 4. Paper 2: fast, real-data-trained model
 

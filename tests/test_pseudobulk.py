@@ -73,3 +73,20 @@ def test_benchmark_split_and_truth(world):
     assert tr["beta"][mono, inp.programs.index("p0")] > 0.7                        # the disease response
     others = np.delete(tr["beta"], mono, axis=0)
     assert np.abs(others).max() < 0.4
+
+
+def test_benchmark_truth_split(world):
+    table, B, G, types, genes, true = world
+    table = table.relabel(keep_types=types)
+    kw = dict(min_cells=30, test_frac=0.5, contrast=("disease", "COVID-19", "HC"), seed=1)
+    full = make_benchmark(table, **kw)
+    split = make_benchmark(table, truth_split=True, **kw)
+    assert list(split.meta.index) == list(full.meta.index)                          # same donor split
+    np.testing.assert_allclose(split.type_counts + split.truth_counts, full.type_counts)   # halves add up
+    np.testing.assert_allclose(split.bulk.values.T, split.type_counts.sum(1))       # bulk = its own half
+    assert abs(split.bulk.values.sum() / full.bulk.values.sum() - 0.5) < 0.01
+    prog = pd.DataFrame(G, index=["p0", "p1", "p2"], columns=genes)
+    inp = pb.prepare_inputs(split.bulk, split.reference, prog, treatment=split.treatment, max_genes=400)
+    tr, tf = split.truth(inp), full.truth(inp)
+    assert np.corrcoef(tr["delta"].ravel(), tf["delta"].ravel())[0, 1] > 0.95      # same target, other half
+    assert not np.allclose(tr["delta"], tf["delta"])

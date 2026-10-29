@@ -11,3 +11,11 @@ results/
 benchmarks/compare/work/
 logs/
 hpc/*.log
+benchmarks/campaign/work/
+benchmarks/campaign_runner.log
+benchmarks/**/*.partial.json
+benchmarks/dev/**/*.npz
+benchmarks/dev/work/
+
+# CIBERSORT source is licensed by Stanford (no redistribution): download it to src/palm_bulk/compare/R/
+src/palm_bulk/compare/R/CIBERSORT.R

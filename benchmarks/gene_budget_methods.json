@@ -1,0 +1,275 @@
+{
+ "rows": [
+  {
+   "rep": 0,
+   "max_genes": 300,
+   "method": "groups",
+   "n_genes": 300,
+   "time": 989.5873,
+   "mean_steps": 511.0,
+   "divergences": 0,
+   "gene_sets": {
+    "programs": 135,
+    "markers": 90,
+    "hvg": 30,
+    "anchors": 45
+   },
+   "pi_rmse": 0.0104,
+   "beta_mae": 0.0469,
+   "kappa_mae": 0.031,
+   "beta_cov90": 0.95,
+   "kappa_cov90": 1.0
+  },
+  {
+   "rep": 0,
+   "max_genes": 300,
+   "method": "fisher",
+   "n_genes": 300,
+   "time": 1446.6582,
+   "mean_steps": 949.6133,
+   "divergences": 0,
+   "gene_sets": {
+    "program_genes": 253,
+    "other": 47
+   },
+   "pi_rmse": 0.0084,
+   "beta_mae": 0.0436,
+   "kappa_mae": 0.0218,
+   "beta_cov90": 0.9,
+   "kappa_cov90": 0.95
+  },
+  {
+   "rep": 0,
+   "max_genes": 600,
+   "method": "groups",
+   "n_genes": 600,
+   "time": 2913.5276,
+   "mean_steps": 1021.2933,
+   "divergences": 0,
+   "gene_sets": {
+    "programs": 270,
+    "markers": 180,
+    "hvg": 60,
+    "anchors": 90
+   },
+   "pi_rmse": 0.0081,
+   "beta_mae": 0.0433,
+   "kappa_mae": 0.0183,
+   "beta_cov90": 0.9,
+   "kappa_cov90": 0.95
+  },
+  {
+   "rep": 0,
+   "max_genes": 600,
+   "method": "fisher",
+   "n_genes": 600,
+   "time": 1960.4311,
+   "mean_steps": 1023.0,
+   "divergences": 0,
+   "gene_sets": {
+    "program_genes": 486,
+    "other": 114
+   },
+   "pi_rmse": 0.0076,
+   "beta_mae": 0.0491,
+   "kappa_mae": 0.0173,
+   "beta_cov90": 0.9,
+   "kappa_cov90": 0.95
+  },
+  {
+   "rep": 0,
+   "max_genes": 1500,
+   "method": "groups",
+   "n_genes": 1500,
+   "time": 2804.3458,
+   "mean_steps": 1023.0,
+   "divergences": 0,
+   "gene_sets": {
+    "programs": 598,
+    "markers": 527,
+    "hvg": 150,
+    "anchors": 225
+   },
+   "pi_rmse": 0.008,
+   "beta_mae": 0.0423,
+   "kappa_mae": 0.0178,
+   "beta_cov90": 0.9,
+   "kappa_cov90": 1.0
+  },
+  {
+   "rep": 0,
+   "max_genes": 1500,
+   "method": "fisher",
+   "n_genes": 1037,
+   "time": 1014.3565,
+   "mean_steps": 558.7867,
+   "divergences": 0,
+   "gene_sets": {
+    "program_genes": 596,
+    "other": 441
+   },
+   "pi_rmse": 0.0099,
+   "beta_mae": 0.0412,
+   "kappa_mae": 0.0185,
+   "beta_cov90": 0.85,
+   "kappa_cov90": 1.0
+  },
+  {
+   "rep": 1,
+   "max_genes": 300,
+   "method": "groups",
+   "n_genes": 300,
+   "time": 451.2973,
+   "mean_steps": 1017.88,
+   "divergences": 0,
+   "gene_sets": {
+    "programs": 135,
+    "markers": 90,
+    "hvg": 30,
+    "anchors": 45
+   },
+   "pi_rmse": 0.0101,
+   "beta_mae": 0.0446,
+   "kappa_mae": 0.041,
+   "beta_cov90": 0.95,
+   "kappa_cov90": 0.95
+  },
+  {
+   "rep": 1,
+   "max_genes": 300,
+   "method": "fisher",
+   "n_genes": 300,
+   "time": 378.505,
+   "mean_steps": 683.3733,
+   "divergences": 0,
+   "gene_sets": {
+    "program_genes": 247,
+    "other": 53
+   },
+   "pi_rmse": 0.0085,
+   "beta_mae": 0.0407,
+   "kappa_mae": 0.0289,
+   "beta_cov90": 0.9,
+   "kappa_cov90": 0.95
+  },
+  {
+   "rep": 1,
+   "max_genes": 600,
+   "method": "groups",
+   "n_genes": 600,
+   "time": 831.9695,
+   "mean_steps": 1017.88,
+   "divergences": 0,
+   "gene_sets": {
+    "programs": 270,
+    "markers": 180,
+    "hvg": 60,
+    "anchors": 90
+   },
+   "pi_rmse": 0.007,
+   "beta_mae": 0.0403,
+   "kappa_mae": 0.0294,
+   "beta_cov90": 0.95,
+   "kappa_cov90": 0.95
+  },
+  {
+   "rep": 1,
+   "max_genes": 600,
+   "method": "fisher",
+   "n_genes": 600,
+   "time": 808.6564,
+   "mean_steps": 1023.0,
+   "divergences": 0,
+   "gene_sets": {
+    "program_genes": 485,
+    "other": 115
+   },
+   "pi_rmse": 0.0066,
+   "beta_mae": 0.0409,
+   "kappa_mae": 0.027,
+   "beta_cov90": 0.95,
+   "kappa_cov90": 1.0
+  },
+  {
+   "rep": 1,
+   "max_genes": 1500,
+   "method": "groups",
+   "n_genes": 1500,
+   "time": 2262.3223,
+   "mean_steps": 1023.0,
+   "divergences": 0,
+   "gene_sets": {
+    "programs": 596,
+    "markers": 529,
+    "hvg": 150,
+    "anchors": 225
+   },
+   "pi_rmse": 0.0079,
+   "beta_mae": 0.0395,
+   "kappa_mae": 0.0315,
+   "beta_cov90": 0.9,
+   "kappa_cov90": 0.9
+  },
+  {
+   "rep": 1,
+   "max_genes": 1500,
+   "method": "fisher",
+   "n_genes": 1095,
+   "time": 1420.3247,
+   "mean_steps": 993.9867,
+   "divergences": 0,
+   "gene_sets": {
+    "program_genes": 595,
+    "other": 500
+   },
+   "pi_rmse": 0.0072,
+   "beta_mae": 0.0396,
+   "kappa_mae": 0.0283,
+   "beta_cov90": 0.85,
+   "kappa_cov90": 0.95
+  }
+ ],
+ "provenance": {
+  "git_commit": "5bf3956f53fd98d3f99ad239b1dec05f45ba0ebb",
+  "git_dirty": false,
+  "versions": {
+   "palm-bulk": "0.1.0",
+   "numpy": "2.5.3",
+   "scipy": "1.18.1",
+   "pandas": "3.0.6",
+   "jax": "0.11.2",
+   "jaxlib": "0.11.2",
+   "numpyro": "0.22.0",
+   "anndata": "0.13.4",
+   "decoupler": "2.2.0",
+   "torch": "2.10.0"
+  },
+  "python": "3.12.15",
+  "os": "Windows-11-10.0.26100-SP0",
+  "platform": "cpu",
+  "precision": "float32",
+  "time": "2026-10-19T21:44:14",
+  "argv": [
+   "-",
+   "C:/Users/duy.pham/AppData/Local/Temp/claude/c--Users-duy-pham-Documents-dev-program2cell/b875f444-1629-495a-aa3c-bfbe4949eb3b/scratchpad/gene_budget.log"
+  ],
+  "settings": {
+   "reps": 2,
+   "sizes": [
+    300,
+    600,
+    1500
+   ],
+   "methods": [
+    "groups",
+    "fisher"
+   ],
+   "N": 40,
+   "C": 5,
+   "P": 4,
+   "genes": 3000,
+   "genes_per_program": 150,
+   "recovered_from_log": true
+  }
+ }
+}

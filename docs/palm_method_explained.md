@@ -73,8 +73,9 @@ type's average RNA content from the reference.
 ### 2.5 Noise: negative binomial counts
 
 Real counts scatter more than coin flips would predict (biological variation between samples), so counts
-are negative binomial around the expected value. Each gene gets its own dispersion, partly pooled across
-genes ("gene-wise dispersion"), because some genes are simply noisier than others.
+are negative binomial around the expected value. Each gene gets its own dispersion, because some genes are
+simply noisier than others. By default it is estimated once from the bulk counts and held fixed (see 5.5);
+`dispersion="gene"` samples it instead, partly pooled across genes.
 
 ### 2.6 Platform bias: `m`
 
@@ -132,8 +133,18 @@ as splitting a restaurant bill fairly: average over both orders. The split is th
 
 ## 4. Which genes go into the model
 
-Using all 20,000 genes would be slow and add noise. PALM picks about 1,500 genes from four groups, each
-serving one job:
+Using all 20,000 genes would be slow and add noise. So PALM asks every gene one question: *how much would
+adding you sharpen our estimates?* A gene's answer depends on two things. The first is how strongly its
+expected count moves when a fraction or a program shift moves. The second is how noisy it is (its
+dispersion). PALM adds genes one at a time, each time taking the gene that most increases the total
+information (the determinant of the Fisher information, a "D-optimal design"). It stops when the next gene
+would add almost nothing, or at the cap (`max_genes`), so the number of genes comes from the data.
+
+Nothing tells it which genes do which job, yet the jobs appear on their own. Program genes inform the
+shifts. Markers inform the fractions. Stable genes become valuable because they separate a program change
+from a composition change. Noisy genes are down-weighted automatically.
+
+**The older rule** (`gene_selection="groups"`) fills a fixed budget from four hand-set groups:
 
 | Group | Share | Job |
 |---|---|---|
@@ -142,27 +153,13 @@ serving one job:
 | Highly variable genes in the reference | 10% | Catch cell-state variation that markers miss |
 | Anchors (well expressed, stable across types, in no program) | 15% | Hold the rescaling steady |
 
-**Where the simple story breaks:** the four shares are a hand-set rule. A principled alternative
-(`gene_selection="fisher"`) asks of every gene: *how much would adding you sharpen our estimates?* Each
-gene's answer depends on two things. The first is how strongly its expected count moves when a fraction or
-a program shift moves. The second is how noisy it is (its dispersion). Adding genes one at a time to
-maximise the total information (the determinant of the Fisher information, a "D-optimal design") recovers
-the four roles without fixing their shares:
-program genes inform the shifts, markers inform the fractions, and stable genes become valuable because
-they separate a program change from a composition change. Noisy genes are down-weighted automatically.
-Selection stops when the next gene would add almost nothing, so the number of genes comes from the data.
-In a first simulation it chose about 1,040 genes instead of the fixed 1,500. Whether this improves
-accuracy is being tested in the gene-budget study; until then the four groups stay the default.
+In the simulated gene-budget study the information rule matched or beat the four groups at every cap. At
+300 genes its κ error was about 30% lower. With a cap of 1,500 it stopped by itself near 1,070 genes and
+the fit took half the time, with the same accuracy. It is therefore the default.
 
-Genes must be expressed in the reference (a gene absent from the baseline cannot be "induced") and
-detected in at least 20% of bulk samples. The second filter is lenient, so genes switched on in one arm only
-are kept.
-
-**Many cell types.** Up to about 20 cell types, each gets its own program activity. Beyond that the data
-cannot support so many unknowns. Either estimate fine fractions first and programs on a coarser reference,
-or let subtypes of one lineage share program activity (`program_groups="lineage"`).
-
----
+**Where the simple story breaks:** the information is computed with programs switched off (δ = 0), a local
+approximation. If strongly induced programs turn out to be under-served, averaging the information over a
+few plausible δ values is the next step.
 
 ## 5. How the model is fitted
 
@@ -198,6 +195,28 @@ A sampler can look fine and still be wrong if it got stuck. PALM now:
   dispersion, and warns when any check fails.
 
 Before this change, most runs used one chain, and one chain cannot see two chains disagreeing.
+
+### 5.5 Making the run faster (new)
+
+The time of a fit is (cost of one gradient) × (gradients per iteration) × (iterations). Two changes
+attacked the first two factors:
+
+- **A cheaper likelihood.** The negative-binomial formula is now written out directly instead of going
+  through numpyro's general version. It gives the same numbers, but each gradient went from about 10 ms to
+  about 4 ms on the PBMC benchmark.
+- **Dispersion estimated once, not sampled.** Each gene's noise level θ_g is now estimated from the bulk
+  counts before fitting and held fixed. Sampling 1,000 dispersions under one shared scale makes a
+  "funnel": a narrow neck where the sampler must take tiny steps and a wide mouth where it needs big ones.
+  Removing it halved the steps per iteration and made each step cheaper again. On PBMC the fit went from
+  3.5 hours to about 1 hour for twice as many draws, and the chains finally agreed (R-hat 1.013).
+
+The price: the uncertainty about each gene's noise is no longer in the intervals, and treatment-effect
+intervals covered the truth 82% instead of 89% of the time. For a final analysis, `dispersion="gene"` puts
+it back.
+
+Three other ideas were tried and dropped: a zero-sum version of the composition logits, a dense mass
+matrix for the shared parameters, and a cap on trajectory length. Each made iterations cheaper, but the
+chains then disagreed, so they gave fewer useful draws per minute, not more.
 
 ---
 

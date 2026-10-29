@@ -1,0 +1,138 @@
+{
+ "updated": "2026-10-23T14:05:15",
+ "hours": 47.03,
+ "jobs": {
+  "A1_pbmc_fast_independent": {
+   "status": "done",
+   "started": "2026-10-21T15:03",
+   "hours": 0.21,
+   "finished": "2026-10-21T15:16"
+  },
+  "A2_pbmc_fast_shared": {
+   "status": "done",
+   "started": "2026-10-21T15:03",
+   "hours": 0.21,
+   "finished": "2026-10-21T15:16"
+  },
+  "A3_pbmc_fast_shared_only": {
+   "status": "done",
+   "started": "2026-10-21T15:03",
+   "hours": 0.36,
+   "finished": "2026-10-21T15:25"
+  },
+  "B1_pbmc5_competitors": {
+   "status": "done",
+   "started": "2026-10-21T15:16",
+   "hours": 8.34,
+   "finished": "2026-10-21T23:36"
+  },
+  "B2_pbmc5_fast_shared": {
+   "status": "done",
+   "started": "2026-10-21T15:16",
+   "hours": 0.34,
+   "finished": "2026-10-21T15:36"
+  },
+  "B3_pbmc5_fast_independent": {
+   "status": "done",
+   "started": "2026-10-21T15:25",
+   "hours": 0.53,
+   "finished": "2026-10-21T15:57"
+  },
+  "B4_pbmc5_palm_independent": {
+   "status": "done",
+   "started": "2026-10-21T15:36",
+   "hours": 7.93,
+   "finished": "2026-10-21T23:32"
+  },
+  "B5_pbmc5_palm_shared": {
+   "status": "done",
+   "started": "2026-10-21T15:57",
+   "hours": 8.18,
+   "finished": "2026-10-22T00:07"
+  },
+  "D1_onek1k_broad": {
+   "status": "done",
+   "started": "2026-10-21T23:32",
+   "hours": 2.66,
+   "finished": "2026-10-22T02:12"
+  },
+  "D2_onek1k_broad_sex": {
+   "status": "done",
+   "started": "2026-10-21T23:36",
+   "hours": 0.23,
+   "finished": "2026-10-21T23:50"
+  },
+  "D3_onek1k_5types": {
+   "status": "done",
+   "started": "2026-10-21T23:50",
+   "hours": 0.3,
+   "finished": "2026-10-22T00:08"
+  },
+  "C1_sim_N24": {
+   "status": "done",
+   "started": "2026-10-22T00:07",
+   "hours": 5.01,
+   "finished": "2026-10-22T05:08"
+  },
+  "C2_sim_N48": {
+   "status": "done",
+   "started": "2026-10-22T00:08",
+   "hours": 8.15,
+   "finished": "2026-10-22T08:17"
+  },
+  "C3_sim_N96": {
+   "status": "done",
+   "started": "2026-10-22T02:12",
+   "hours": 14.8,
+   "finished": "2026-10-22T17:00"
+  },
+  "C4_sim_N48_shared": {
+   "status": "done",
+   "started": "2026-10-22T05:08",
+   "hours": 1.74,
+   "finished": "2026-10-22T06:52"
+  },
+  "E1_pbmc_fast_genes500": {
+   "status": "done",
+   "started": "2026-10-22T06:52",
+   "hours": 0.68,
+   "finished": "2026-10-22T07:33"
+  },
+  "E2_pbmc_fast_genes2000": {
+   "status": "done",
+   "started": "2026-10-22T07:33",
+   "hours": 0.42,
+   "finished": "2026-10-22T07:58"
+  },
+  "E3_pbmc_fast_all_programs": {
+   "status": "done",
+   "started": "2026-10-22T07:58",
+   "hours": 2.18,
+   "finished": "2026-10-22T10:08"
+  },
+  "F1_onek1k_full_broad": {
+   "status": "done",
+   "started": "2026-10-22T08:17",
+   "hours": 20.38,
+   "finished": "2026-10-23T04:40"
+  },
+  "F2_onek1k_full_sex": {
+   "status": "done",
+   "started": "2026-10-22T10:08",
+   "hours": 11.74,
+   "finished": "2026-10-22T21:53"
+  },
+  "F3_onek1k_full_5types": {
+   "status": "done",
+   "started": "2026-10-22T17:00",
+   "hours": 11.12,
+   "finished": "2026-10-23T04:07"
+  },
+  "F4_onek1k_full_palm": {
+   "status": "done",
+   "started": "2026-10-22T21:53",
+   "hours": 16.19,
+   "finished": "2026-10-23T14:04"
+  }
+ }
+}
