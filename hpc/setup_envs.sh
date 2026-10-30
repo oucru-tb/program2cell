@@ -34,7 +34,7 @@ EOF
   set +u; conda deactivate; set -u
 fi
 
-# ---- R env: BayesPrism, TOAST, TCA ---------------------------------------------------------------
+# ---- R env: InstaPrism, TOAST, TCA ---------------------------------------------------------------
 if [[ " $STEPS " == *" r "* ]]; then
   env_exists "$R_ENV" || $MAMBA create -y -n "$R_ENV" -c conda-forge \
       r-base=4.4 r-matrix r-remotes r-devtools r-biocmanager compilers make pkg-config \
@@ -43,13 +43,13 @@ if [[ " $STEPS " == *" r "* ]]; then
   Rscript - <<'EOF'
 options(repos = BiocManager::repositories(), Ncpus = max(1L, parallel::detectCores() - 1L))
 need <- function(p) !requireNamespace(p, quietly = TRUE)
-bioc <- c("GenomeInfoDbData", "TOAST", "scran", "BiocParallel")
+bioc <- c("GenomeInfoDbData", "TOAST")
 if (any(sapply(bioc, need))) BiocManager::install(bioc[sapply(bioc, need)], update = FALSE, ask = FALSE)
-cran <- c("TCA", "snowfall", "NMF", "gplots")
+cran <- c("TCA", "NMF", "caret", "pheatmap", "abind", "pbapply", "RcppArmadillo")
 if (any(sapply(cran, need))) install.packages(cran[sapply(cran, need)])
-if (need("BayesPrism"))
-  remotes::install_github("Danko-Lab/BayesPrism/BayesPrism", upgrade = "never", dependencies = TRUE)
-ok <- sapply(c("TOAST", "TCA", "BayesPrism"), function(p) requireNamespace(p, quietly = TRUE))
+if (need("InstaPrism"))   # compiles C++ (RcppArmadillo); the conda compilers suffice on Linux, no Rtools
+  remotes::install_github("humengying0907/InstaPrism", upgrade = "never", dependencies = TRUE)
+ok <- sapply(c("TOAST", "TCA", "InstaPrism"), function(p) requireNamespace(p, quietly = TRUE))
 print(ok)
 if (!all(ok)) quit(status = 1)
 EOF

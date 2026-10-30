@@ -26,11 +26,11 @@ Rows per palm config:
                      reallocation (3 steps; converges towards the unpooled per-sample estimate)
 Baselines: naive (one bulk shift copied to every type), reallocation (NNLS fractions), oracle realloc
 (true fractions: the ceiling for reallocation given perfect fractions).
-Published competitors (--competitors cellgeometry,bayesprism) run on the same split, genes and truth.
+Published competitors (--competitors cellgeometry,instaprism) run on the same split, genes and truth.
 Their single-cell reference is the reference donors' pseudo-bulk rows (the information PALM's B is
 built from), or real cells of the reference donors with --cells (names get a " cells" suffix). Rows:
-model (the method's own activity: BayesPrism's per-type expression; cellGeometry has none, so its
-wrapper reallocates) and, for BayesPrism, realloc (its fractions with the plain reallocation).
+model (the method's own activity: InstaPrism's per-type expression; cellGeometry has none, so its
+wrapper reallocates) and, for InstaPrism, realloc (its fractions with the plain reallocation).
 `rescore` recomputes every row's metrics from the saved arrays (after a change to the metrics), keeping
 the fit diagnostics; rows without arrays (fits from before 2026-10-27 morning) are left as they are.
 Each fit also saves its arrays to s<split>__<config>.npz (and the truth to s<split>__truth.npz), so other
@@ -119,7 +119,7 @@ PRESETS = {
     },
 }
 BASELINES = ["naive", "reallocation", "oracle realloc"]
-COMPETITOR_KW = {"bayesprism": dict(n_cores=8, max_cells_per_type=1000),
+COMPETITOR_KW = {"instaprism": dict(n_cores=8, max_cells_per_type=1000),
                  "cellgeometry": dict(max_cells_per_type=5000),
                  "blade": dict(grid="small", n_jobs=8)}
 _CELLS = {}
@@ -342,7 +342,7 @@ def run(args):
                     if res is None:
                         raise RuntimeError(err)
                     results = [("model", res)]
-                    if method == "bayesprism":
+                    if method == "instaprism":
                         a = realloc(res.fractions)
                         results.append(("realloc", MethodResult(name, fractions=res.fractions, activity=a,
                                                                 effects=design(a))))
@@ -434,7 +434,7 @@ if __name__ == "__main__":
     p.add_argument("--ref", default=None, help="'config|row' to compare against in the summary (row defaults to model)")
     p.add_argument("--out", default=OUT)
     p.add_argument("--prior", default="progeny7", choices=list(PRIORS), help="program prior set (see PRIORS)")
-    p.add_argument("--competitors", default="", help="comma-separated compare methods, e.g. cellgeometry,bayesprism")
+    p.add_argument("--competitors", default="", help="comma-separated compare methods, e.g. cellgeometry,instaprism")
     p.add_argument("--cells", default=None, help="cell-level h5ad for the competitors' reference (reference donors only)")
     a = p.parse_args()
     dict(run=run, summary=summary, rescore=rescore)[a.cmd](a)

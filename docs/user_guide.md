@@ -112,8 +112,8 @@ decoupler's ULM (`activity="ulm"`, the usual "deconvolve, then PROGENy" route; n
 | Method | Runs via | Needs |
 |---|---|---|
 | `naive_two_step` (NNLS fractions + bulk-level program shift) | Python | nothing |
-| `reallocation` (NNLS + BayesPrism-style read split with a fixed reference) | Python | nothing |
-| `bayesprism` | `Rscript` + files | R with BayesPrism (`devtools::install_github("Danko-Lab/BayesPrism/BayesPrism")`) |
+| `reallocation` (NNLS + BayesPrism/InstaPrism-style read split with a fixed reference) | Python | nothing |
+| `instaprism` (BayesPrism's model with a fast fixed-point solver) | `Rscript` + files | R with InstaPrism (`remotes::install_github("humengying0907/InstaPrism")`; Rtools on Windows) |
 | `cibersortx` (fractions + high resolution) | Docker | images `cibersortx/fractions`, `cibersortx/hires`; token in `CIBERSORTX_USER`/`CIBERSORTX_TOKEN` |
 | `blade` | another Python env | `pip install BLADE_Deconvolution` there; its interpreter in `PALM_BLADE_PYTHON` |
 | `toast`, `tca` (cell-type-specific DE -> program effects) | `Rscript` + files | Bioconductor TOAST / CRAN TCA |
@@ -129,14 +129,14 @@ mamba create -n palm-r -c conda-forge r-base=4.4 r-devtools r-biocmanager r-matr
 # in palm-r's R:
 #   options(repos = BiocManager::repositories())        # keeps the annotation repo (GenomeInfoDbData)
 #   BiocManager::install(c("GenomeInfoDbData", "TOAST")); install.packages("TCA")
-#   remotes::install_github("Danko-Lab/BayesPrism/BayesPrism", upgrade = "never", dependencies = TRUE)
+#   remotes::install_github("humengying0907/InstaPrism", upgrade = "never", dependencies = TRUE)   # Rtools on Windows
 mamba create -n palm-blade -c conda-forge python=3.8 pip numpy scipy scikit-learn numba joblib
 #   then in palm-blade: pip install BLADE_Deconvolution      (0.0.7; run_blade.py patches its import bug)
 export PALM_RSCRIPT=<miniforge>/envs/palm-r/Lib/R/bin/x64/Rscript.exe
 export PALM_BLADE_PYTHON=<miniforge>/envs/palm-blade/python.exe
 ```
 
-BayesPrism, TOAST and TCA have been run through these wrappers on simulated data; CIBERSORTx has not
+InstaPrism, TOAST and TCA have been run through these wrappers; CIBERSORTx has not
 (it needs Docker and a token).
 
 ## Layout
@@ -149,7 +149,7 @@ src/palm_bulk/
   bayes/       Bayesian inference: model.py (NumPyro priors + likelihood), fit.py (VI warm start, NUTS),
                diagnostics.py (intervals, R-hat, ESS), pipeline.py (run_palm, PalmResult, estimate_runtime)
   compare/     competing methods with one input/output format, and scoring against truth:
-               methods.py, activity.py, scoring.py; R/ (BayesPrism, TOAST, TCA), external/ (BLADE)
+               methods.py, activity.py, scoring.py; R/ (InstaPrism, TOAST, TCA), external/ (BLADE)
   compute.py   CPU/GPU, precision, parallel chains;  plots.py;  provenance.py  commit + versions saved with results
 notebooks/     palm_bulk_real_data.ipynb (executed demo)
 scripts/       run_calibration.py, run_gene_budget.py, run_compare.py, collect_benchmarks.py;

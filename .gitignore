@@ -19,3 +19,6 @@ benchmarks/dev/work/
 
 # CIBERSORT source is licensed by Stanford (no redistribution): download it to src/palm_bulk/compare/R/
 src/palm_bulk/compare/R/CIBERSORT.R
+
+# intermediate files of real-data runs
+benchmarks/real/*/work/

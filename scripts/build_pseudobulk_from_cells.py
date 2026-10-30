@@ -22,7 +22,7 @@ What it does
        OUT_broad.h5ad   rows = donor x broad type   (use this for benchmarks first)
        OUT_fine.h5ad    rows = donor x level-2 type
        OUT_cells.h5ad   raw counts of up to --cells-per-type cells per donor and broad type
-                        (cell-level reference for BayesPrism / CIBERSORTx / BLADE and HVG scores)
+                        (cell-level reference for InstaPrism / CIBERSORTx / BLADE and HVG scores)
        OUT_report.txt   donors, cells per donor and type, label grouping, what was dropped
 """
 import argparse

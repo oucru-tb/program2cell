@@ -1,6 +1,6 @@
 """C1 + C2 (research_plan 3.10): current practice vs PALM on the known-answer datasets.
 
-C1, current practice: each competitor's per-sample per-type program activity (BayesPrism's per-type expression,
+C1, current practice: each competitor's per-sample per-type program activity (InstaPrism's per-type expression,
 or its fractions with reallocation, scored with PROGENy), then one test per cell type and program, as a user
 would run it:
   paired t-test over donors (treated mean - control mean within each donor that has both arms; Welch t-test
@@ -29,7 +29,7 @@ OUT = os.path.join(ROOT, "benchmarks", "dev", "practice")
 DEV = os.path.join(ROOT, "benchmarks", "dev")
 # dev_bench rows with per-sample activity (file stem -> row prefix in the npz)
 ACTIVITY = {"naive": "model", "reallocation": "model", "cibersort": "model", "cellgeometry": "model",
-            "cellgeometry_cells": "model", "bayesprism": "model", "bayesprism_cells": "model", "blade": "model"}
+            "cellgeometry_cells": "model", "instaprism": "model", "instaprism_cells": "model", "blade": "model"}
 CSDE = ("toast", "tca")
 
 

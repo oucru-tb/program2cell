@@ -81,7 +81,7 @@ Annotation level: up to ~20 cell types → full model. More than 20 → two stag
 | 4 | **E2:** PBMC pseudo-bulk benchmark with cross-fitting (held-out donors) | exact truth; level-1 vs level-2; runtime scaling |
 | 5 | **E3:** known stimulation response (e.g. IFN-β-stimulated PBMC, Kang et al. 2018) | intrinsic vs composition split and attribution |
 | 6 | **E4:** paired tissue bulk + scRNA-seq (in-house) | real bulk; compare relative patterns across samples |
-| 7 | Competitor comparison | BayesPrism → PROGENy (strongest), CIBERSORTx high-res → PROGENy, BLADE → PROGENy, TOAST/TCA csDE → enrichment, naive two-step. Harness in `palm_bulk.compare` + `scripts/run_compare.py` (2026-10-19); R/Docker/BLADE wrappers still to be run against the real tools |
+| 7 | Competitor comparison | InstaPrism (BayesPrism's model) → PROGENy (strongest), CIBERSORTx high-res → PROGENy, BLADE → PROGENy, TOAST/TCA csDE → enrichment, naive two-step. Harness in `palm_bulk.compare` + `scripts/run_compare.py` (2026-10-19); R/Docker/BLADE wrappers still to be run against the real tools |
 | 8 | Modest application on the in-house unpaired cohort | optional; group-level validation |
 | 9 | Write and submit | |
 
@@ -157,7 +157,7 @@ splits 10+.
 - A systematic search (PubMed, bioRxiv, Scholar, 2023–2026). Read the final Statescope paper (Nat Commun
   2026), the IPF preprint's methods and the latest BLADE.
 - **Two explicit baselines:**
-  1. BayesPrism's per-type expression scored with PROGENy/decoupleR (already the `bayesprism` row).
+  1. InstaPrism's (BayesPrism model) per-type expression scored with PROGENy/decoupleR (the `instaprism` row).
   2. NMF programs correlated with fractions, as in BayesPrism's embedding module.
 - PBMC numbers recomputed with the fixed `estimate_delta` (v2 run).
 - Kang activity coverage (0.70–0.83) is either fixed or reported as the limit of calibrating from a resting
@@ -169,7 +169,7 @@ splits 10+.
 **Two arms:**
 - **Quantitative:** the benchmark above.
 - **Qualitative:** in-house disease cohorts from the lab, PALM vs one strong existing pipeline (e.g.
-  BayesPrism or CIBERSORTx expression + PROGENy, or cellGeometry + reallocation).
+  InstaPrism or CIBERSORTx expression + PROGENy, or cellGeometry + reallocation).
 
 **Outline:**
 1. **Introduction.** Bulk cohorts are large, and the question is "which cells change which programs". Current
@@ -180,7 +180,7 @@ splits 10+.
    - **Ground truth and failure modes:** attenuation, leakage and localisation (PBMC, OneK1K), with
      simulations for identifiability.
    - **Head-to-head accuracy:** fractions, activity and effects vs NNLS, CIBERSORT, cellGeometry,
-     BayesPrism and NMF-correlation, across 4 prior sets.
+     InstaPrism and NMF-correlation, across 4 prior sets.
    - **Calibration:** coverage, false sign rate and interval score; uncorrected vs calibrated; behaviour
      under null contrasts (OneK1K sex).
    - **Real perturbation:** Kang IFN-β, a known answer (interferon programs in all types, strongest in
@@ -255,13 +255,13 @@ mislocalises effects" message and the disease validation carry the impact.
 ### 3.8 PALM as a program-deconvolution module on any method's fractions (design, 2026-10-27)
 
 **Idea.** Separate *composition* from *program deconvolution*. Any deconvolution method (cellGeometry,
-BayesPrism, CIBERSORTx, MuSiC, PALM itself) supplies the fractions. The PALM module turns bulk counts
+InstaPrism, CIBERSORTx, MuSiC, PALM itself) supplies the fractions. The PALM module turns bulk counts
 plus those fractions into per-sample, per-cell-type program activity δ, and design effects β, with
 calibrated intervals.
 
 This repositions PALM: it complements the fraction tools instead of competing with them. It also
 answers the reviewer question "isn't this BayesPrism + PROGENy?", because the module can be run on
-BayesPrism's own fractions.
+the fractions of InstaPrism (BayesPrism's model).
 
 **Feasibility: already shown on the dev benchmark** (PBMC, 10 splits, PROGENy-7; posterior
 reallocation on each method's fractions):
@@ -269,7 +269,6 @@ reallocation on each method's fractions):
 | Fractions from | Fraction RMSE | Activity ρ | Type-specific ρ | Effect r |
 |---|---|---|---|---|
 | NNLS | 0.117 | 0.791 | 0.23 | 0.44 |
-| BayesPrism (split 0 only; reference is pseudobulk rows) | 0.17 | 0.807 | 0.42 | 0.46 |
 | cellGeometry | 0.096 | 0.832 | 0.43 | 0.58 |
 | multinomial EM ("PALM-lite", 5–15 s per split) | 0.076 | 0.830 | 0.40 | 0.62 |
 | PALM | 0.062 | 0.849 | 0.48 | 0.65 |
@@ -277,13 +276,11 @@ reallocation on each method's fractions):
 
 - The module works with any fractions, and its activity accuracy rises with fraction accuracy.
 - PALM's own fractions are the best plug-in so far.
-- BayesPrism's own per-type expression gives ρ 0.69 on that split. The module on BayesPrism's
-  fractions gives 0.81, so the module also improves on BayesPrism's native expression output.
 
 **Pipeline.** Every step is closed form or a vectorised Newton step, so it runs in seconds.
 
 1. **Unit harmonisation.** Methods report different quantities:
-   - read fractions on their own gene set (BayesPrism θ);
+   - read fractions on their own gene set (InstaPrism θ);
    - cell fractions (CIBERSORTx, MuSiC);
    - cell amounts (cellGeometry).
 
@@ -303,7 +300,7 @@ reallocation on each method's fractions):
    - **Fraction-method error has to enter the calibration.** Three options, best first:
      - (a) The user gives a callable `fraction_fn(bulk, reference)`, which the module runs on the
        calibration pseudobulks. This captures that method's bias; cellGeometry takes about 1 minute,
-       BayesPrism about 25.
+       InstaPrism 10–25 seconds.
      - (b) The method's own uncertainty (draws or standard errors, such as cellGeometry `se()`) is
        propagated by resampling π.
      - (c) Neither is available: calibrate on true π and report that the intervals ignore fraction
@@ -327,7 +324,7 @@ res.activity, res.activity_interval, res.effects, res.effects_interval, res.diag
 ```
 
 `compare` would get a matching wrapper for each method ("X + PALM module"), so the benchmark becomes
-a matrix: fraction method × activity module. The activity modules are naive, BayesPrism Z,
+a matrix: fraction method × activity module. The activity modules are naive, InstaPrism Z,
 reallocation + ULM, and the PALM module.
 
 **Requirements and limits:**
@@ -337,7 +334,7 @@ reallocation + ULM, and the PALM module.
 - Calibration needs per-donor, per-type counts for several reference donors (pseudobulk by donor).
   With a single-donor reference, the module falls back to cell-level bootstraps, and the intervals are
   then weaker.
-- Systematic fraction bias (as with BayesPrism on our pseudobulk-row reference) passes into δ. Only
+- Systematic fraction bias passes into δ. Only
   option (a) captures it.
 - Activity is relative to the reference profile B_c, so δ = 0 means "as in the reference donors".
 
@@ -348,7 +345,7 @@ and is untested.
 
 **Next steps:**
 1. Implement `program_deconvolution` with calibration options (a)–(c).
-2. Wrappers in `compare` for cellGeometry, BayesPrism and NNLS fractions.
+2. Wrappers in `compare` for cellGeometry, InstaPrism and NNLS fractions.
 3. Dev-bench rows "X + module" on 10 splits, both datasets, all four prior sets.
 
 ---
@@ -461,7 +458,7 @@ This turns "+0.02–0.03 per dataset" into one significance statement across 5�
 
 | # | Experiment | What it shows | Status |
 |---|---|---|---|
-| C1 | **Current practice with standard tests on the known-answer datasets.** Competitors: BayesPrism, CIBERSORT(x), cellGeometry and BLADE (each scored per type with PROGENy, then a t-test or limma per type and program, BH-corrected), TOAST/TCA (cell-type-specific DE, then program enrichment), and bulk PROGENy with no deconvolution. Datasets: McFarland ida/tram, Kang, Zhang (and sci-Plex once built). | The headline. We expect their calls to leak to non-responder types (the same pairs every split), so false calls on null pairs and wrong localisation rise. Metrics: `fpr_null`, `tpr_t`, responder AUROC, localisation, coverage where an interval exists. | BayesPrism, cellGeometry and CIBERSORT fractions exist for Kang; only CIBERSORT for McFarland and Zhang; no tests yet |
+| C1 | **Current practice with standard tests on the known-answer datasets.** Competitors: InstaPrism, CIBERSORT(x), cellGeometry and BLADE (each scored per type with PROGENy, then a t-test or limma per type and program, BH-corrected), TOAST/TCA (cell-type-specific DE, then program enrichment), and bulk PROGENy with no deconvolution. Datasets: McFarland ida/tram, Kang, Zhang (and sci-Plex once built). | The headline. We expect their calls to leak to non-responder types (the same pairs every split), so false calls on null pairs and wrong localisation rise. Metrics: `fpr_null`, `tpr_t`, responder AUROC, localisation, coverage where an interval exists. | InstaPrism, cellGeometry and CIBERSORT fractions exist for Kang; InstaPrism and CIBERSORT for McFarland and Zhang (InstaPrism: splits 0–2); no tests yet |
 | C2 | **The PALM module on each competitor's fractions** (`fractions=`, default settings) | "PALM improves any method": the same fractions turned from invalid calls into valid ones | Wiring exists; not yet run |
 | C3 | **Pooled significance:** `known_answer.paired_test`, Holm, random-effects pooling over datasets × splits | One statement across datasets instead of +0.02 per dataset | Code exists |
 | C4 | **Held-out splits 10+** for every final number | No tuning on the reported splits | Pending |
@@ -481,6 +478,56 @@ This turns "+0.02–0.03 per dataset" into one significance statement across 5�
     intervals).
 - The disease setting: the response varies between patients, so check the coverage of `misfit` when
   effects are heterogeneous (simulate it, then run on the in-house cohort).
+
+### 3.11 Making Paper 1 a principle paper: four pillars (plan, 2026-10-30)
+
+**Working title:** *Which cells changed? Identifiable, causal cell-type attribution from bulk transcriptomes.*
+The method alone ("better deconvolution") is incremental. The paper needs a principle, real truth at scale
+and a discovery.
+
+| Pillar | Claim | Work | Status |
+|---|---|---|---|
+| P1 Principle: identifiability | Attribution from bulk is possible only when the design allows it; a design calculator says which cell types are identifiable, before sequencing | Design-based minimum detectable effect (MDE) per type × program; validate as a bound on all benchmarks; turn into a tool (sample size, composition spread) | **Started** (below) |
+| P1 Principle: causal split | Every bulk change = composition (more cells) + cell-intrinsic change + spillover bias; estimands on a causal diagram, PALM estimates each with a range | Formalise `decompose=True` as mediation (natural direct / indirect effects, composition as mediator); shared vs type-specific readout (`shared_response`) | Code exists; formalise; 2 fixes pending (§3.10 note) |
+| P2 Scale: real perturbations | Across thousands of real perturbations the standard workflow puts responses on the wrong cell types | Turn perturbation atlases into known-answer bulk experiments (pooled cells per well / donor), same truth split as §3.9 | Plan; needs compute (below) |
+| P3 Real truth in disease | In real patients, PALM on bulk recovers what purified cells show | Bulk + sorted-cell datasets from the same people, ideally TB (candidates being checked) | Search running |
+| P4 Discovery | In TB, which cells change, with in-cohort controls and a prospective test | PTB cohort: PALM vs InstaPrism; positive control (interferon-inducible neutrophil signature, Berry 2010), negative controls (size-matched random sets, label permutation); pre-registered predictions checked by sorted-cell or scRNA-seq on a subset; treatment cohort for within-person contrasts | Next week (talk 2.5) |
+
+**Extra causal tools for P4:** within-person contrasts (before vs during treatment), negative-control outcomes
+(pathways that cannot respond) to detect confounding and spillover in real data, and robustness values for
+observational contrasts.
+
+**Optional, high impact if careful:** an audit of published cell-type claims from blood bulk cohorts (TB,
+sepsis, COVID, lupus): what share is consistent with spillover alone.
+
+#### P1 first result: the design calculator is a bound (2026-10-30)
+`scripts/experiments/identifiability.py`, outputs `benchmarks/dev/identifiability/`. For each design, the
+generalised least-squares covariance of the effects under the full leakage operator (each sample's own
+composition, per-(type, program) intercepts, rows weighted by the within-arm noise) gives
+MDE = (z_0.95 + z_0.80) × sd: the smallest effect any estimator can attribute to that type without extra
+assumptions. (A first version that inverted only the average operator ignored composition variation and was
+far too pessimistic on McFarland.)
+
+Development splits 0–2, four datasets, 420 type × program units, PALM = `auto_abs`:
+
+| Real effects (\|true\| ≥ 0.1) | n | Called by PALM |
+|---|---|---|
+| Calculator: not identifiable (\|true\| < MDE) | 28 | **0%** |
+| Calculator: identifiable | 73 | 58% |
+
+- The calculator is never violated: PALM never calls what the design cannot support.
+- The gap is PALM's headroom: on McFarland every real effect is identifiable but 56–81% are called; on Kang
+  the calculator says T cells (MDE 0.14, true JAK-STAT 0.28) are identifiable, PALM doesn't call them.
+- Kang per type (median MDE): monocytes 0.09, T 0.14, NK 0.33, B 0.63; own-signal share 56%, 38%, 14%, 11%.
+
+**Next for P1:** (1) add fraction uncertainty and donor pairing to the calculator; (2) power curves: MDE vs
+number of samples and composition spread (simulated designs), for the design tool; (3) close the gap: use
+the MDE to set where the widening (`sim_widen`) is needed; (4) a formal statement (identifiability holds iff
+the stacked operator has full column rank; MDE from its information matrix).
+
+**Compute note (P2):** the atlases are large (tens of millions of cells). Pseudobulking is streaming
+work, but the per-perturbation PALM runs (minutes each, thousands of perturbations) need a cluster or many
+cores; ask before starting.
 
 ## 4. Paper 2: fast, real-data-trained model
 
@@ -510,7 +557,7 @@ Train a network once so it outputs, for any bulk sample, per-cell-type fractions
 |---|---|---|---|
 | 0 | 1–2 months | Finish Paper 1 core (section 3.4) | Paper 1 is the fallback |
 | 1 | 2 months | **PBMC pilot**: ~500k pseudo-bulk from public PBMC (held-out donors for testing); BulkFormer + output head trained on Teacher 1 | About as accurate as the Bayesian model; 90% intervals cover ~90%; >1000x faster. **Go / stop** |
-| 2 | 2–3 months | Add Teacher 2 (ARCHS4, GTEx blood); test on real bulk with truth: flow-cytometry PBMC (e.g. Monaco et al. 2019), IFN-stimulated vs control, our paired tissue cohort | Beats CIBERSORTx and BayesPrism + PROGENy on real bulk; honest intervals |
+| 2 | 2–3 months | Add Teacher 2 (ARCHS4, GTEx blood); test on real bulk with truth: flow-cytometry PBMC (e.g. Monaco et al. 2019), IFN-stimulated vs control, our paired tissue cohort | Beats CIBERSORTx and InstaPrism + PROGENy on real bulk; honest intervals |
 | 3 | 3–4 months | More tissues (lung, gut, skin, tumour); run on GTEx, TCGA, ARCHS4; build the public atlas; one validated discovery | A finding confirmed independently |
 | 4 | 1–2 months | Write the paper | Story: method → accurate and honest → scale → new biology |
 
@@ -568,8 +615,50 @@ Check access and licences of each public dataset before use.
 - Reference-informed priors on program activity (typical range and co-variation of programs per cell type).
 - Semi-supervised discovery of new programs from large bulk cohorts.
 - Gene-level attribution within programs ("leading genes").
-- BayesPrism extension module (PALM-BP): BayesPrism for fractions and per-type reads, then the program model per cell type. A fast mode and an ablation.
+- InstaPrism extension module: InstaPrism (BayesPrism's model) for fractions and per-type reads, then the program model per cell type. A fast mode and an ablation.
 - Hybrid Gibbs sampler (Pólya–Gamma augmentation): only if speed remains the bottleneck.
+
+### 7.1 Spatial niches and microdissection (idea, 2026-10-29; nothing tested)
+
+**Unit of analysis = the niche, not the spot or cell.** A niche (granuloma core, rim, lymphoid aggregate,
+normal lung) is a pooled sample of mixed cells, which is what PALM already models. The question per niche:
+does a pathway differ because the cell mix differs, or because a cell type changed its activity there?
+`decompose` already gives this split.
+
+**Data types:**
+- **Microdissection / GeoMx DSP** (whole-transcriptome probe counts per ROI/AOI, ~50–1000 cells):
+  - Each ROI is a bulk sample, so PALM runs unchanged. The replicate is the patient, with many ROIs per patient.
+  - Marker-segmented AOIs (CD45+, CD68+, PanCK+) give strongly varying cell mixes. This is the best case for
+    unmixing (compare Kang, where proportions barely varied and B/NK effects were not identifiable).
+  - Competitor: SpatialDecon gives proportions only, with no per-cell-type pathway activity or uncertainty.
+- **Spot-based** (Visium 55 µm): pool spots by niche × section, which turns them into bulk samples and
+  removes shallow-depth and spot-correlation problems. Niches are defined by histology, or by clustering the
+  composition of neighbourhoods.
+- **Single-cell spatial** (Xenium, CosMx, Visium HD): niches are defined from cell neighbourhoods. A
+  segmentation spillover correction (transcripts leaking between touching cells) is a possible module; the
+  leakage resembles the spillover PALM corrects.
+
+**Questions it would answer:**
+1. Which cell types change which pathways between niches, beyond the composition difference.
+2. Niche composition as a continuous covariate, e.g. whether macrophage interferon activity rises with local
+   T-cell density.
+
+**Known issues:**
+- Platform effect: probe- or spatial-chemistry capture differs from scRNA-seq. Calibration/misfit may absorb
+  part of it; this must be tested.
+- GeoMx normalisation (Q3), background (negative probes) and low-nuclei AOIs.
+- Inference must be at the patient level. ROIs and spots within a patient are correlated, and pathologist
+  ROI choice is not random. Niche comparisons are observational, so report adjusted associations plus
+  `robustness_value`, not causal effects.
+
+**Answer-key benchmark:** sum segmented cells from single-cell spatial data (or matched scRNA-seq) into
+pseudo-ROIs per niche. The per-cell-type truth comes from the other half of the cells, as in §3.9.
+
+**Steps:**
+- First: run region-pooled PALM on a public TB granuloma GeoMx or Visium dataset as a feasibility check.
+- Then: a pseudo-ROI benchmark with C-SIDE (RCTD, Nat Methods 2022) and SpatialDecon as competitors.
+- Scope: a paper section or a separate paper, decided after the feasibility check.
+- Talk mention (2026-10-30): one line in the close, with no claims.
 
 ## 8. Open decisions
 
@@ -581,7 +670,7 @@ Check access and licences of each public dataset before use.
 
 ## 9. Key references
 
-- BayesPrism; BLADE; BayesPrism-DWLS (PMC13457527); BLUE (PLOS Comp Biol); EPIC-unmix (Genome Biology 2025)
+- BayesPrism (Chu et al. 2022); InstaPrism (Hu & Chikina 2024); BLADE; BayesPrism-DWLS (PMC13457527); BLUE (PLOS Comp Biol); EPIC-unmix (Genome Biology 2025)
 - Cell-type-specific pathway analysis of IPF bulk RNA-seq (bioRxiv 2024.07.30.605740)
 - Meng et al. 2023 and Jaakkola & Elo 2022: csDE method benchmarks (Briefings in Bioinformatics)
 - DestVI (spatial within-type states)

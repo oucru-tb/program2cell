@@ -108,7 +108,7 @@ def test_unavailable_methods_reported(study, monkeypatch):
     for var in ("PALM_RSCRIPT", "PALM_BLADE_PYTHON", "CIBERSORTX_USER", "CIBERSORTX_TOKEN"):
         monkeypatch.delenv(var, raising=False)                  # never launch the real tools here
     monkeypatch.setattr("palm_bulk.compare.methods.find_rscript", lambda: None)
-    for name in ["bayesprism", "toast", "cibersortx", "blade"]:
+    for name in ["instaprism", "toast", "cibersortx", "blade"]:
         res, err = compare.run_method(name, data)
         assert res is None and err.startswith("unavailable"), name
 
@@ -118,10 +118,10 @@ FAKE_R = textwrap.dedent('''
     import os, sys
     import numpy as np, pandas as pd
     script, wd = os.path.basename(sys.argv[1]), sys.argv[2]
-    if script == "run_bayesprism.R":
+    if script == "run_instaprism.R":
         labels = sorted(set(open(os.path.join(wd, "sc_labels.txt")).read().split()))
         bulk = pd.read_csv(os.path.join(wd, "bulk_counts.csv"), index_col=0)
-        genes = list(bulk.index[:-5])                                    # pretend cleanup dropped 5 genes
+        genes = list(bulk.index[:-5])                                    # pretend 5 genes were dropped
         theta = pd.DataFrame(1.0 / len(labels), index=bulk.columns, columns=labels)
         theta.to_csv(os.path.join(wd, "theta.csv"))
         for ct in labels:
@@ -143,7 +143,7 @@ def test_r_wrappers_file_handoff(study, tmp_path):
     beta = truth["beta"]
     np.save(tmp_path / "b.npy", beta @ inp.Gmat + 0.3)                       # lfc consistent with true beta
     rs = [sys.executable, str(fake)]
-    bp = compare.bayesprism(data, rscript=rs)
+    bp = compare.instaprism(data, rscript=rs)
     assert bp.fractions.shape == truth["pi"].shape and np.allclose(bp.fractions.sum(1), 1)
     assert bp.activity.shape == truth["delta"].shape and np.isfinite(bp.activity).all()
     for method in (compare.toast, compare.tca):

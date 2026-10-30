@@ -21,7 +21,7 @@ moment estimate of gene g's overdispersion from the residuals of an unweighted f
 Gene offsets (gene_offset=True): the reference profiles come from other specimens (another platform, donors,
 batch), and every off-program difference between them and the study's cells is otherwise forced into the
 program shifts. A per-gene log offset b_g shared by all types and samples, B_kg -> B_kg e^{b_g} (as the
-batch correction of BayesPrism / CIBERSORTx), absorbs the common part; it is constant across samples, so it
+batch correction of BayesPrism (Chu et al. 2022) / CIBERSORTx), absorbs the common part; it is constant across samples, so it
 does not absorb treatment effects (small ridge `lam_b` for identifiability).
 """
 import numpy as np

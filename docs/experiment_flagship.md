@@ -15,7 +15,7 @@ Planned for **after the method freeze** (see `experiment_cellgeometry.md` §7), 
 | C1 | From bulk RNA-seq alone, PALM-bulk estimates **per-sample, per-cell-type program activity** with calibrated uncertainty | Fraction methods stop at proportions; cell-type-specific DE methods (TOAST, TCA, CellDMC, bMIND, Unico) give gene-level effects without program structure or calibrated per-sample activity |
 | C2 | It **decomposes a bulk treatment effect into composition and intrinsic parts**, with uncertainty | The question "is this signature immune-cell shift or real activation?" cannot be answered by current tools |
 | C3 | Its intervals **cover** under realistic mismatch between reference and bulk | Competitors give no intervals, or SEs validated only by correlation |
-| C4 | It scales to atlas references and cohorts of 10⁴ samples | Bayesian deconvolution (BayesPrism) is hours to days |
+| C4 | It scales to atlas references and cohorts of 10⁴ samples | Full Bayesian deconvolution (BayesPrism's Gibbs sampler) is hours to days; its fast solver InstaPrism gives point estimates only |
 | C5 | Applied to large public cohorts, it **changes a biological conclusion** | Shows the method matters in practice |
 
 Each claim needs evidence from at least two tiers below, and at least one tier must not rely on the
@@ -56,7 +56,7 @@ model's own definitions.
 - Metrics: fraction RMSE/CCC and coverage; activity ρ across samples and types, plus coverage; effect
   r, AUROC, coverage; composition/intrinsic share error.
 - Comparators:
-  - fractions: cellGeometry, BayesPrism/InstaPrism, CIBERSORTx, MuSiC, DWLS;
+  - fractions: cellGeometry, InstaPrism, CIBERSORTx, MuSiC, DWLS;
   - cell-type-specific effects: TOAST, TCA, CellDMC, bMIND, Unico, ENIGMA;
   - activity: deconvolution then ULM/decoupler, naive bulk activity.
 

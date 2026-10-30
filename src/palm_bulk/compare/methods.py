@@ -3,9 +3,9 @@
   palm            this package (reference point)
   naive_two_step  NNLS fractions + one bulk-level program shift per sample (no cell-type resolution)
   reallocation    NNLS fractions + bulk reads split across cell types in proportion to pi_c B_cg
-                  (the expectation step of BayesPrism with a fixed reference), then programs
+                  (the expectation step of BayesPrism / InstaPrism with a fixed reference), then programs
                   per cell type; pure Python, no extra software
-  bayesprism      BayesPrism (R)                        -> per-type expression -> programs
+  instaprism      InstaPrism (R; BayesPrism's model, fast) -> per-type expression -> programs
   cellgeometry    cellGeometry (R, CRAN)                -> fractions; activity by reallocation
   cibersort       CIBERSORT (R script v1.02, nu-SVR)    -> fractions; activity by reallocation
   cibersortx      CIBERSORTx fractions + high-resolution (Docker, needs a token) -> programs
@@ -163,41 +163,37 @@ def reallocation(data, activity="delta"):
     w = pi[:, :, None] * inp.B[None]                                            # (N, C, G)
     Z = inp.Y[:, None, :] * w / w.sum(1, keepdims=True)
     return _finish("reallocation", data, pi, Z, activity, t0,
-                   notes="expectation step of BayesPrism with a fixed reference; NNLS fractions")
+                   notes="expectation step of BayesPrism / InstaPrism with a fixed reference; NNLS fractions")
 
 
-# ---- BayesPrism (R) -----------------------------------------------------------------------
-def bayesprism(data, n_cores=4, max_cells_per_type=1000, activity="delta", species="hs", cleanup=True,
-               rscript=None, timeout=None):
-    """BayesPrism (Chu et al. 2022). Needs R with the BayesPrism package
-    (devtools::install_github("Danko-Lab/BayesPrism/BayesPrism")). Fractions: final theta; per-type
-    expression: get.exp() (posterior mean reads per sample, cell type and gene).
-    cleanup: drop ribosomal, mitochondrial and sex-chromosome genes, as the BayesPrism tutorial
-    advises (needs gene symbols for `species` 'hs' or 'mm').
-    max_cells_per_type: BayesPrism holds the reference as a dense cells x genes matrix in R, so
-    cells are subsampled per type (None keeps all; ~8 bytes x cells x genes of memory)."""
+# ---- InstaPrism (R) -----------------------------------------------------------------------
+def instaprism(data, n_cores=4, max_cells_per_type=1000, activity="delta", rscript=None, timeout=None):
+    """InstaPrism (Hu & Chikina 2024): the BayesPrism model (Chu et al. 2022) with a fixed-point solver
+    instead of Gibbs sampling. Needs R with InstaPrism (remotes::install_github("humengying0907/InstaPrism");
+    Rtools on Windows). Fractions: initial-stage theta (cell types = cell states); per-type expression:
+    get_Z_array(). No gene cleanup (InstaPrism has none).
+    max_cells_per_type: the reference is held as a dense cells x genes matrix in R, so cells are
+    subsampled per type (None keeps all; ~8 bytes x cells x genes of memory)."""
     rs = rscript or find_rscript()
     if not rs:
         raise MethodUnavailable("Rscript not found (set PALM_RSCRIPT or add R to PATH)")
     t0 = time.time()
-    d = data.method_dir("bayesprism")
+    d = data.method_dir("instaprism")
     cells = data.subsample_cells(max_cells_per_type)
-    genes = _write_sc_mtx(data, d, cells)
+    _write_sc_mtx(data, d, cells)
     fwd, back = safe_names(data.inputs.cell_types, "ct")
     pd.Series([fwd[c] for c in data.sc_cell_types[cells]]).to_csv(os.path.join(d, "sc_labels.txt"),
                                                                   index=False, header=False)
     _write_bulk(data, os.path.join(d, "bulk_counts.csv"))
-    run_command(_as_cmd(rs) + [os.path.join(HERE, "R", "run_bayesprism.R"), d, n_cores, species, int(cleanup)],
-                d, "bayesprism", timeout)
+    run_command(_as_cmd(rs) + [os.path.join(HERE, "R", "run_instaprism.R"), d, n_cores], d, "instaprism", timeout)
     theta = pd.read_csv(os.path.join(d, "theta.csv"), index_col=0).rename(columns=back)
     used = pd.read_csv(os.path.join(d, "genes_used.txt"), header=None)[0].tolist()
     frac = theta.reindex(index=data.inputs.samples, columns=data.inputs.cell_types).values
     frac = to_modelled_read_fractions(frac, data, used)
-    per_type = {name: pd.read_csv(os.path.join(d, "Z_%s.csv" % code), index_col=0)     # samples x genes
+    per_type = {name: pd.read_csv(os.path.join(d, "Z_%s.csv" % code), index_col=0)
                 for code, name in back.items() if os.path.exists(os.path.join(d, "Z_%s.csv" % code))}
     Z = _align_type_expression(per_type, data)
-    return _finish("bayesprism", data, frac, Z, activity, t0,
-                   notes="%d reference cells; %d genes after cleanup" % (len(cells), len(used)))
+    return _finish("instaprism", data, frac, Z, activity, t0, notes="%d reference cells" % len(cells))
 
 
 # ---- cellGeometry (R) ---------------------------------------------------------------------
@@ -484,7 +480,8 @@ def tca(data, fractions=None, **kw):
     return _csde("tca", data, fractions, **kw)
 
 
-METHODS = dict(palm=palm, palm_fast=palm_fast, naive_two_step=naive_two_step, reallocation=reallocation, bayesprism=bayesprism,
+METHODS = dict(palm=palm, palm_fast=palm_fast, naive_two_step=naive_two_step, reallocation=reallocation,
+               instaprism=instaprism,
                cellgeometry=cellgeometry, cibersort=cibersort,
                cibersortx=cibersortx, blade=blade, toast=toast, tca=tca)
 

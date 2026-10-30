@@ -7,7 +7,7 @@ export PALM_BLADE_PYTHON='C:\Users\duy.pham\AppData\Local\miniforge3\envs\palm-b
 cd /c/Users/duy.pham/Documents/dev/program2cell
 LOG=benchmarks/dev/competitors_c1.log
 echo "START $(date)" >> $LOG
-for comp in toast,tca cellgeometry bayesprism blade; do
+for comp in toast,tca cellgeometry instaprism blade; do
   for ds in mcf_ida mcf_tram zhang kang; do
     python scripts/dev_bench.py run --dataset $ds --splits 0-2 --configs '{}' --competitors $comp >> $LOG 2>&1
   done

@@ -4,7 +4,7 @@
 # ---- conda ------------------------------------------------------------------------------------
 CONDA_BASE="${CONDA_BASE:-$(conda info --base 2>/dev/null)}"   # e.g. /nfs/team205/<you>/miniforge3
 PALM_ENV=palm            # main env: palm_bulk, JAX, decoupler (PALM, naive, reallocation, scoring)
-R_ENV=palm-r             # R 4.4 + BayesPrism, TOAST, TCA
+R_ENV=palm-r             # R 4.4 + InstaPrism, TOAST, TCA
 BLADE_ENV=palm-blade     # Python 3.8 + BLADE_Deconvolution
 USE_GPU=0                # 1: install CUDA JAX in the main env and run PALM on a GPU
 
@@ -30,12 +30,12 @@ REPS=1                                           # donor splits (each a new rand
 CONTRAST=none                                    # OneK1K is healthy only; e.g. "disease,COVID-19,HC"
 PROGRAM_LIST="JAK-STAT,NFkB,TNFa,TGFb,Hypoxia,p53,MAPK"   # empty: all 14 PROGENy programs
 MAX_GENES=1000
-METHODS="palm,naive_two_step,reallocation,bayesprism,toast,tca,blade"   # toast/tca need a contrast
+METHODS="palm,naive_two_step,reallocation,instaprism,toast,tca,blade"   # toast/tca need a contrast
 WARMUP=500
 SAMPLES=500
 CHAINS=2
 PRECISION=float64
-METHOD_KW='{"blade": {"grid": "small", "n_rep": 1, "n_jobs": 8}, "bayesprism": {"n_cores": 8}}'
+METHOD_KW='{"blade": {"grid": "small", "n_rep": 1, "n_jobs": 8}, "instaprism": {"n_cores": 8}}'
 
 # ---- job resources (used by run_benchmark.sh for threads; scheduler headers are in that file) ----
 THREADS="${LSB_DJOB_NUMPROC:-${SLURM_CPUS_PER_TASK:-8}}"

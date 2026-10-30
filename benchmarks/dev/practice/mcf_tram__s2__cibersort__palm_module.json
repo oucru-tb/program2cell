@@ -1,0 +1,1 @@
+[{"cov": 0.9285714285714286, "r": 0.9156089897108837, "rmse": 0.04034846525246247, "width": 0.1599114484993369, "r_t": 0.9156089897108837, "calls": 17, "fpr_null": 0.15, "auroc": NaN, "tpr": 0.8333333333333334, "fpr": NaN, "tpr_t": 1.0, "cov_known": 1.0, "dataset": "mcf_tram", "split": 2, "method": "cibersort", "kind": "palm_module", "rule": "palm", "seconds": 334.5135962963104}]

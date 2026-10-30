@@ -86,6 +86,9 @@ def program_deconvolution(inputs, calibration, fractions=None, fraction_draws=No
     'auto': per program, 'unmix' where the simulated error is lower than calibrated reallocation's, else the
     calibrated effects (with covariates / groups: 'ols'); sim_widen=True (default) also widens those programs'
     intervals to the simulated error of rescaled reallocation (False: the calibrated intervals as they are;
+    "abs": widen to the simulated level-quantile of the absolute leakage error per type and program (not studentised:
+    leakage bias does not grow with the study's noise, and the simulated cohorts are less noisy than real ones)
+    plus the study's contrast noise in quadrature, so well-separated types are not widened like poorly separated ones;
     "replace": the simulated-error interval alone, i.e. the study's own (group-bootstrap) contrast standard error
     times the simulated studentised error quantile of rescaled reallocation, which carries its leakage bias).
     Default (the causal setting, chosen on the perturbation benchmarks, method_spec 4.5b): estimator="auto" with
@@ -96,7 +99,8 @@ def program_deconvolution(inputs, calibration, fractions=None, fraction_draws=No
     (misfit_sd) to the unmixed intervals, which then use the t quantile alone, while the design check simulates
     cohorts with that response (choice of engine, widening of calibrated programs); per_pair=True ('auto'):
     choose the engine per (type, program) instead of per program (a type keeping little of its own shift is
-    better left calibrated even where unmixing wins for the program).
+    better left calibrated even where unmixing wins for the program). plant="observed": the design check plants
+    this study's shared effect plus type deviations of its observed spread (core.unmix.design_check).
     estimator 'direct' (core.direct): maximum likelihood of the treatment effects on the bulk counts given the
     fractions (no reallocation), cluster-bootstrap intervals; direct_kw go to direct_effects (e.g. lam).
     """
@@ -172,11 +176,12 @@ def program_deconvolution(inputs, calibration, fractions=None, fraction_draws=No
 
 def _unmix_effects(out, inputs, calibration, fractions, fraction_draws, raw, raw_draws, T, X, groups, level, seed,
                    n_sim, mode, eff_cal, iv_cal, sim_widen=True, pev=False, separate=False, misfit=False,
-                   per_pair=False):
+                   per_pair=False, plant="prior", shared=False, margin=0.1):
     """Effects by unmixing (core.unmix) for every program ('unmix') or where the design check favours it
     ('auto'); the others keep the calibrated effects. Intervals: unmixed, bootstrap half-width widened to
     max(t, simulated studentised error quantile) standard errors; calibrated, the calibrated interval widened
-    to at least the simulated studentised error quantile of rescaled reallocation (its leakage bias)."""
+    to at least the simulated studentised error quantile of rescaled reallocation (its leakage bias).
+    shared=True: also out.info["shared_response"] (shared_response)."""
     from scipy.stats import t as tdist
     from .core import unmix as um
     B, G = inputs.B, inputs.Gmat
@@ -189,9 +194,9 @@ def _unmix_effects(out, inputs, calibration, fractions, fraction_draws, raw, raw
         Ad = np.stack([um.leakage_operator(z, B, G, diagonal=False) for z in zd])
     r = um.unmix_effects(raw, A, T, X, groups, level=level, dhat_draws=dd, A_draws=Ad, pi=fractions, B=B, G=G,
                          pi_draws=zd, seed=seed, pev=pev, separate=separate,
-                         misfit_tau="auto" if misfit else None, Y=inputs.Y)
+                         misfit_tau="auto" if misfit else None, Y=inputs.Y, shared_fit=shared)
     chk = um.design_check(calibration, fractions, T, X, groups, n_sim=n_sim, level=level, seed=seed,
-                          effect_hint=eff_cal, offprog_sd=r["tau"] if misfit else 0.0)
+                          effect_hint=eff_cal, offprog_sd=r["tau"] if misfit else 0.0, plant=plant)
     q = tdist.ppf(0.5 + level / 2, max(r["n_units"] - 1, 1))
     q = q if misfit else max(chk["z_q"], q)
     lo_u, hi_u = r["effects"] - q * r["se"], r["effects"] + q * r["se"]
@@ -206,10 +211,48 @@ def _unmix_effects(out, inputs, calibration, fractions, fraction_draws, raw, raw
     if sim_widen:
         se_r = np.abs(chk["slope"])[None] * um.contrast_se(raw, T, np.random.default_rng(seed), groups=groups)
         h_sim = chk["z_q_realloc"][None] * se_r
+        if sim_widen == "abs":              # leakage error in absolute units per type, plus this study's noise
+            q_t = tdist.ppf(0.5 + level / 2, max(r["n_units"] - 1, 1))
+            h_sim = np.sqrt(chk["q_abs_realloc_cp"] ** 2 + (q_t * se_r) ** 2)
         h = h_sim if sim_widen == "replace" else np.maximum(h, h_sim)
     iv = (np.where(use, lo_u, eff_cal - h), np.where(use, hi_u, eff_cal + h))
     out.info["unmix"] = dict(programs=[p for p, u in zip(inputs.programs, use.any(0)) if u], pairs=use.tolist(),
                              rmse_unmix=chk["rmse_unmix"].tolist(), rmse_realloc=chk["rmse_realloc"].tolist(),
                              z_q=chk["z_q"], shrinkage=r["lam"][:, 1].tolist(), tau=r["tau"],
                              misfit_sd=None if r["misfit_sd"] is None else r["misfit_sd"].tolist())
+    if shared:
+        out.info["shared_response"] = shared_response(r, eff, iv, use, q, tdist.ppf(0.5 + level / 2, max(r["n_units"] - 1, 1)),
+                                                      inputs.cell_types, inputs.programs, margin)
     return eff, iv
+
+
+def shared_response(r, eff, iv, use, q_dev, q_common, cell_types, programs, margin=0.1):
+    """Shared vs cell-type-specific response per program, from unmix_effects(shared_fit=True) r and the final
+    effects eff, intervals iv and unmixed pairs use (C, P) of _unmix_effects.
+    common: the effect if every type responded alike (shared-response model; precise even where the types
+    cannot be told apart), interval common +- q_common se, the se adding in quadrature the lack of fit of the
+    shared model |common - mean_c eff_c| (its value depends on the model's weighting when the types differ).
+    deviation_c = eff_c - common: unmixed pairs, interval
+    +- q_dev se (bootstrapped jointly with the common effect); calibrated pairs, the half-widths of the effect's
+    interval and of the common interval in quadrature.
+    Per type: 'differs' (deviation interval excludes 0), 'same' (it lies within +-margin), else 'unclear'.
+    Per program: 'type-specific' (some type differs), 'shared' (common changed, every type same), 'shared?'
+    (common changed, no type differs, some unclear: consistent with a shared response, not resolved per type),
+    'none' (common unchanged, every type same) or 'unclear'."""
+    c = r["common"]
+    cs = np.sqrt(r["common_se"] ** 2 + (c - eff.mean(0)) ** 2)
+    d = eff - c[None]
+    h = np.where(use, q_dev * r["deviation_se"], np.sqrt(((iv[1] - iv[0]) / 2) ** 2 + (q_common * cs[None]) ** 2))
+    clo, chi, dlo, dhi = c - q_common * cs, c + q_common * cs, d - h, d + h
+    lab = np.where((dlo > 0) | (dhi < 0), "differs", np.where((dlo > -margin) & (dhi < margin), "same", "unclear"))
+    moved = (clo > 0) | (chi < 0)
+    pat = []
+    for p in range(len(programs)):
+        lp = lab[:, p]
+        pat.append("type-specific" if (lp == "differs").any() else
+                   ("shared" if (lp == "same").all() else "shared?") if moved[p] else
+                   "none" if (lp == "same").all() else "unclear")
+    return dict(cell_types=list(cell_types), programs=list(programs), margin=margin,
+                common=c.tolist(), common_lo=clo.tolist(), common_hi=chi.tolist(),
+                deviation=d.tolist(), deviation_lo=dlo.tolist(), deviation_hi=dhi.tolist(),
+                type_label=lab.tolist(), pattern=pat)

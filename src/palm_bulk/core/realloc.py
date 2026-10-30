@@ -1,7 +1,8 @@
 """Fractions and per-cell-type activity without a Bayesian fit.
 
 reallocate:    split each bulk sample's reads between cell types in proportion to pi_nc B_cg (the expectation
-               step of BayesPrism with a fixed reference) and estimate each type's program shift with
+               step of BayesPrism / InstaPrism with a fixed reference; Chu et al. 2022, Hu & Chikina 2024)
+               and estimate each type's program shift with
                estimate_delta. With good fractions this is the best activity estimator we have
                (docs/method_spec.md, section 3).
 em_fractions:  "PALM-lite": multinomial maximum-likelihood read fractions, y_n ~ Mult(n_n, pi_n B), by EM

@@ -62,7 +62,7 @@ res.table()          # activity / effects, intervals, calls, robustness value pe
 | **Paired / repeated samples** | `groups=donor_ids` | — | Before/after or several samples per donor. Gives within-donor effects and resamples whole donors for intervals. |
 | **Observational (e.g. disease vs healthy)** | `covariates=X`, optionally `estimator="aipw"` | — | Effects are adjusted associations, not causal. Report `robustness`: how strong an unmeasured confounder would have to be to remove a call. |
 | **Composition vs cell response** | `decompose=True` | +seconds | Splits each bulk program effect into a part from changed proportions and a part from changed cell state, per cell type. |
-| **Other methods' fractions** | `fractions=...` (convert cell to read fractions with `compare.methods.to_modelled_read_fractions`) or `frac_fn=method` | — | CIBERSORTx, BayesPrism, etc. A `frac_fn` that can be rerun has its own fraction error calibrated. Otherwise PALM-lite stands in for that error. |
+| **Other methods' fractions** | `fractions=...` (convert cell to read fractions with `compare.methods.to_modelled_read_fractions`) or `frac_fn=method` | — | CIBERSORTx, InstaPrism, etc. A `frac_fn` that can be rerun has its own fraction error calibrated. Otherwise PALM-lite stands in for that error. |
 | **Many cell types (> 20)** | fine fractions with `prepare_inputs(bulk, ref_fine, None)`, programs on a level-1 reference | — | Program activity needs enough signal per type. |
 
 Always:
@@ -83,7 +83,7 @@ Always:
 
 ## Benchmarks
 
-`scripts/run_compare.py` compares palm-bulk with BayesPrism, BLADE, TOAST, TCA and simple two-step
+`scripts/run_compare.py` compares palm-bulk with InstaPrism, BLADE, TOAST, TCA and simple two-step
 baselines on simulated or pseudo-bulk data with known truth. `hpc/` has scripts to set up the
 environments and run the benchmark on a cluster.
 

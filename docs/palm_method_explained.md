@@ -242,7 +242,7 @@ It is used in two places:
 - **Ground truth on real data:** pool the real cells of one type in one sample, compute that pseudo-bulk,
   and run `estimate_delta`. That is the true program activity, by the model's own definition. The same
   approach gives Paper 2's training labels.
-- **Competitors:** BayesPrism, CIBERSORTx and BLADE output a per-sample expression profile for each cell type.
+- **Competitors:** InstaPrism, CIBERSORTx and BLADE output a per-sample expression profile for each cell type.
   Running `estimate_delta` on those puts them on PALM's scale. The conventional route (decoupler ULM, the
   usual "deconvolve then PROGENy") is reported alongside it.
 
@@ -255,8 +255,8 @@ On simulated profiles drawn from the model, `estimate_delta` recovers the true s
 | Method | What it gives | How it becomes comparable |
 |---|---|---|
 | Naive two-step | NNLS fractions; one program shift per bulk sample | Same shift copied to every cell type, so it cannot say who carries a program |
-| Reallocation | NNLS fractions; reads split between cell types in proportion to fraction × reference | Programs per cell type with `estimate_delta` (the first step of BayesPrism, with a fixed reference) |
-| BayesPrism | Fractions; per-type expression per sample | `estimate_delta` or ULM |
+| Reallocation | NNLS fractions; reads split between cell types in proportion to fraction × reference | Programs per cell type with `estimate_delta` (the first step of BayesPrism / InstaPrism, with a fixed reference) |
+| InstaPrism | Fractions; per-type expression per sample | `estimate_delta` or ULM |
 | CIBERSORTx | Fractions; high-resolution per-type expression | Same (not run yet: needs Docker and a token) |
 | BLADE | Fractions; per-type expression per sample | Same |
 | TOAST, TCA | Gene-level treatment effect per cell type | Projected onto program weights to give per-type program effects |
@@ -296,7 +296,6 @@ not a benchmark):
 | | Fraction error | Activity rank corr. | Names the right carrier | Effect corr. | AUROC |
 |---|---|---|---|---|---|
 | PALM | 0.014 | 0.71 | 0.84 | 0.96 | 1.00 |
-| BayesPrism | 0.051 | 0.50 | 0.47 | 0.40 | 0.69 |
 | Reallocation | 0.067 | 0.52 | 0.58 | 0.30 | 0.64 |
 | BLADE | 0.118 | 0.51 | 0.23 | 0.33 | 0.72 |
 | Naive two-step | 0.067 | 0.44 | none | 0.03 | 0.50 |

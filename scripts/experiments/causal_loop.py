@@ -43,6 +43,10 @@ ESTIMATORS = {"diff": dict(estimator="diff"),
               "auto_m": dict(estimator="auto", unmix_kw=dict(pev=True, misfit=True)),
               "auto_m_pair": dict(estimator="auto", paired=True, unmix_kw=dict(pev=True, misfit=True)),
               "auto_mc": dict(estimator="auto", unmix_kw=dict(pev=True, misfit=True, per_pair=True)),
+              # 2026-10-30 (post-freeze development): design check planted like the study's own effects
+              "auto_obs": dict(estimator="auto", unmix_kw=dict(pev=True, misfit=True, plant="observed")),
+              # 2026-10-30: calibrated programs widened by the absolute leakage error per type (sim_widen="abs")
+              "auto_abs": dict(estimator="auto", sim_widen="abs", unmix_kw=dict(pev=True, misfit=True)),
               "direct": dict(estimator="direct", direct_kw=dict(n_boot=40)),
               "direct_nb": dict(estimator="direct", direct_kw=dict(n_boot=40, weights="nb")),
               "direct_pair": dict(estimator="direct", paired=True, direct_kw=dict(n_boot=40))}

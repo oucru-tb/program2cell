@@ -1,0 +1,67 @@
+== held-out splits: [np.int64(10), np.int64(11), np.int64(12)]
+                    n    cov      r    r_t   rmse  width  calls  fpr_null  auroc    tpr  tpr_t    fpr  cov_known PASS
+dataset  estimator                                                                                                   
+kang     auto_m     3  1.000  0.944  0.944  0.063  0.998  0.000     0.000    NaN  0.000  0.000    NaN      1.000    -
+         diff       3  0.976  0.944  0.944  0.063  0.621  3.667     0.000    NaN  0.250  0.250    NaN      1.000    -
+mcf_ida  auto_m     3  0.921  0.920  0.920  0.060  0.243  3.333     0.014  1.000  0.889  0.750  0.222      0.944    -
+         diff       3  0.635  0.892  0.892  0.078  0.267  1.667     0.015  0.889  0.222  0.167  0.000      1.000    -
+mcf_tram auto_m     3  0.929  0.866  0.866  0.051  0.238  9.667     0.000    NaN  0.833  1.000    NaN      1.000    -
+         diff       3  0.730  0.862  0.862  0.050  0.176  1.333     0.000    NaN  0.000  0.000    NaN      1.000    -
+zhang    auto_m     3  0.976  0.745    NaN  0.014  0.154  0.000     0.000    NaN    NaN    NaN    NaN        NaN  yes
+         diff       3  0.964  0.745    NaN  0.014  0.088  1.667     0.049    NaN    NaN    NaN    NaN        NaN  yes
+
+targets: cov >= 0.85, r >= 0.9, auroc >= 0.95, tpr_t >= 0.9, fpr_null <= 0.1
+
+C:\Users\duy.pham\AppData\Local\miniforge3\envs\program2cell\Lib\site-packages\scipy\stats\_axis_nan_policy.py:601: RuntimeWarning: Precision loss occurred in moment calculation due to catastrophic cancellation. This occurs when the data are nearly identical. Results may be unreliable.
+  res = hypotest_fun_out(*samples, **kwds)
+C:\Users\duy.pham\AppData\Local\miniforge3\envs\program2cell\Lib\site-packages\scipy\stats\_axis_nan_policy.py:601: RuntimeWarning: Precision loss occurred in moment calculation due to catastrophic cancellation. This occurs when the data are nearly identical. Results may be unreliable.
+  res = hypotest_fun_out(*samples, **kwds)
+                                        n    cov    r_t   rmse   calls  fpr_null  auroc  tpr_t
+dataset  kind        method       rule                                                        
+kang     palm        palm         palm  3  1.000  0.944  0.063   0.000     0.000    NaN  0.000
+         palm_module cibersort    palm  3  0.988  0.934  0.067   2.000     0.000    NaN  0.333
+                     reallocation palm  3  1.000  0.952  0.059   0.333     0.000    NaN  0.083
+         practice    cibersort    bh10  3  0.619  0.982  0.040  25.333     0.690    NaN  1.000
+                                  p10   3  0.619  0.982  0.040  25.333     0.690    NaN  1.000
+                     naive        bh10  3  0.286  0.913  0.081  26.667     0.833    NaN  1.000
+                                  p10   3  0.286  0.913  0.081  26.667     0.833    NaN  1.000
+                     reallocation bh10  3  0.464    NaN    NaN  17.000     0.393    NaN  0.667
+                                  p10   3  0.464    NaN    NaN  17.000     0.393    NaN  0.667
+mcf_ida  palm        palm         palm  3  0.921  0.920  0.060   3.333     0.014  1.000  0.750
+         palm_module cibersort    palm  3  0.944  0.915  0.068   4.667     0.015  0.963  0.583
+                     reallocation palm  3  0.913  0.924  0.063   4.000     0.016  0.963  0.667
+         practice    cibersort    bh10  3  0.079  0.769  0.103  35.000     0.775  1.000  1.000
+                                  p10   3  0.079  0.769  0.103  35.000     0.775  1.000  1.000
+                     naive        bh10  3  0.048  0.699  0.117  38.000     0.970  0.500  1.000
+                                  p10   3  0.048  0.699  0.117  38.000     0.970  0.500  1.000
+                     reallocation bh10  3  0.071  0.769  0.104  32.333     0.670  1.000  1.000
+                                  p10   3  0.071  0.769  0.104  32.667     0.686  1.000  1.000
+mcf_tram palm        palm         palm  3  0.929  0.866  0.051   9.667     0.000    NaN  1.000
+         palm_module cibersort    palm  3  0.944  0.921  0.038  14.667     0.129    NaN  1.000
+                     reallocation palm  3  0.929  0.834  0.057   8.333     0.050    NaN  0.933
+         practice    cibersort    bh10  3  0.063  0.864  0.049  35.000     0.770    NaN  1.000
+                                  p10   3  0.063  0.864  0.049  35.000     0.770    NaN  1.000
+                     naive        bh10  3  0.119  0.824  0.056  36.000     0.806    NaN  1.000
+                                  p10   3  0.119  0.824  0.056  36.000     0.806    NaN  1.000
+                     reallocation bh10  3  0.079  0.816  0.056  34.333     0.751    NaN  0.933
+                                  p10   3  0.079  0.816  0.056  34.667     0.769    NaN  0.933
+zhang    palm        palm         palm  3  0.976    NaN  0.014   0.000     0.000    NaN    NaN
+         palm_module cibersort    palm  3  0.940    NaN  0.041   1.667     0.049    NaN    NaN
+                     reallocation palm  3  0.929    NaN  0.075   2.000     0.061    NaN    NaN
+         practice    cibersort    bh10  3  0.917    NaN  0.018   0.000     0.000    NaN    NaN
+                                  p10   3  0.917    NaN  0.018   3.667     0.137    NaN    NaN
+                     naive        bh10  3  0.750    NaN  0.022   1.333     0.051    NaN    NaN
+                                  p10   3  0.750    NaN  0.022   6.667     0.253    NaN    NaN
+                     reallocation bh10  3  0.310    NaN    NaN   0.000     0.000    NaN    NaN
+                                  p10   3  0.310    NaN    NaN   1.333     0.051    NaN    NaN
+
+== PALM (auto_m) minus alternative, paired over dataset x split [95% bootstrap CI]
+                                                            cov                      fpr_null                        tpr_t                        auroc
+palm_module | cibersort | palm     +0.002 [-0.020, +0.026] n=12  -0.045 [-0.082, -0.011] n=12  -0.056 [-0.250, +0.111] n=9  +0.037 [+0.000, +0.111] n=3
+palm_module | reallocation | palm  +0.014 [-0.004, +0.034] n=12  -0.028 [-0.051, -0.005] n=12  +0.022 [-0.061, +0.106] n=9  +0.037 [+0.000, +0.111] n=3
+practice | cibersort | bh10        +0.537 [+0.340, +0.724] n=12  -0.555 [-0.723, -0.362] n=12  -0.417 [-0.722, -0.139] n=9  +0.000 [+0.000, +0.000] n=3
+practice | cibersort | p10         +0.537 [+0.340, +0.724] n=12  -0.590 [-0.731, -0.428] n=12  -0.417 [-0.722, -0.139] n=9  +0.000 [+0.000, +0.000] n=3
+practice | naive | bh10            +0.656 [+0.497, +0.791] n=12  -0.662 [-0.857, -0.442] n=12  -0.417 [-0.722, -0.139] n=9  +0.500 [+0.500, +0.500] n=3
+practice | naive | p10             +0.656 [+0.497, +0.791] n=12  -0.712 [-0.879, -0.515] n=12  -0.417 [-0.722, -0.139] n=9  +0.500 [+0.500, +0.500] n=3
+practice | reallocation | bh10     +0.725 [+0.632, +0.812] n=12  -0.450 [-0.620, -0.276] n=12  -0.283 [-0.500, -0.072] n=9  +0.000 [+0.000, +0.000] n=3
+practice | reallocation | p10      +0.725 [+0.632, +0.812] n=12  -0.471 [-0.640, -0.302] n=12  -0.283 [-0.500, -0.072] n=9  +0.000 [+0.000, +0.000] n=3

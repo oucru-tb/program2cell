@@ -1,0 +1,1 @@
+[{"cov": 1.0, "r": 0.9526862513602657, "rmse": 0.06538396567653777, "width": 1.0013302565283824, "r_t": 0.9526862513602657, "calls": 1, "fpr_null": 0.0, "auroc": NaN, "tpr": 0.0, "fpr": NaN, "tpr_t": 0.0, "cov_known": 1.0, "dataset": "kang", "split": 1, "method": "reallocation", "kind": "palm_module", "rule": "palm", "seconds": 104.9996554851532}]

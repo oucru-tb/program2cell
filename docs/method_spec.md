@@ -16,6 +16,12 @@ see `benchmarking.md`.*
 
 ## Method freeze v1 (2026-10-29; git tag `method-freeze-v1`)
 
+> **Freeze lifted 2026-10-30** for further development. Splits 10–12 have been used, so they are no longer
+> held out. A new freeze needs a new tag (`method-freeze-v2`) and fresh held-out splits (e.g. 20–22).
+> Development continues on splits 0–9 only. The v1 results below stay as the record of that freeze.
+> Post-freeze work: InstaPrism replaces BayesPrism as the competitor; opt-in `plant="observed"` design check
+> (not adopted); opt-in shared-response output (`unmix_kw=dict(shared=True)`, `shared_response`).
+
 **What is frozen** (the method reported in Paper 1):
 
 | Step | Setting |
@@ -41,6 +47,28 @@ see `benchmarking.md`.*
 - Minor cell types with little spread in composition (Kang B/NK) get no calls: their effects can't be
   identified from the bulk.
 - Coverage when the response varies between patients is untested; this is for the disease arm.
+
+**Held-out results (run once, finished 2026-10-29 20:31; `benchmarks/dev/heldout_summary.txt`):**
+
+| Dataset | Coverage | r | False calls (null pairs) | Known answer | CIBERSORT + t-test false calls |
+|---|---|---|---|---|---|
+| McFarland idasanutlin | 0.92 | 0.92 | 0.014 | AUROC 1.0, responders found 0.75 | 0.78 |
+| McFarland trametinib | 0.93 | 0.87 | 0.000 | responders found 1.0 | 0.77 |
+| Zhang | 0.98 | — | 0.000 | — | 0.00 |
+| Kang | 1.00 | 0.94 | 0.000 | responders found 0 (power) | 0.69 |
+
+Paired over the 12 dataset × split units, PALM minus CIBERSORT + t-test (BH):
+- coverage +0.54 [0.34, 0.72];
+- false calls −0.56 [−0.72, −0.36];
+- responders found −0.42 [−0.72, −0.14].
+
+PALM finds fewer responders than the t-test because the t-test calls nearly everything.
+
+Two targets missed on held-out:
+- trametinib r is 0.87, against a target of 0.9;
+- idasanutlin responders found is 0.75, against a target of 0.9 (0.92 on development).
+
+These are reported as they are.
 
 ---
 
@@ -122,7 +150,7 @@ or an approximate posterior.
 
 ### 2c. External fractions (module mode)
 
-- **Input:** any method's fractions (cellGeometry, BayesPrism, CIBERSORTx, …).
+- **Input:** any method's fractions (cellGeometry, InstaPrism, CIBERSORTx, …).
 - **Unit harmonisation:** convert to *read* fractions on the modelled genes.
   - Methods that report cell fractions are converted with each type's mean library size from the
     reference, then `to_modelled_read_fractions`.
@@ -522,14 +550,11 @@ Activity cov90, pooled over priors:
 
 ### O5: OneK1K competitors (PROGENy-7, dev_bench rows)
 
-Splits 0–2 for the BayesPrism rows; cellGeometry is over 10 splits.
+cellGeometry is over 10 splits.
 
 | Method | Fraction RMSE | ρ | Type-specific ρ | Effect r | Runtime |
 |---|---|---|---|---|---|
 | PALM NB, posterior realloc | 0.046 | 0.751 | 0.531 | 0.771 | ~10 min |
-| BayesPrism, own Z (pseudobulk ref) | 0.064 | 0.732 | 0.543 | 0.746 | 1.9 h |
-| BayesPrism + realloc | 0.064 | 0.744 | 0.543 | 0.774 | |
-| BayesPrism with cells + realloc | 0.064 | 0.747 | 0.539 | 0.776 | 50 min |
 | cellGeometry with cells | 0.053 | 0.745 | 0.462 | 0.724 | 71 s |
 | True fractions + realloc | 0 | 0.750 | 0.502 | 0.789 | |
 
@@ -541,8 +566,6 @@ Splits 0–2 for the BayesPrism rows; cellGeometry is over 10 splits.
   |---|---|---|
   | PALM | 0.859 | 0.059 |
   | cellGeometry | 0.850 | 0.087 |
-  | BayesPrism + realloc | 0.806 | 0.176 |
-  | BayesPrism, own Z | 0.690 | |
 
 - PBMC, where real effects exist, is the informative dataset. Kang (O6) would be a second one.
 
@@ -594,7 +617,7 @@ vs IFN-β stimulated, raw counts. Built by `scripts/experiments/build_kang.py` i
   (`make_benchmark(ref_filter=("label", "ctrl"))`). This mimics a resting reference atlas, so the IFN-β
   response is entirely "program activity".
 - Calibration uses all of a calibration donor's control specimens, with folds by donor.
-- **Competitors needing single cells** (cellGeometry, BayesPrism) use the reference donors' control cells,
+- **Competitors needing single cells** (cellGeometry, InstaPrism) use the reference donors' control cells,
   `data/kang/kang_ctrl_cells.h5ad`, through `--cells`.
   - With only 4 control donors, there are too few pseudo-bulk rows: cellGeometry's `cellMarkers` failed on
     split 1.
@@ -637,7 +660,7 @@ vs IFN-β stimulated, raw counts. Built by `scripts/experiments/build_kang.py` i
   - `lk+` uses |β̃| + z·se instead of |β̃|.
   - Null effects get the plain width; real effects get the leakage they would cause.
 - **Proxy fraction error (`calib px`).** For engines without a fraction function (PALM, cellGeometry,
-  CIBERSORT, BayesPrism), the calibration set's d̂ is computed with PALM-lite fractions. This is
+  CIBERSORT, InstaPrism), the calibration set's d̂ is computed with PALM-lite fractions. This is
   conservative, because PALM-lite's error is at least as large.
 - **Competitor sources:** `comp:<name>` reads any dev_bench competitor's saved fractions and reallocates.
 
@@ -662,9 +685,8 @@ vs IFN-β stimulated, raw counts. Built by `scripts/experiments/build_kang.py` i
     baselines.
   - OneK1K CIBERSORT.
   - `rescore` of PBMC.
-  - Then BayesPrism on Kang (splits 0–4) and PBMC (splits 0–2).
 - **openitems_v2:** Kang, PBMC and OneK1K × PROGENy-7, Hallmark, PROGENy-14 and CollecTRI.
-  - Sources: PALM NB, PALM-lite, NNLS, cellGeometry, CIBERSORT, true fractions; BayesPrism where it ran.
+  - Sources: PALM NB, PALM-lite, NNLS, cellGeometry, CIBERSORT, true fractions.
   - Summaries: `benchmarks/dev/openitems_v2/summary_<dataset>__<prior>.txt`.
 
 ---

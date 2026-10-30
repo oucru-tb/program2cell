@@ -3,7 +3,7 @@
 The model defines activity as the shift delta in E_cg = softmax_g(log B_cg + sum_p delta_cp G_pg).
 `estimate_delta` inverts that definition for profiles that are observed directly: a per-cell-type
 pseudo-bulk of real cells (ground truth for benchmarks and Paper 2's Teacher 1), or the per-sample
-per-cell-type expression another method outputs (BayesPrism Z, CIBERSORTx high-resolution, BLADE).
+per-cell-type expression another method outputs (InstaPrism Z, CIBERSORTx high-resolution, BLADE).
 All are then compared on one scale.
 """
 import numpy as np

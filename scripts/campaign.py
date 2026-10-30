@@ -7,7 +7,7 @@ so re-running after a crash or reboot continues where it stopped. Progress goes 
 
 Usage:  python scripts/campaign.py [--outdir benchmarks/campaign] [--slots 3] [--only name1,name2]
                                    [--wait file1,file2 --wait-hours 6] [--dry-run]
-Set PALM_RSCRIPT for BayesPrism/TOAST/TCA (see docs/user_guide.md).
+Set PALM_RSCRIPT for InstaPrism/TOAST/TCA (see docs/user_guide.md).
 """
 import argparse
 import datetime
@@ -36,7 +36,7 @@ PBMC = "pbmc_broad_clean.h5ad"
 O1K = "data/onek1k_50k_%s.h5ad"
 O1K_FULL = os.environ.get("ONEK1K_FULL", "C:/Users/duy.pham/Downloads/onek1k_full_%s.h5ad")
 PROGS7 = "JAK-STAT,NFkB,TNFa,TGFb,Hypoxia,p53,MAPK"
-COMP = "naive_two_step,reallocation,toast,tca,bayesprism"
+COMP = "naive_two_step,reallocation,toast,tca,instaprism"
 FINE_MAP = json.dumps({"B naive": "B cell", "B memory": "B cell", "B intermediate": "B cell",
                        "CD14 Mono": "Monocyte", "CD16 Mono": "Monocyte", "NK": "NK cell",
                        "NK_CD56bright": "NK cell", "NK Proliferating": "NK cell",
@@ -95,7 +95,7 @@ JOBS = [
     pbmc("B4_pbmc5_palm_independent", "palm", 5, full("independent"), 4.0),
     pbmc("B5_pbmc5_palm_shared", "palm", 5, full("shared"), 5.0),
     # D. OneK1K 50k subset (39 donors; small): second dataset, no disease contrast
-    onek1k("D1_onek1k_broad", "naive_two_step,reallocation,bayesprism,palm_fast,palm", 3, fast("independent"), 3.0,
+    onek1k("D1_onek1k_broad", "naive_two_step,reallocation,instaprism,palm_fast,palm", 3, fast("independent"), 3.0,
            cells=O1K % "cells", contrast="none"),
     onek1k("D2_onek1k_broad_sex", "naive_two_step,reallocation,toast,tca,palm_fast", 3, fast("independent"), 1.0,
            cells=O1K % "cells", contrast="sex,male,female"),
@@ -113,7 +113,7 @@ JOBS = [
     pbmc("E3_pbmc_fast_all_programs", "naive_two_step,palm_fast", 3, fast("independent"), 1.0,
          program_list="Androgen,EGFR,Estrogen,Hypoxia,JAK-STAT,MAPK,NFkB,PI3K,TGFb,TNFa,Trail,VEGF,WNT,p53"),
     # F. full OneK1K (981 donors; 616 with >= 20 cells of each broad type), after the plan above
-    onek1k_full("F1_onek1k_full_broad", "naive_two_step,reallocation,bayesprism,palm_fast", 3, fast("independent"),
+    onek1k_full("F1_onek1k_full_broad", "naive_two_step,reallocation,instaprism,palm_fast", 3, fast("independent"),
                 4.0, contrast="none", n_test=150),
     onek1k_full("F2_onek1k_full_sex", "naive_two_step,reallocation,toast,tca,palm_fast", 3, fast("independent"),
                 3.0, contrast="sex,male,female", n_test=300),

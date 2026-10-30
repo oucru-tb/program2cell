@@ -213,14 +213,19 @@ def _pev(Zf, y, pen, lam, scale_of=None):
 
 
 def _fit_joint(dhat, Af, T, X, grp, lam=None, pi=None, B=None, G=None, iters=6, tol=1e-3, separate=False,
-               want_pev=False):
+               want_pev=False, shared_only=False):
     """All programs jointly with the full operator (cross-program leakage), one shrinkage size by REML
     (separate=True: one for the effect deviations u and its own for the baseline deviations v, so a large real
     baseline heterogeneity does not switch off the shrinkage of the effects; P x (0, lam_u, lam_v)).
     Nonlinear chord iterations as _fit. Returns beta (C, P), shared m (P,), (0, lam) per program (P, 2), and
-    with want_pev the prediction-error standard deviation of beta (C, P) (_pev) as a fourth element."""
+    with want_pev the prediction-error standard deviation of beta (C, P) (_pev) as a fourth element.
+    shared_only: no effect deviations u (every type gets the shared effect m_p): the shared-response model."""
     n, C, P = dhat.shape
     Z, pen, mi, ui = _design_joint(Af, T, X, grp, separate)
+    if shared_only:
+        keep = np.ones(Z.shape[-1], bool)
+        keep[ui.ravel()] = False
+        Z, pen, mi = Z[..., keep], pen[keep], np.searchsorted(np.flatnonzero(keep), mi)
     Zf = Z.reshape(n * C * P, -1)
     delta = np.zeros((n, C, P))
     f0 = forward(pi, delta, B, G) if pi is not None else None
@@ -230,7 +235,7 @@ def _fit_joint(dhat, Af, T, X, grp, lam=None, pi=None, B=None, G=None, iters=6, 
         th, lp = _gls_reml(Zf[None], work.reshape(1, -1), np.zeros((1, n * C * P, 1)), pen,
                            None if l is None else (0.0, *l), gls=False)
         l = tuple(lp[1:])
-        beta, shared = th[mi][None] + th[ui], th[mi]
+        beta, shared = (np.repeat(th[mi][None], C, 0) if shared_only else th[mi][None] + th[ui]), th[mi]
         if pi is None:
             wk = work
             break
@@ -299,7 +304,7 @@ def _fit(dhat, A, T, X, grp, lam=None, pi=None, B=None, G=None, iters=6, tol=1e-
 # ---- estimator with intervals ------------------------------------------------------------------------------
 def unmix_effects(dhat, A, T, X=None, groups=None, level=0.9, n_boot=200, dhat_draws=None, A_draws=None,
                   seed=0, pi=None, B=None, G=None, pi_draws=None, gls=True, separate=False, pev=False,
-                  misfit_tau=None, Y=None):
+                  misfit_tau=None, Y=None, shared_fit=False):
     """Cell-type-specific treatment effects (C, P) from reallocated activity dhat (N, C, P) and the leakage
     operator A from leakage_operator on the same fractions: (N, C, C, P) (diagonal: programs one at a time) or
     (N, C, P, C, P) (diagonal=False: all programs jointly, with cross-program leakage; recommended). T (N,) 0/1; X (N, q) covariates;
@@ -310,6 +315,9 @@ def unmix_effects(dhat, A, T, X=None, groups=None, level=0.9, n_boot=200, dhat_d
     sd), so the interval also carries the shrinkage bias of the type deviations. misfit_tau (offprogram_tau):
     add the error sd of an off-program treatment response of that size per type and gene (misfit_sd) in
     quadrature; "auto" (needs the bulk Y): its size measured by offprogram_tau at the point fit.
+    shared_fit (joint operator): also the shared-response model (_fit_joint shared_only), bootstrapped on the
+    same resamples: 'common' (P,) its effect with 'common_se', and 'deviation' (C, P) = effects - common with
+    'deviation_se' (bootstrap sd, at least the prediction-error sd with pev, plus the misfit sd).
     Returns dict(effects, lo, hi, se, se_boot, pev_sd, shared (P,), lam (P, 2), n_units, boot)."""
     dhat, A, T = np.asarray(dhat, float), np.asarray(A, float), np.asarray(T, float)
     N = len(T)
@@ -323,6 +331,11 @@ def unmix_effects(dhat, A, T, X=None, groups=None, level=0.9, n_boot=200, dhat_d
     fit = (lambda *a, **k: _fit_joint(*a, separate=separate, **k)) if A.ndim == 5 else         (lambda *a, **k: _fit(*a, gls=gls, **k))
     if pev_sd is None:
         beta, shared, lam = fit(dhat, A, T, X, grp, **nl)
+    shared_fit = shared_fit and A.ndim == 5
+    if shared_fit:
+        sfit = lambda *a, **k: _fit_joint(*a, separate=separate, shared_only=True, **k)
+        common, lam_c = sfit(dhat, A, T, X, grp, **nl)[1:]
+        cboot = []
     rng = np.random.default_rng(seed)
     if grp is not None:
         units = [np.flatnonzero(grp == g) for g in np.unique(grp)]
@@ -349,6 +362,8 @@ def unmix_effects(dhat, A, T, X=None, groups=None, level=0.9, n_boot=200, dhat_d
             pb_ = None if pi is None else np.asarray(pi)[idx]
         nlb = dict(pi=pb_, B=B, G=G, iters=3) if pi is not None else {}
         boot.append(fit(yb, Ab, T[idx], None if X is None else X[idx], gb, lam=lam, **nlb)[0])
+        if shared_fit:
+            cboot.append(sfit(yb, Ab, T[idx], None if X is None else X[idx], gb, lam=lam_c, **nlb)[1])
     boot = np.array(boot)
     se = boot.std(0)
     se_boot = se
@@ -363,8 +378,15 @@ def unmix_effects(dhat, A, T, X=None, groups=None, level=0.9, n_boot=200, dhat_d
                         rng=np.random.default_rng(seed + 7))
         se = np.sqrt(se ** 2 + mis ** 2)
     q = tdist.ppf(0.5 + level / 2, max(len(units) - 1, 1))
-    return dict(effects=beta, lo=beta - q * se, hi=beta + q * se, se=se, se_boot=se_boot, pev_sd=pev_sd,
-                misfit_sd=mis, tau=misfit_tau, shared=shared, lam=lam, n_units=len(units), boot=boot)
+    res = dict(effects=beta, lo=beta - q * se, hi=beta + q * se, se=se, se_boot=se_boot, pev_sd=pev_sd,
+               misfit_sd=mis, tau=misfit_tau, shared=shared, lam=lam, n_units=len(units), boot=boot)
+    if shared_fit:
+        cboot = np.array(cboot)
+        dse = (boot - cboot[:, None]).std(0)
+        dse = dse if pev_sd is None else np.maximum(dse, pev_sd)
+        dse = dse if mis is None else np.sqrt(dse ** 2 + mis ** 2)
+        res.update(common=common, common_se=cboot.std(0), deviation=beta - common[None], deviation_se=dse)
+    return res
 
 
 def unmix(Y, fractions, B, G, T, X=None, groups=None, fraction_draws=None, n_draws=10, **kw):
@@ -383,7 +405,8 @@ def unmix(Y, fractions, B, G, T, X=None, groups=None, fraction_draws=None, n_dra
 
 
 # ---- design-aware choice and interval calibration -----------------------------------------------------------
-def simulate_cohort(cal, pi, T, rng, scale=0.6, kinds=(0.2, 0.3, 0.5), max_log=6.0, offprog_sd=0.0):
+def simulate_cohort(cal, pi, T, rng, scale=0.6, kinds=(0.2, 0.3, 0.5), max_log=6.0, offprog_sd=0.0,
+                    beta_fn=None):
     """One synthetic cohort shaped like the study: N = len(pi) bulks with the study's fractions pi (N, C) and
     treatment T, built from real per-type counts of reference specimens (one calibration fold, whose profiles
     B_k exclude those donors), with planted treatment effects beta (C, P) per program drawn as null / shared by
@@ -393,7 +416,8 @@ def simulate_cohort(cal, pi, T, rng, scale=0.6, kinds=(0.2, 0.3, 0.5), max_log=6
     thins every type to its target read fraction. Returns (Y (N, G), true read fractions (N, C), B, beta), beta
     the realised shift (estimate_delta of the treated type counts minus the untreated, averaged).
     offprog_sd: the treatment also shifts every type's genes by independent N(0, offprog_sd^2) logs (drawn once
-    per cohort: a response outside the programs, as offprogram_tau measures on real data)."""
+    per cohort: a response outside the programs, as offprogram_tau measures on real data).
+    beta_fn(rng) -> (C, P): planted effects drawn by the caller instead (design_check plant="observed")."""
     real = [np.asarray(c)[~np.asarray(p, bool)] for c, p in zip(cal.counts, cal.planted)]
     folds = [k for k, r in enumerate(real) if len(r)]
     k = folds[rng.integers(len(folds))]
@@ -402,13 +426,15 @@ def simulate_cohort(cal, pi, T, rng, scale=0.6, kinds=(0.2, 0.3, 0.5), max_log=6
     P = G.shape[0]
     beta = np.zeros((C, P))
     sc = np.broadcast_to(np.asarray(scale, float), (P,))
-    for p in range(P):
+    for p in (range(P) if beta_fn is None else []):
         kind = rng.choice(3, p=kinds)
         if kind == 1:
             beta[:, p] = rng.uniform(-sc[p], sc[p])
         elif kind == 2:
             on = rng.permutation(C)[:rng.integers(1, C)]
             beta[on, p] = rng.uniform(-sc[p], sc[p], len(on))
+    if beta_fn is not None:
+        beta = np.asarray(beta_fn(rng), float)
     logf = beta @ G
     if offprog_sd:
         logf = logf + rng.normal(0, offprog_sd, logf.shape)
@@ -536,7 +562,8 @@ def contrast_se(dhat, T, rng, n_boot=100, groups=None):
 
 
 def design_check(cal, pi, T, X=None, groups=None, n_sim=10, scale=0.6, level=0.9, n_boot=20, nonlinear=True,
-                 seed=0, estimator="diff", joint=True, effect_hint=None, offprog_sd=0.0):
+                 seed=0, estimator="diff", joint=True, effect_hint=None, offprog_sd=0.0, plant="prior",
+                 kinds=(0.2, 0.3, 0.5)):
     """Simulated error of the unmixing estimator vs reallocation (the effect of reallocated activity, rescaled
     per program by a slope fitted on the other cohorts, as calibration does) under this study's design: per program RMSE over cohorts and planted
     effects (simulate_cohort), and the level-quantile of the unmixing errors studentised by their bootstrap
@@ -546,17 +573,39 @@ def design_check(cal, pi, T, X=None, groups=None, n_sim=10, scale=0.6, level=0.9
     z_q (scalar), use_unmix (P,) bool, n_sim, slope (P,) of the rescaled reallocation, rmse_unmix_cp,
     rmse_realloc_cp, use_unmix_cp (C, P) per type and program (type x program model), z_q_realloc (P,) the
     level-quantile of its errors studentised by slope * contrast_se). offprog_sd: simulated cohorts carry an
-    off-program treatment response of this size (simulate_cohort)."""
+    off-program treatment response of this size (simulate_cohort).
+    plant: "prior" (default) plants null / shared / localised effects of size clip(2 max_c |hint|) per program;
+    "observed" (needs effect_hint) plants the study's own shared effect (the mean of the hint over types) plus
+    type deviations drawn like the prior's (none / every type / a random subset, probabilities `kinds`) of size
+    clip(2 max_c |hint_c - mean|, 0.05, 1): the leakage check then matches how type-specific this study's
+    response looks, instead of assuming large type-specific responses wherever the effects are large."""
     from ..causal import estimator_weights
     rng = np.random.default_rng(seed + 11)
-    if effect_hint is not None:                 # plant effects of the size this study shows, per program
+    beta_fn = None
+    if plant == "observed":
+        hint = np.asarray(effect_hint, float)
+        shared = hint.mean(0)
+        dev_scale = np.clip(2 * np.abs(hint - shared[None]).max(0), 0.05, 1.0)
+
+        def beta_fn(r):
+            C, P = hint.shape
+            b = np.broadcast_to(shared, (C, P)).copy()
+            for p in range(P):
+                kind = r.choice(3, p=kinds)
+                if kind == 1:
+                    b[:, p] += r.uniform(-dev_scale[p], dev_scale[p], C)
+                elif kind == 2:
+                    on = r.permutation(C)[:r.integers(1, C)]
+                    b[on, p] += r.uniform(-dev_scale[p], dev_scale[p], len(on))
+            return b
+    elif effect_hint is not None:               # plant effects of the size this study shows, per program
         scale = np.clip(2 * np.abs(np.asarray(effect_hint, float)).max(0), 0.05, 1.0)
     T = np.asarray(T)
     w = estimator_weights(T, X, groups, "ols" if (X is not None or groups is not None) else estimator)
     G = cal.G
     eu, rr, bt, z, rse = [], [], [], [], []
     for _ in range(n_sim):
-        Y, pt, B, beta = simulate_cohort(cal, pi, T, rng, scale, offprog_sd=offprog_sd)
+        Y, pt, B, beta = simulate_cohort(cal, pi, T, rng, scale, offprog_sd=offprog_sd, beta_fn=beta_fn)
         dh = reallocate(Y, pt, B, G)
         rr.append(np.einsum("n,ncp->cp", w, dh))
         rse.append(contrast_se(dh, T, rng, groups=groups))
@@ -582,6 +631,9 @@ def design_check(cal, pi, T, X=None, groups=None, n_sim=10, scale=0.6, level=0.9
         m = (e ** 2).mean(0)                                        # (C, P)
         return np.sqrt(m.mean(1, keepdims=True) * m.mean(0, keepdims=True) / max(m.mean(), 1e-24))
     rmse_u_cp, rmse_r_cp = cell(eu), cell(er)
-    return dict(rmse_unmix=rmse_u, rmse_realloc=rmse_r, z_q=float(np.quantile(z, level)),
+    # absolute leakage error of rescaled reallocation: level-quantile per program, per type by the cell model
+    q_abs = np.quantile(np.abs(er), level, axis=(0, 1))
+    q_abs_cp = q_abs[None] * rmse_r_cp / np.maximum(rmse_r[None], 1e-12)
+    return dict(rmse_unmix=rmse_u, rmse_realloc=rmse_r, z_q=float(np.quantile(z, level)), q_abs_realloc_cp=q_abs_cp,
                 use_unmix=rmse_u < rmse_r, n_sim=n_sim, slope=slope, z_q_realloc=np.quantile(zr, level, axis=(0, 1)),
                 rmse_unmix_cp=rmse_u_cp, rmse_realloc_cp=rmse_r_cp, use_unmix_cp=rmse_u_cp < rmse_r_cp)

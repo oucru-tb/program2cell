@@ -84,7 +84,7 @@ method favours, and the paper must state which estimand it targets.
 | Name | Fractions | Activity |
 |---|---|---|
 | `naive` | NNLS | One bulk program shift per sample, copied to every cell type. |
-| `reallocation` | NNLS | Bulk counts split by π·B (BayesPrism's expectation step with a fixed reference), then `estimate_delta` per type. |
+| `reallocation` | NNLS | Bulk counts split by π·B (the BayesPrism / InstaPrism expectation step with a fixed reference), then `estimate_delta` per type. |
 | `oracle realloc` | true π | Reallocation with perfect fractions: the ceiling for any reallocation estimator. |
 
 ### Published competitors (`--competitors`)
@@ -94,13 +94,13 @@ Each runs on the same split, genes and truth as the rows above.
 | Name | What it gives | Activity used |
 |---|---|---|
 | `cellgeometry` | Cell amounts, converted to read fractions with each type's mean library size in the reference. | Reallocation with its fractions. |
-| `bayesprism` | θ fractions, and per-type expression Z from Gibbs sampling. | `model` row: δ from its own Z. `realloc` row: its fractions with plain reallocation. |
+| `instaprism` | θ fractions, and per-type expression Z (BayesPrism's model, fixed-point solver instead of Gibbs sampling). | `model` row: δ from its own Z. `realloc` row: its fractions with plain reallocation. |
 
 - **Reference:** by default, the reference donors' pseudobulk rows (the same information PALM's B uses).
   With `--cells`, the reference donors' real cells are used instead (OneK1K only). The row name then
   gets a " cells" suffix.
 - **Planned after the method freeze:** BLADE, CIBERSORTx (needs Docker and a token), TOAST and TCA
-  (effects only), and BayesPrism embedding learning with PROGENy as `eta_prior` (section 6).
+  (effects only).
 
 ### PALM rows (per configuration)
 
@@ -358,8 +358,10 @@ is what the false sign rate is meant to show.
 
 ## 6. BayesPrism and gene programs: what it does, and how ours differs
 
-Checked against the installed package (BayesPrism 2.2.3: `learn.embedding`, `learn.embedding.nmf`) and
-the paper (Chu et al., *Nature Cancer* 2022).
+Related work. Checked against the BayesPrism package (2.2.3: `learn.embedding`, `learn.embedding.nmf`) and
+the paper (Chu et al., *Nature Cancer* 2022). The competitor we run is InstaPrism (Hu & Chikina 2024), the
+same deconvolution model with a fast fixed-point solver; this section describes the published BayesPrism
+program analysis that the plug-in workflow follows.
 
 **What BayesPrism does:**
 
@@ -399,8 +401,8 @@ the malignant compartment, then correlated with fractions estimated from the sam
 - Simulate bulk where programs are independent of composition. Then do the same with a known true
   coupling.
 - Run each method's full pipeline:
-  - BayesPrism: deconvolution, embedding learning with `eta_prior` = PROGENy (so the programs match),
-    then Spearman ω ~ θ.
+  - InstaPrism plug-in (the BayesPrism-style analysis): deconvolution, per-type PROGENy activity from
+    its Z, then Spearman activity ~ θ.
   - Reallocation: activity ~ fractions.
   - PALM: posterior of the activity–fraction association.
 - **Report** the false-positive rate at nominal 5% under the null, and the power under the alternative.
@@ -408,15 +410,10 @@ the malignant compartment, then correlated with fractions estimated from the sam
   error, and PALM's joint posterior does not.
 - **Caution:** this is an expectation, not a result. Run it before claiming it.
 
-**Running BayesPrism embedding on PBMC:** there is no malignant type, so declare one type as `key` (for
-example Monocyte) and pass `eta_prior` = PROGENy weights on the modelled genes. That gives the one
-cell type's program weights, which can be scored with the activity metrics above as a direct
-competitor. Planned, not yet run.
-
 **Honest status:**
 
 - Today, PALM's own model δ ranks activity *worse* than naive. Our activity gains come from posterior
-  reallocation (PALM's fractions plus BayesPrism's expectation step).
+  reallocation (PALM's fractions plus the BayesPrism / InstaPrism expectation step).
 - The cell-type-specific claim therefore currently rests on reallocation plus PALM's fractions. The
   inference claim rests on β intervals, which are calibrated for the model but not for reallocation.
 - De-mixing (section 7) and conformal intervals are the planned fixes.
@@ -498,18 +495,6 @@ What the table says:
   The model's β intervals are conservative instead: PBMC coverage 0.79–0.84; OneK1K
   `joint quasi+sw` coverage 0.73, with 0 calls.
 
-**BayesPrism, PBMC split 0** (the reference is donor pseudobulk rows, not single cells):
-
-| Estimate | Fraction RMSE | Activity ρ | Specific ρ | Effect r |
-|---|---|---|---|---|
-| Its own expression Z | 0.17 | 0.69 | 0.36 | 0.34 |
-| Its fractions with plain reallocation | 0.17 | 0.81 | 0.42 | 0.46 |
-
-- **Runtime:** 26 minutes, against 103 s for the PALM fit.
-- **Comparison:** both are behind cellGeometry and PALM on this split.
-- **Caveat:** BayesPrism expects single cells. The OneK1K runs with real cells (`--cells`) are its
-  fair test.
-
 ### De-mixing: ruled out (2026-10-27)
 
 **Idea.** For each sample, compute the matrix A_i that maps the true δ to the expected reallocation
@@ -544,8 +529,8 @@ acts as useful shrinkage for ranking. The remaining activity headroom is the ora
 
 ```
 python scripts/dev_bench.py run --dataset pbmc --splits 0-9 --configs night        # PALM presets
-python scripts/dev_bench.py run --dataset pbmc --splits 0-9 --configs {} --competitors cellgeometry,bayesprism
-python scripts/dev_bench.py run --dataset o1k  --splits 0-2 --configs {} --competitors bayesprism \
+python scripts/dev_bench.py run --dataset pbmc --splits 0-9 --configs {} --competitors cellgeometry,instaprism
+python scripts/dev_bench.py run --dataset o1k  --splits 0-2 --configs {} --competitors instaprism \
        --cells C:/Users/duy.pham/Downloads/onek1k_full_cells.h5ad
 python scripts/dev_bench.py summary --dataset pbmc --ref "joint quasi+sw|posterior realloc"
 python scripts/dev_bench.py rescore --dataset pbmc      # after changing metrics: recompute from saved arrays
@@ -569,6 +554,9 @@ Rows from before then have no `.npz` and keep their old metrics: the PBMC config
 
 ## Changelog
 
+- **2026-10-30**
+  - The BayesPrism-model competitor is now InstaPrism (Hu & Chikina 2024: same model, fixed-point solver,
+    seconds instead of minutes); the BayesPrism wrapper and its outputs were removed.
 - **2026-10-27**
   - Added program prior sets (PROGENy-14, CollecTRI immune, Hallmark immune), the `--prior` option and
     `act_prog_leakage`, following Tripso (section 5b). Designed a stimulation benchmark with label
@@ -579,7 +567,7 @@ Rows from before then have no `.npz` and keep their old metrics: the PBMC config
   - Implemented the leakage, gain, coupling, localisation, interval-score and false-sign-rate metrics,
     with tests.
   - Added the `rescore` command, and `.npz` arrays for every row.
-  - Added the competitors (cellGeometry, BayesPrism) and the `--cells` reference to `dev_bench`.
+  - Added the competitors (cellGeometry, InstaPrism) and the `--cells` reference to `dev_bench`.
   - Fixed cellGeometry's conversion from cells to reads: it now uses each type's mean library size,
     not signature column sums. Fraction RMSE went from 0.229 to 0.093.
   - Proposed the leakage, localisation, coupling and interval-score metrics.

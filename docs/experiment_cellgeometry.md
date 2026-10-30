@@ -80,7 +80,7 @@ Common settings for all experiments:
   - PALM stage-1 mode;
   - palm_fast (common activity, quasi + sandwich, NUTS 500 + 500 at target accept 0.95);
   - full PALM on small cases only;
-  - NNLS, MuSiC, DWLS, BayesPrism/InstaPrism, reallocation, naive.
+  - NNLS, MuSiC, DWLS, InstaPrism, reallocation, naive.
 - Seeds: 5 replicates per setting.
 - **Truth split:** the truth always uses `truth_split=True` for activity, so the bulk and the δ truth
   come from independent halves of the counts.
@@ -125,7 +125,7 @@ Common settings for all experiments:
 ### E5. Uncertainty quality (the headline differentiator)
 
 - For each method with uncertainty (cellGeometry var.e as ±1.645 SE; palm_fast; full PALM;
-  BayesPrism if available):
+  InstaPrism if available):
   - 90% coverage of fractions, per cell type and overall;
   - interval width;
   - their metric (ρ and CCC between SE and actual error).
@@ -142,7 +142,7 @@ Common settings for all experiments:
   - activity ρ across samples and across cell types;
   - effect r, MAE, coverage;
   - the intrinsic-vs-composition split.
-- Baselines: naive, reallocation, BayesPrism+ULM, TOAST, TCA. Also "cellGeometry + ULM": its
+- Baselines: naive, reallocation, InstaPrism+ULM, TOAST, TCA. Also "cellGeometry + ULM": its
   fractions, then a per-type expression proxy, then programs. This gives cellGeometry a fair route
   to activity.
 
