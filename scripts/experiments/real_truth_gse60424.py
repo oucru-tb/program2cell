@@ -74,7 +74,7 @@ def build(counts, meta, contrast):
         return out
 
     R = sorted_counts(ref_donors)                                 # (D, C, G) reference donors
-    Bfull = (R / R.sum(-1, keepdims=True)).mean(0)
+    Bfull = ((R + 1.0) / (R + 1.0).sum(-1, keepdims=True)).mean(0)   # pseudocount: no zero baseline
     ref = Reference(B=Bfull, genes=list(counts.index), cell_types=list(TYPES), rna_content=np.ones(len(TYPES)),
                     n_cells=np.full(len(TYPES), len(ref_donors)), n_donors=np.full(len(TYPES), len(ref_donors)))
     prog = db._programs(pb, "progeny7")
@@ -85,15 +85,18 @@ def build(counts, meta, contrast):
     return inp, cal, T, S, list(wb.donorid), R, ref_donors
 
 
-def truth(S, inp, T, n_boot=2000, level=0.9, seed=0):
+def truth(S, inp, T, level=0.9):
+    """Per-donor activity of the sorted cells and the per-type difference of arm means with a Welch t
+    interval (a bootstrap over 3-4 donors per arm is far too narrow)."""
+    from scipy import stats
     from palm_bulk.core.scores import estimate_delta
-    d = estimate_delta(S, inp.B, inp.Gmat)                        # (N, C, P)
-    beta = d[T == 1].mean(0) - d[T == 0].mean(0)
-    rng = np.random.default_rng(seed)
-    i1, i0 = np.flatnonzero(T == 1), np.flatnonzero(T == 0)
-    bt = np.array([d[rng.choice(i1, len(i1))].mean(0) - d[rng.choice(i0, len(i0))].mean(0) for _ in range(n_boot)])
-    lo, hi = np.quantile(bt, (0.5 - level / 2, 0.5 + level / 2), axis=0)
-    return d, beta, lo, hi
+    d = estimate_delta(S, np.maximum(inp.B, 1e-8), inp.Gmat)      # (N, C, P)
+    a, b = d[T == 1], d[T == 0]
+    beta = a.mean(0) - b.mean(0)
+    va, vb = a.var(0, ddof=1) / len(a), b.var(0, ddof=1) / len(b)
+    df = (va + vb) ** 2 / np.maximum(va ** 2 / (len(a) - 1) + vb ** 2 / (len(b) - 1), 1e-30)
+    h = stats.t.ppf(0.5 + level / 2, df) * np.sqrt(va + vb)
+    return d, beta, beta - h, beta + h
 
 
 def instaprism_activity(inp, R, ref_donors, bulk_samples, Y_full, counts):
@@ -151,6 +154,12 @@ def run(contrasts):
                          ("PALM_abs", dict(estimator="auto", sim_widen="abs", unmix_kw=dict(pev=True, misfit=True)))):
             r = pb.program_deconvolution(inp, cal, engine="palm", seed=0, **kw)
             lo, hi = r.effects_interval
+            if name == "PALM":                                    # design calculator on this design
+                import identifiability as idf
+                from palm_bulk.core.realloc import reallocate as _re
+                dc = idf.design_calculator(r.fractions, inp.B, inp.Gmat, T, _re(inp.Y, r.fractions, inp.B, inp.Gmat))
+                res["mde"] = dc["mde_full"].tolist()
+                res["truth_detectable"] = int((np.abs(beta) >= dc["mde_full"]).sum())
             res["methods"][name] = dict(score(r.effects, lo, hi, r.calls, beta, tlo, thi), effects=r.effects.tolist(),
                                         lo=lo.tolist(), hi=hi.tolist(), call_matrix=r.calls.tolist(),
                                         fractions=r.fractions.mean(0).tolist())
@@ -170,8 +179,9 @@ def run(contrasts):
         res["seconds"] = time.time() - t0
         with open(os.path.join(OUT, con + ".json"), "w") as fh:
             json.dump(res, fh, default=float)
-        print("== %s (%d vs %d): truth calls %d of %d" % (con, *res["n"], int(((tlo > 0) | (thi < 0)).sum()),
-                                                            beta.size))
+        print("== %s (%d vs %d): truth calls %d of %d; identifiable (|true| >= MDE) %s; median MDE %.2f" % (
+            con, *res["n"], int(((tlo > 0) | (thi < 0)).sum()), beta.size, res.get("truth_detectable"),
+            np.median(res["mde"]) if "mde" in res else np.nan))
         for m, s in res["methods"].items():
             print("  %-22s r %5.2f  unchanged flagged %s  real found %s  coverage %s  calls %d" % (
                 m, s["r"], _f(s["neg_flagged"]), _f(s["pos_found"]), _f(s["cov"]), s["calls"]), flush=True)

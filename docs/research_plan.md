@@ -525,6 +525,34 @@ number of samples and composition spread (simulated designs), for the design too
 the MDE to set where the widening (`sim_widen`) is needed; (4) a formal statement (identifiability holds iff
 the stacked operator has full column rank; MDE from its information matrix).
 
+#### P3 first result: GSE60424, whole blood + sorted cells from the same donors (2026-10-30)
+`scripts/experiments/real_truth_gse60424.py`, outputs `benchmarks/real/gse60424/`. Design in the script
+docstring: whole blood = bulk; the same donors' sorted neutrophils, monocytes, B, CD4, CD8 = truth (Welch
+90% interval per type × program); reference and calibration from the other donors' sorted cells; PROGENy 7.
+
+| Contrast (n) | Truth calls / 35 | Identifiable (calculator) | PALM r / unchanged flagged / real found / coverage | InstaPrism + t-test | Bulk score + t-test |
+|---|---|---|---|---|---|
+| MS after vs before IFN-β (3 v 3) | 17 | 2 | 0.85 / 0% / 29% / 0.94 | 0.88 / 0% / 82% / 0.57 | 0.85 / 0% / 82% / 0.40 |
+| Sepsis vs healthy (3 v 4) | 13 | 2 | 0.13 / 0% / 0% / 1.00 | 0.04 / 24% / 38% / 0.43 | 0.04 / 76% / 15% / 0.23 |
+| T1D vs healthy (4 v 4), negative control | 9 | 0 | 0.55 / 0% / 0% / 0.97 | 0.44 / 0% / 0% / 0.77 | 0.37 / 0% / 0% / 0.57 |
+| ALS vs healthy (3 v 4), negative control | 8 | 0 | 0.59 / 0% / 0% / 1.00 | 0.53 / 0% / 0% / 0.74 | 0.57 / 0% / 0% / 0.71 |
+
+What it says:
+- **Interferon in the body (MS):** a shared response (JAK-STAT +0.16–0.19 in every sorted type), like Kang.
+  Copying the bulk signal is right here; PALM's estimates are as accurate (r 0.85) with honest ranges
+  (coverage 0.94 vs 0.57) but less power (29% vs 82% found). Same picture as the Kang benchmark.
+- **Sepsis:** no method tracks the sorted-cell truth (r ≈ 0). Every method's estimates follow a bulk-wide
+  change (NF-κB down, TNF up in all types) that no sorted type shows. Likely causes: (a) whole blood is fixed
+  at once (Tempus) while sorted cells spend hours ex vivo, which shifts immediate-early / NF-κB / TNF / MAPK
+  genes, so sorted cells are not a clean truth for those pathways; (b) unmodelled cells (NK, eosinophils,
+  immature granulocytes in sepsis). InstaPrism + t-test flags 24% of unchanged pairs, bulk score 76%, PALM 0%.
+- **Power:** the design calculator says only 0–2 of 35 true changes are identifiable at 3–4 donors per arm,
+  consistent with PALM's few calls. GSE60424 is too small for attribution claims; it is useful as a
+  real-data negative control (no false flags by PALM in any contrast) and to expose the sorting artefact.
+- **Next for P3:** a larger same-donor dataset (Berry GSE19443/19444 TB, microarray, 7 vs 4; Bloom GSE42832);
+  restrict the truth to pathways not driven by ex vivo handling, or model a sorting offset estimated from
+  healthy donors; or build the truth from single-cell data of the same donors (no sorting step).
+
 **Compute note (P2):** the atlases are large (tens of millions of cells). Pseudobulking is streaming
 work, but the per-perturbation PALM runs (minutes each, thousands of perturbations) need a cluster or many
 cores; ask before starting.
