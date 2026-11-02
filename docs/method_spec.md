@@ -450,7 +450,47 @@ docs/figures/talk/2_4_design_power.
 - auto_abs: [0.12, 0.62] (detected).
 - Half-width: bound 0.07, auto_abs 0.25.
 
-PALM is conservative here, not limited by the design. The calibrated path's leakage allowance is a worst case
+PALM is conservative here, not limited by the design.
+
+### 4.7 Post-freeze decisions (2026-11-02, development splits 0–9)
+
+**Interval allowance `sim_widen="abs"`: candidate default for freeze v2.**
+
+auto_m (default) vs auto_abs, same 10 splits:
+
+| Dataset | Unchanged flagged | Coverage | Real changes found | Width |
+|---|---|---|---|---|
+| idasanutlin | 0.041 / 0.041 | 0.924 / 0.943 | 0.89 / 0.90 | 0.280 / 0.261 |
+| trametinib | 0.104 / 0.104 | 0.945 / 0.945 | 1.00 / 1.00 | 0.187 / 0.186 |
+| Kang | 0 / 0 | 1.00 / 1.00 | 0.00 / 0.23 | 1.19 / 0.81 |
+| Zhang | 0.034 / 0.038 | 0.971 / 0.961 | — | 0.166 / 0.118 |
+
+It is equal or better everywhere.
+
+**Trametinib, 0.104 unchanged flagged against a 0.10 target.** The rate is the same under both estimators.
+- The calls come from the unmixed programs, not the allowance.
+- Of 21 calls on |true| < 0.05 (199 such pairs), 13 are small real effects (0.02–0.05, right sign) and 8 are
+  errors (4% of unchanged pairs).
+- With |true| < 0.02 the rate is 0.091 (7/77).
+- Errors cluster on strong shared MAPK responses, e.g. LNCaP p53 and COLO680N NFkB. This is likely nonlinear
+  leakage that the linear operator misses.
+- Not tuned further on these splits. The Tahoe plate-3 benchmark (several MEK, RAF and KRAS inhibitors) is
+  the test.
+
+**Shared-response readout v2** (`deconvolution.shared_response`, splits 0–2):
+- Common interval: adds between-type heterogeneity τ²/C (random effects).
+- "differs": needs the deviation interval clear of ±margin/2.
+
+| Metric | Before | After |
+|---|---|---|
+| "differs" on null deviations, idasanutlin | 0.052 | 0 |
+| "differs" on null deviations, trametinib | 0.125 | 0.011 |
+| "differs" found, idasanutlin | 0.85 | 0.77 |
+| Common-effect coverage, idasanutlin | 0.62 | 0.71 (still below target) |
+| Common-effect coverage, trametinib | 0.90 | 0.95 |
+
+When the types differ strongly (idasanutlin p53), the "common" effect depends on the weighting, so report it
+only for programs labelled shared or shared?. The calibrated path's leakage allowance is a worst case
 over simulated designs, while the bound assumes A is known. Closing this gap is the main power target: an
 efficient estimator that also stays honest when A is misspecified.
 

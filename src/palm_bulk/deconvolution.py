@@ -235,16 +235,24 @@ def shared_response(r, eff, iv, use, q_dev, q_common, cell_types, programs, marg
     deviation_c = eff_c - common: unmixed pairs, interval
     +- q_dev se (bootstrapped jointly with the common effect); calibrated pairs, the half-widths of the effect's
     interval and of the common interval in quadrature.
-    Per type: 'differs' (deviation interval excludes 0), 'same' (it lies within +-margin), else 'unclear'.
+    Per type: 'differs' (deviation interval clear of +-margin/2), 'same' (it lies within +-margin), else
+    'unclear'. The common interval adds the between-type heterogeneity tau^2 / C (random effects).
     Per program: 'type-specific' (some type differs), 'shared' (common changed, every type same), 'shared?'
     (common changed, no type differs, some unclear: consistent with a shared response, not resolved per type),
     'none' (common unchanged, every type same) or 'unclear'."""
     c = r["common"]
-    cs = np.sqrt(r["common_se"] ** 2 + (c - eff.mean(0)) ** 2)
+    # between-type heterogeneity (random-effects, DerSimonian-Laird): variance of the types' effects beyond
+    # their own uncertainty; when the types differ the common value depends on the weighting, so its
+    # interval carries tau^2 / C (equal weights) on top of the shared model's se and lack of fit
+    se_c = (iv[1] - iv[0]) / 2 / q_dev
+    tau2 = np.clip(eff.var(0, ddof=1) - (se_c ** 2).mean(0), 0, None) if eff.shape[0] > 1 else 0.0
+    cs = np.sqrt(r["common_se"] ** 2 + (c - eff.mean(0)) ** 2 + tau2 / eff.shape[0])
     d = eff - c[None]
     h = np.where(use, q_dev * r["deviation_se"], np.sqrt(((iv[1] - iv[0]) / 2) ** 2 + (q_common * cs[None]) ** 2))
     clo, chi, dlo, dhi = c - q_common * cs, c + q_common * cs, d - h, d + h
-    lab = np.where((dlo > 0) | (dhi < 0), "differs", np.where((dlo > -margin) & (dhi < margin), "same", "unclear"))
+    # 'differs' needs the deviation interval clear of +-margin/2 (a relevant difference, not just non-zero)
+    lab = np.where((dlo > margin / 2) | (dhi < -margin / 2), "differs",
+                   np.where((dlo > -margin) & (dhi < margin), "same", "unclear"))
     moved = (clo > 0) | (chi < 0)
     pat = []
     for p in range(len(programs)):
