@@ -490,7 +490,41 @@ It is equal or better everywhere.
 | Common-effect coverage, trametinib | 0.90 | 0.95 |
 
 When the types differ strongly (idasanutlin p53), the "common" effect depends on the weighting, so report it
-only for programs labelled shared or shared?. The calibrated path's leakage allowance is a worst case
+only for programs labelled shared or shared?.
+
+**Program-level call (second tier), `shared_response(...)["net_change"]`:** up or down when the pattern is
+shared or shared? and the common interval is clear of ±margin (0.1). Splits 0–2:
+- Kang: 10 calls (JAK-STAT, NF-κB and TNF-α in every split, plus hypoxia once). In every one, every type
+  truly moved in the same direction (|β| ≥ 0.05). The true common change was covered in 9 of 10.
+- Idasanutlin: no calls.
+- Trametinib: MAPK in 3 splits. The net change is right; LNCaP is flat.
+
+This is how PALM reports a response that every cell type shares (interferon) when the types can't be
+resolved one by one.
+
+**Partial pooling of per-type effects: ruled out (negative result, `scripts/experiments/pooling.py`).**
+Method: random effects across types per program (DerSimonian–Laird, Q-profile upper τ), shrinking each
+type's effect toward the common one.
+- Kang improves: responders found 0.23 → 0.90, unchanged flagged 0.03, coverage 0.90.
+- The cell lines break: unchanged flagged 0.23 (idasanutlin) and 0.22 (trametinib); coverage 0.59 and 0.67.
+- Cause: PALM's intervals carry leakage allowances, not just noise, so the homogeneity test has no power. It
+  pools types whose true effects differ by ±0.1.
+- Estimating τ from noise-only standard errors (the design calculator) does not fix it: idasanutlin
+  coverage 0.75, unchanged flagged 0.19.
+- Shrinkage is honest only if the types' responses are exchangeable, which cell lines are not.
+
+**Fair calling rules for the comparators (`scripts/experiments/fair_rules.py`, splits 0–2).** InstaPrism +
+paired t-test:
+- With q < 0.1 it flags 81–91% of unchanged pairs. The cause is bias, not noise: on idasanutlin the rate
+  rises with the number of paired mixtures (24, 58, 79, 96% at 3, 5, 10, 20). Its mean |error| on unchanged
+  pairs is 0.047 against a test standard error of ~0.005.
+- With q < 0.1 and |change| ≥ 0.1 it flags 5–7% (PALM 0–5%).
+- Threshold-free AUROC is similar (0.80/0.79, 0.93/0.95, 0.99/0.98).
+- It still flags the p53-mutant lines in idasanutlin.
+- Its 90% intervals cover 2–55% (PALM 92–100%).
+
+Benchmarks report all three rules. The headline is coverage and attribution of non-responders, not the
+q-only false-flag rate. The calibrated path's leakage allowance is a worst case
 over simulated designs, while the bound assumes A is known. Closing this gap is the main power target: an
 efficient estimator that also stays honest when A is misspecified.
 

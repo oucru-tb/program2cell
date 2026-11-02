@@ -115,8 +115,11 @@ how to test any method on it fairly, including whether a study can answer it at 
 - **Say:**
   - "We ran our part-1 workflow on an experiment with a known answer: a drug that switches on p53 in only 3
     of 6 cell lines."
-  - "Our workflow flags 19 of the 23 boxes that did not change. It can't tell responding lines from the
-    others."
+  - "Look at the p53 column: our workflow gives the p53-mutant lines the same rise as the real responders. It
+    can't tell responding lines from the others."
+  - Don't lead with the count (19 of 23 unchanged boxes flagged): part of it is small biases made
+    'significant' by a nearly noise-free test. The robust point is the mutant lines looking like responders
+    (see D).
 - **Why, in one picture (spoken, 20 s):**
   - "The workflow shares out each sample's reads by cell proportions, then scores each share. One cell type's
     extra reads land in every cell type."
@@ -214,20 +217,30 @@ how to test any method on it fairly, including whether a study can answer it at 
 
 ## D. Proof the design works: negative and positive controls (1.5 min, 1 slide)
 
-- **Slide title:** "Same real changes found, without the false ones"
-- **Visual:** `2_5_controls.png`.
-- **How to read it (10 s):** "Left of the line: unchanged boxes flagged; shorter is better. Right: real
-  changes found; longer is better."
-- **Say:**
-  - "In both drug experiments, every method finds the real changes (PALM 92–100%). But PALM flags under 5% of
-    the unchanged boxes; the others flag 72–100%."
-  - "One example: the p53 drug. InstaPrism gives *every* cell line a similar rise, so p53-mutant lines look
-    like responders. PALM ranks the three real responders correctly and leaves the mutant lines alone."
-  - "Interferon is PALM's limit: no false flags, but little found. That is exactly what the design limit
-    predicted for B and NK cells."
-- **Design box:** 4 datasets (2 drugs on cell lines, interferon on blood cells, chemotherapy in patients);
-  answer key from split cells; all tools with the same reference; targets set in advance: unchanged flagged
-  ≤ 10%, real found ≥ 90%.
+- **Slide title:** "A fair test: the standard approach is confidently wrong, and more data makes it worse"
+- **Visual:** `2_5_fair_rules.png` (three panels). Backup: `2_5_controls.png` (all tools).
+- **Say, panel by panel (the evaluation design in action):**
+  - **Left, "we gave the standard approach a fair chance":**
+    - "With the usual t-test, InstaPrism flags 81–91% of unchanged boxes."
+    - "That's partly unfair to it: our test mixtures have very little noise, so tiny biases become
+      'significant'. So we also required a change of at least 0.1."
+    - "Then it drops to 5–7%, close to PALM's 0–5%. Both find the real changes in the drug experiments."
+  - **Middle, "but its confidence is wrong":**
+    - "Its 90% ranges hold the true value only 2–55% of the time. PALM's hold it 92–100%."
+    - "And the error that matters survives the cut-off: in the p53 drug, the p53-mutant lines still look like
+      responders. PALM leaves them alone."
+  - **Right, "more samples make it worse":**
+    - "Give the t-test more samples and it flags *more* unchanged boxes: 24% with 3 samples, 96% with 20."
+    - "That's the signature of bias, not noise: more data makes a biased method more confidently wrong."
+- **Honest limit (one line):** "Interferon is where PALM finds little per cell type, exactly as the design
+  limit predicted for B and NK cells. PALM still reports it, at the program level: 'interferon response up,
+  consistent across cell types'."
+- **Design box:**
+  - Data: 3 known-answer experiments (p53 drug and MEK drug on 6 cell lines, interferon on blood cells),
+    answer key from split cells, same reference for all tools, 3 splits.
+  - Calling rules: q < 0.1; q < 0.1 + change ≥ 0.1; and a threshold-free ranking (AUROC, similar for both:
+    0.79–0.99).
+  - Targets set in advance.
 
 ---
 
@@ -241,8 +254,8 @@ how to test any method on it fairly, including whether a study can answer it at 
   - "We add a positive control (Berry 2010 interferon signature in neutrophils and monocytes) and negative
     controls (random gene sets, shuffled labels)."
 - **Conclusion (45 s), the three take-home messages:**
-  1. **Problem:** which cell type changed which gene program. Standard tools spread one cell's change onto all.
-  2. **Approach:** PALM undoes the spillover at the program level and says how sure it is.
+  1. **Problem:** which cell type changed which gene program. Standard tools spread one cell's change onto all, with confidence that grows with sample size, not accuracy.
+  2. **Approach:** PALM undoes the spillover at the program level and says how sure it is; where cell types can't be separated, it reports the program-level change instead of guessing.
   3. **Evaluation design:** answer keys from real experiments, controls set by biology, and a design limit that
      tells before sequencing what a study can resolve. Any method can be tested this way.
 - **Last line:** "We can now ask not only *what* changed in the blood of TB patients, but *which cells*
@@ -265,7 +278,7 @@ standard tools, dark = truth. Rebuild with `python scripts/experiments/talk_figu
 | C1 | Three rules for an answer key | `2_3_answer_key.png` |
 | C2 | Ladder of evidence | draw (four rungs) |
 | C3 | Design limit vs donors; composition spread | `2_4_design_power.png` |
-| D | Negative / positive controls, all tools | `2_5_controls.png` |
+| D | Fair test: three calling rules, 90% ranges, false flags vs sample size | `2_5_fair_rules.png` (backup: `2_5_controls.png`) |
 | E | Small PTB panel + three lines | text |
 
 **Reading notes:**

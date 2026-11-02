@@ -260,7 +260,13 @@ def shared_response(r, eff, iv, use, q_dev, q_common, cell_types, programs, marg
         pat.append("type-specific" if (lp == "differs").any() else
                    ("shared" if (lp == "same").all() else "shared?") if moved[p] else
                    "none" if (lp == "same").all() else "unclear")
+    # program-level call (second tier): a net change across the cell types, reported where no type is shown to
+    # differ (pattern shared / shared?) and the common interval is clear of +-margin; per-type attribution
+    # stays with the per-type calls. Benchmarks 2026-11-02 (splits 0-2): Kang 10 calls (JAK-STAT, NFkB, TNFa
+    # every split), every type truly moved the same way; idasanutlin none; trametinib MAPK 3 (LNCaP flat).
+    net = ["up" if (pat[p] in ("shared", "shared?") and clo[p] > margin) else
+           "down" if (pat[p] in ("shared", "shared?") and chi[p] < -margin) else "" for p in range(len(programs))]
     return dict(cell_types=list(cell_types), programs=list(programs), margin=margin,
                 common=c.tolist(), common_lo=clo.tolist(), common_hi=chi.tolist(),
                 deviation=d.tolist(), deviation_lo=dlo.tolist(), deviation_hi=dhi.tolist(),
-                type_label=lab.tolist(), pattern=pat)
+                type_label=lab.tolist(), pattern=pat, net_change=net)

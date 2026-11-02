@@ -528,6 +528,59 @@ def fig_kang_limit(competitor="cibersort"):
     save(fig, "2_6_interferon_ranges")
 
 
+# ---- D: fair comparison of calling rules (fair_rules.py) ----------------------------------------------------
+def fig_fair():
+    """Left: unchanged boxes flagged by InstaPrism + t-test under q < 0.1 (light) and q < 0.1 with a 0.1
+    cut-off (dark), and by PALM; middle: 90% range holds the truth; right: more samples make the t-test more
+    confidently wrong (unchanged flagged vs paired mixtures; PALM at the full 20)."""
+    F = json.load(open(os.path.join(ROOT, "benchmarks", "dev", "fair_rules.json")))
+    df = pd.DataFrame(F["rows"])
+    g = df.groupby(["dataset", "method", "rule"]).mean(numeric_only=True)
+    dsl = [("mcf_ida", "p53\ndrug"), ("mcf_tram", "MEK\ndrug"), ("kang", "Inter-\nferon")]
+    fig, axs = plt.subplots(1, 3, figsize=(13.3, 4.9), gridspec_kw=dict(width_ratios=[1.25, 1, 1.1], wspace=0.42))
+    ax = axs[0]
+    x = np.arange(len(dsl))
+    bars = [("InstaPrism + t-test", "q-only", "#f0a8b2", "t-test, q < 0.1"),
+            ("InstaPrism + t-test", "q+cut-off", C_PRACT, "t-test, q < 0.1 and change ≥ 0.1"),
+            ("PALM", "q-only", C_PALM, "PALM")]
+    for i, (m, r, col, lab) in enumerate(bars):
+        v = [100 * g.loc[(d, m, r), "unchanged_flagged"] for d, _ in dsl]
+        ax.bar(x + (i - 1) * 0.27, v, 0.25, color=col, label=lab)
+        for xx, vv in zip(x + (i - 1) * 0.27, v):
+            ax.text(xx, vv + 1.5, "%d" % round(vv), ha="center", va="bottom", fontsize=11.5, color="#333333")
+    ax.set_xticks(x); ax.set_xticklabels([l for _, l in dsl])
+    ax.set_ylabel("unchanged boxes flagged (%)"); ax.set_ylim(0, 105)
+    ax.legend(frameon=False, fontsize=11.5, loc="upper right", bbox_to_anchor=(1.02, 1.12))
+    ax = axs[1]
+    for i, (m, col, lab) in enumerate((("InstaPrism + t-test", C_PRACT, "t-test"), ("PALM", C_PALM, "PALM"))):
+        v = [100 * g.loc[(d, m, "q-only"), "coverage"] for d, _ in dsl]
+        ax.bar(x + (i - 0.5) * 0.36, v, 0.34, color=col, label=lab)
+        for xx, vv in zip(x + (i - 0.5) * 0.36, v):
+            ax.text(xx, vv + 1.5, "%d" % round(vv), ha="center", va="bottom", fontsize=11.5, color="#333333")
+    ax.axhline(90, color=C_TRUTH, ls="--", lw=1.2, label="target 90%")
+    ax.set_xticks(x); ax.set_xticklabels([l for _, l in dsl])
+    ax.set_ylabel("90% range holds the truth (%)"); ax.set_ylim(0, 105)
+    ax.legend(frameon=False, fontsize=11.5, loc="upper left", bbox_to_anchor=(0.0, 1.14), ncol=3, columnspacing=0.8)
+    ax = axs[2]
+    for d, lab, mk in (("mcf_ida", "p53 drug", "o"), ("mcf_tram", "MEK drug", "s")):
+        c = F["curve"][d]
+        n = sorted(int(k) for k in c["instaprism"])
+        ax.plot(n, [100 * c["instaprism"][str(k)] for k in n], "-" + mk, color=C_PRACT, lw=2.5, ms=7)
+        ax.text(n[-1] + 0.6, 100 * c["instaprism"][str(n[-1])], "t-test, " + lab, va="center",
+                fontsize=11.5, color=C_PRACT)
+        ax.plot([c["n_full"]], [100 * c["palm_full"]], mk, color=C_PALM, ms=9)
+    ax.text(20.6, 3, "PALM (20)", va="center", fontsize=11.5, color=C_PALM)
+    ax.set_xticks([3, 5, 10, 20]); ax.set_xlim(1.5, 21.5)
+    ax.set_xlabel("paired samples per arm"); ax.set_ylabel("unchanged boxes flagged (%)"); ax.set_ylim(0, 105)
+    for a in axs:
+        a.tick_params(axis="x", length=0)
+    fig.text(0.07, -0.05, "Left: a 0.1 cut-off removes most of the t-test's false flags (small biases made 'significant'), "
+             "but its ranges still miss the truth (middle),\nand its false flags grow with sample size (right): "
+             "bias, not noise. Splits 0–2; curve: split 0, 30 random subsets per size.", fontsize=11.5,
+             color="#555555", ha="left", va="top")
+    save(fig, "2_5_fair_rules")
+
+
 # ---- 2.3a how to test attribution: building an answer key ---------------------------------------------------
 def fig_answer_key():
     """Schematic, three rules: (1) split each sample's cells, half pooled into bulk (what the method sees), half
@@ -661,7 +714,7 @@ if __name__ == "__main__":
     figs = dict(concept=fig_concept, fractions=fig_fractions, false_flags=fig_false_flags, controls=fig_controls,
                 cases=fig_case_studies, scorecard=fig_scorecard,
                 heat=fig_heatmaps,
-                heat_lab=lambda: fig_heatmaps(competitor="lab"), attenuation=fig_attenuation, kang=fig_kang_limit, power=fig_power, answer_key=fig_answer_key)
+                heat_lab=lambda: fig_heatmaps(competitor="lab"), attenuation=fig_attenuation, kang=fig_kang_limit, power=fig_power, answer_key=fig_answer_key, fair=fig_fair)
     for k, f in figs.items():
         if only and k not in only:
             continue
