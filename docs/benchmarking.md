@@ -16,8 +16,15 @@ Last updated: 2026-11-02.
 ## 0. Known-answer benchmark for attribution (current)
 
 ### 0.1 The question and the claims under test
-The question: *for each cell type c and gene program p, did p change in c under treatment, by how much, and
-can the data tell?* We call this attribution. It is distinct from deconvolution (how many cells) and from bulk
+The question has two layers, together called attribution:
+1. **Contribution:** when a gene program changes in bulk, which cell types does the change come from, and how
+   much is more cells (more reads) versus cells that changed? Readout: `palm_bulk.contributions`; check:
+   `contributions_eval.py`.
+2. **Per-cell change:** for each cell type c and program p, did p change *inside* c, by how much, and can the
+   data tell?
+
+The claims and metrics below mostly cover layer 2. Layer-2 results are in §0.6; the layer-1 results table is
+in `method_spec.md` §4.7. It is distinct from deconvolution (how many cells) and from bulk
 differential expression (what changed in the sample).
 
 Claims tested:

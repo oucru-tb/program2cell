@@ -15,6 +15,7 @@ from .bayes import (fit, make_model, run_palm, run_palm_fast, PalmResult, estima
                      mean_width)
 from .provenance import provenance
 from .deconvolution import program_deconvolution, DeconvolutionResult
+from .contributions import contributions, contributions_table
 from . import causal
 from . import plots
 

@@ -25,7 +25,7 @@ it. We define the question, show it bites in our own workflow, propose a method,
 how to test any method on it fairly, including whether a study can answer it at all.
 
 **Three take-home messages (they open part 2's last slide):**
-1. **The problem:** attribution, i.e. which cell type changed which gene program. Standard tools answer "how
+1. **The problem:** attribution: where a bulk gene-program change comes from (which cell types; more cells or cells changed) and which cell types themselves changed. Standard tools answer "how
    many cells" or "what changed", not "which cells changed", and they spread one cell type's change onto all.
 2. **The approach:** PALM undoes that spillover, at the gene-program level, and says how sure it is.
 3. **The evaluation design:** an answer key from real experiments, controls fixed by biology in advance, and a
@@ -88,9 +88,21 @@ how to test any method on it fairly, including whether a study can answer it at 
 - **Point at:** the dashed line (same bulk signal), then the highlighted panel ("what we want to know").
 
 ### A2. The question, and why no standard tool answers it (1 min)
-- **Slide title:** "Attribution: which cell type changed which gene program?"
-- **Top, large:** *For each cell type and each gene program: did it change, by how much, and can the data
-  tell?*
+- **Slide title:** "Attribution: where does a bulk program change come from?"
+- **Top, large (the question, two layers):**
+  1. *When a gene program changes in bulk, which cell types does the change come from, and how much is more
+     cells versus cells that changed?* (**contribution**; e.g. "IFN-γ up: 75% from monocytes, 25% from
+     neutrophils")
+  2. *Inside each cell type, did the program itself change, by how much, and can the data tell?* (**per-cell
+     change**; e.g. "monocyte IFN-γ +0.30 [0.18, 0.42]; neutrophils: can't tell")
+- **Say (20 s):**
+  - "We start where we always start: a program that changed in bulk. Then we ask where it comes from: which
+    cells, and whether it's more cells or cells that changed. That is the three-explanations picture."
+  - "The second layer is what you'd validate at the bench: did the program change *inside* the cell type?"
+  - "The two differ: an abundant cell type can contribute most of the bulk signal with only a small change per
+    cell."
+- **One-line link (small, bottom of slide):** contribution = abundance × how much that cell type expresses the
+  program × its per-cell change.
 - **Gene programs (20 s):**
   - "A gene program is a set of genes that switch on together for one job, like the interferon response. Our
     part-1 pathways are programs."
@@ -103,7 +115,7 @@ how to test any method on it fairly, including whether a study can answer it at 
   | Deconvolution (CIBERSORT, InstaPrism) | How many cells of each type? | Did those cells change? |
   | Bulk differential expression | What changed in the sample? | In which cells? |
   | Per-cell-type expression (CIBERSORTx high-resolution, TCA, BayesPrism) | Each gene in each cell type | Did a program change, and in which cell type? |
-  | **Attribution (this talk)** | **Which cell type changed which program, by how much, how sure** | n/a |
+  | **Attribution (this talk)** | **Where a program change comes from (contribution), and which cell types changed (per-cell change), how sure** | n/a |
 
   - **Say:** "These tools are rarely checked against a known answer on the question that matters to us: did
     the change land in the right cell type?"
@@ -232,9 +244,12 @@ how to test any method on it fairly, including whether a study can answer it at 
   - **Right, "more samples make it worse":**
     - "Give the t-test more samples and it flags *more* unchanged boxes: 24% with 3 samples, 96% with 20."
     - "That's the signature of bias, not noise: more data makes a biased method more confidently wrong."
-- **Honest limit (one line):** "Interferon is where PALM finds little per cell type, exactly as the design
-  limit predicted for B and NK cells. PALM still reports it, at the program level: 'interferon response up,
-  consistent across cell types'."
+- **Interferon, both layers (20 s):**
+  - "Per-cell change: PALM finds little for B and NK cells, exactly as the design limit predicted."
+  - "Contribution: it still gets right *where* the interferon signal comes from. Its share error is 0.07–0.10
+    vs 0.10–0.15 for InstaPrism, and it correctly says almost none of it is more cells: 4–7%, against InstaPrism's
+    21–26%."
+  - "So when cells can't be told apart one by one, you still learn where the bulk change comes from."
 - **Design box:**
   - Data: 3 known-answer experiments (p53 drug and MEK drug on 6 cell lines, interferon on blood cells),
     answer key from split cells, same reference for all tools, 3 splits.
@@ -254,7 +269,7 @@ how to test any method on it fairly, including whether a study can answer it at 
   - "We add a positive control (Berry 2010 interferon signature in neutrophils and monocytes) and negative
     controls (random gene sets, shuffled labels)."
 - **Conclusion (45 s), the three take-home messages:**
-  1. **Problem:** which cell type changed which gene program. Standard tools spread one cell's change onto all, with confidence that grows with sample size, not accuracy.
+  1. **Problem:** where a bulk program change comes from, and which cell types changed. Standard tools spread one cell's change onto all, with confidence that grows with sample size, not accuracy.
   2. **Approach:** PALM undoes the spillover at the program level and says how sure it is; where cell types can't be separated, it reports the program-level change instead of guessing.
   3. **Evaluation design:** answer keys from real experiments, controls set by biology, and a design limit that
      tells before sequencing what a study can resolve. Any method can be tested this way.

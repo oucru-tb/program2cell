@@ -502,6 +502,29 @@ shared or shared? and the common interval is clear of ±margin (0.1). Splits 0�
 This is how PALM reports a response that every cell type shares (interferon) when the types can't be
 resolved one by one.
 
+**Contributions readout (`palm_bulk.contributions`, added 2026-11-02).** It answers the question users start
+from: a program changed in bulk; where does the change come from? It splits each program's bulk change
+exactly into per-cell-type parts (the Shapley form of `core.equations.effect_decomposition`):
+- **cells changed:** ½(π₀+π₁)(s₁−s₀);
+- **more cells:** ½(π₁−π₀)(s₀+s₁);
+- s_cp = Σ_g G_pg E_cg, with E = the reference profile before and `cell_profiles(B, β)` after.
+
+Intervals come from Monte Carlo over the fraction draws and the effect intervals. Shares are meaningful only
+where the total is clearly non-zero, and can leave 0–100% when cell types move in opposite directions.
+
+Check against the answer key (`scripts/experiments/contributions_eval.py`, splits 0–2; truth from the
+held-out cells with true read fractions):
+
+| Dataset | Bulk total r: PALM / InstaPrism | Share mean abs error: PALM / InstaPrism | Contribution r: PALM / InstaPrism | "More cells" part: PALM / InstaPrism / truth | PALM share coverage |
+|---|---|---|---|---|---|
+| Kang (interferon) | 0.91–0.98 / 0.88–0.95 | **0.07–0.10** / 0.10–0.15 | **0.90–0.97** / 0.81–0.92 | 4–7% / 21–26% / 4–7% | 100% |
+| Idasanutlin | 0.98–0.99 / 0.99 | 0.16–0.21 / 0.17–0.20 | **0.85–0.90** / 0.75–0.76 | 52–63% / 63–67% / 32–35% | 96–100% |
+| Trametinib | ~0.99 / ~0.99 | 0.11–0.16 / **0.08–0.12** | 0.80–0.87 / **0.91–0.92** | 26–48% / 43–48% / 44–48% | 92–100% |
+
+In McFarland the cell numbers are equal across arms, so the "more cells" part there is really *more reads*:
+the drugs change each line's RNA output, which moves the read fractions. Read-share shifts are not always
+cell-number shifts; report contributions as shares of the bulk *signal*.
+
 **Partial pooling of per-type effects: ruled out (negative result, `scripts/experiments/pooling.py`).**
 Method: random effects across types per program (DerSimonian–Laird, Q-profile upper τ), shrinking each
 type's effect toward the common one.
