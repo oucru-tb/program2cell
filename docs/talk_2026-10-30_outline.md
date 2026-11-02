@@ -120,10 +120,18 @@ the standard workflow can make pathways *look* coordinated across cell types; pa
   |---|---|---|
   | Deconvolution (CIBERSORT, InstaPrism) | How many cells of each type? | Did those cells change? |
   | Differential expression on bulk | What changed in the sample? | In which cells? |
-  | Attribution (this talk) | Which cell type changed, by how much, how sure | n/a |
+  | Per-cell-type expression (CIBERSORTx high-resolution, TCA, BayesPrism's per-type output) | Each gene's level in each cell type | Is a *pathway* change real, and in which cell type? Pathways are scored afterwards (e.g. GSVA), and spillover adds up gene by gene |
+  | Attribution (this talk) | Which cell type changed a **gene program**, by how much, how sure | n/a |
 
-  "Tools exist that output per-cell-type expression, but none was tested on whether they get the cell type
-  right. That test is part of our work."
+- **Why programs, not single genes (one sentence on the slide, the rest spoken):**
+  - "One gene in one cell type is too noisy to attribute from bulk. A program pools 50–200 genes that move
+    together, so there is enough signal to tell cell types apart."
+  - "It is also the unit we think in: 'interferon response in monocytes', not 'IFI44L in monocytes'. Our
+    part-1 pathways (TLR, NLR, IFN-γ) are programs."
+  - "PALM estimates the program change per cell type directly, instead of estimating every gene first and
+    scoring pathways afterwards."
+- **Say:** "Several tools output per-cell-type expression, but they are rarely tested on whether a pathway
+  change lands in the right cell type, against a known answer. That test is part of our work."
 
 ### 2.2 Why it is hard: spillover, on our own workflow (1 min)
 - **Visual:** `2_5_heatmap_lab_workflow.png` (answer key | our workflow; reveal PALM's panel in 2.5).
@@ -313,8 +321,8 @@ panels); scorecard `case_scorecard_palm_vs_instaprism.png` as backup or a quick 
   RCTD. No results yet.
 
 ### 2.10 Conclusion (1 min)
-1. **A new question:** which cell type changed a pathway. Bulk data can answer it, but only after undoing
-   spillover; without that, a response in some cells is painted onto all of them.
+1. **A new question:** which cell type changed a gene program (pathway). Working at the program level, not
+   gene by gene, is what makes it answerable from bulk. It still needs spillover undone; without that, a response in some cells is painted onto all of them.
 2. **A fair test for it:** an answer key from real experiments (split cells, sorted cells, drug screens),
    with negative and positive controls set by biology in advance. Any method can be checked this way.
 3. **PALM:**
