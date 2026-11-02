@@ -528,12 +528,140 @@ def fig_kang_limit(competitor="cibersort"):
     save(fig, "2_6_interferon_ranges")
 
 
+# ---- 2.3a how to test attribution: building an answer key ---------------------------------------------------
+def fig_answer_key():
+    """Schematic, three rules: (1) split each sample's cells, half pooled into bulk (what the method sees), half
+    kept per cell type (the answer key, hidden); (2) controls decided by biology before running (p53 status);
+    (3) honest test (reference from other donors, targets written first, frozen method checked once)."""
+    rng = np.random.default_rng(3)
+    cols = {"A": C_NEUT, "B": C_MONO, "C": C_PALM}
+    fig = plt.figure(figsize=(13.3, 5.4))
+    head = dict(fontsize=16, fontweight="bold", color=C_TRUTH, ha="left", va="top")
+    sub = dict(fontsize=12.5, color="#555555", ha="left", va="top")
+
+    # panel 1: split the sample
+    ax = fig.add_axes([0.0, 0.0, 0.38, 1.0]); ax.set_xlim(0, 10); ax.set_ylim(0, 10); ax.axis("off")
+    ax.text(0.2, 9.8, "1  Hide the answer inside a real sample", **head)
+    ax.text(0.2, 9.05, "real cells, real drug response", **sub)
+    ax.add_patch(plt.Circle((2.0, 5.0), 1.6, fc=C_LIGHT, ec="#888888", lw=1.2))
+    pts = rng.uniform(-1, 1, (90, 2)); pts = pts[(pts ** 2).sum(1) < 0.85][:44]
+    lab = rng.choice(list(cols), len(pts), p=[0.5, 0.3, 0.2])
+    for (x, y), l in zip(pts, lab):
+        ax.add_patch(plt.Circle((2.0 + 1.55 * x, 5.0 + 1.55 * y), 0.13, color=cols[l], lw=0))
+    ax.text(2.0, 3.05, "one sample", ha="center", va="top", fontsize=12.5, color="#555555")
+    for yy, txt in ((7.1, "half A"), (2.9, "half B")):
+        ax.annotate("", xy=(5.0, yy), xytext=(3.7, 5.0 + (yy - 5) * 0.35),
+                    arrowprops=dict(arrowstyle="-|>", color="#777777", lw=1.6))
+        ax.text(4.0, yy + (0.35 if yy > 5 else -0.35), txt, fontsize=11.5, color="#777777",
+                va="bottom" if yy > 5 else "top")
+    # bulk tube: one mixed bar
+    x0 = 5.3
+    acc = 0
+    for l, w in (("A", 0.5), ("B", 0.3), ("C", 0.2)):
+        ax.add_patch(Rectangle((x0 + acc * 3.6, 6.7), w * 3.6, 0.8, color=cols[l], lw=0)); acc += w
+    ax.add_patch(Rectangle((x0, 6.7), 3.6, 0.8, fill=False, ec="#444444", lw=1.2))
+    ax.text(x0, 8.05, "pooled → bulk", fontsize=13, fontweight="bold", color=C_TRUTH, va="bottom")
+    ax.text(x0, 6.45, "what the method sees", fontsize=12, color="#555555", va="top")
+    # answer key: per type, hidden
+    for i, l in enumerate(("A", "B", "C")):
+        ax.add_patch(Rectangle((x0 + i * 1.25, 2.5), 1.05, 0.8, color=cols[l], lw=0))
+    ax.add_patch(FancyBboxPatch((x0 - 0.15, 2.3), 3.85, 1.2, boxstyle="round,pad=0.05", fill=False,
+                                ec=C_TRUTH, lw=1.5, ls="--"))
+    ax.text(x0, 3.85, "per cell type → answer key", fontsize=13, fontweight="bold", color=C_TRUTH,
+            va="bottom")
+    ax.text(x0, 2.05, "never shown to the method", fontsize=12, color="#555555", va="top")
+    for l, name, xx in (("A", "neutrophil", 0.3), ("B", "monocyte", 3.6), ("C", "T cell", 6.6)):
+        ax.add_patch(plt.Circle((xx, 0.55), 0.17, color=cols[l], lw=0))
+        ax.text(xx + 0.35, 0.55, name, va="center", fontsize=11.5, color="#555555")
+
+    # panel 2: controls from biology
+    ax = fig.add_axes([0.40, 0.0, 0.31, 1.0]); ax.set_xlim(0, 10); ax.set_ylim(0, 10); ax.axis("off")
+    ax.text(0.2, 9.8, "2  Decide the controls from biology", **head)
+    ax.text(0.2, 9.05, "before any method is run", **sub)
+    ax.text(0.2, 8.0, "Drug: idasanutlin (switches on p53)", fontsize=13, color=C_TRUTH, va="top")
+    rows = [("LNCaP", "p53 intact", True), ("RCC10RGB", "p53 intact", True), ("SNU1079", "p53 intact", True),
+            ("COLO680N", "p53 mutant", False), ("TEN", "p53 mutant", False)]
+    for i, (ln, g, resp) in enumerate(rows):
+        y = 6.9 - i * 0.95
+        ax.text(0.3, y, ln, fontsize=13, va="center", color=C_TRUTH)
+        ax.text(3.2, y, g, fontsize=12.5, va="center", color="#555555")
+        ax.text(6.0, y, "↑ expected" if resp else "no change", fontsize=13, va="center",
+                color=C_PALM if resp else C_GREY, fontweight="bold" if resp else "normal")
+    ax.text(0.3, 1.75, "positive control", fontsize=13, color=C_PALM, fontweight="bold", va="center")
+    ax.text(0.3, 1.0, "negative control", fontsize=13, color=C_GREY, fontweight="bold", va="center")
+    ax.text(4.5, 1.75, "a good method must find these", fontsize=12, color="#555555", va="center")
+    ax.text(4.5, 1.0, "a good method must not flag these", fontsize=12, color="#555555", va="center")
+    ax.plot([0.2, 9.6], [2.35, 2.35], color="#cccccc", lw=1)
+
+    # panel 3: honest test
+    ax = fig.add_axes([0.73, 0.0, 0.27, 1.0]); ax.set_xlim(0, 10); ax.set_ylim(0, 10); ax.axis("off")
+    ax.text(0.2, 9.8, "3  Keep the test honest", **head)
+    ax.text(0.2, 9.05, "so the result can't be tuned", **sub)
+    items = ["Reference and correction\nlearned from other donors", "Success targets written\ndown before the run",
+             "Method frozen, then checked\nonce on held-back data"]
+    for i, t in enumerate(items):
+        y = 7.3 - i * 2.2
+        ax.add_patch(FancyBboxPatch((0.3, y - 0.45), 0.9, 0.9, boxstyle="round,pad=0.05", fc="white",
+                                    ec=C_PALM, lw=1.8))
+        ax.text(0.75, y, "✔", fontsize=17, color=C_PALM, ha="center", va="center", fontfamily="DejaVu Sans")
+        ax.text(1.7, y, t, fontsize=13, va="center", color=C_TRUTH, linespacing=1.3)
+    save(fig, "2_3_answer_key")
+
+
+# ---- 2.4 design: how many samples, how much composition spread --------------------------------------------
+def fig_power():
+    """Minimum detectable effect (identifiability.power; 90% two-sided, 80% power) against samples per arm.
+    Left: Kang IFN-beta, paired donors, per cell type (Kang has 7 donors). Right: Zhang TNBC blood, median over
+    types and programs, at the observed composition spread and with it halved / doubled."""
+    P = os.path.join(ROOT, "benchmarks", "dev", "identifiability", "power__%s.json")
+    k, z = json.load(open(P % "kang")), json.load(open(P % "zhang"))
+    fig, axs = plt.subplots(1, 2, figsize=(13.3, 5.6), gridspec_kw=dict(wspace=0.45))
+    n = np.array(k["sizes"])
+    cols = {"Monocyte": C_MONO, "T cell": C_PALM, "NK cell": C_NEUT, "B cell": C_PRACT}
+    ax = axs[0]
+    m = np.array(k["mde_paired"])                                  # (sizes, C, P)
+    for c, ct in enumerate(k["cell_types"]):
+        y = np.median(m[:, c], 1)
+        ax.plot(n, y, "-o", color=cols.get(ct, C_GREY), lw=2.5, ms=6)
+        ax.text(n[-1] * 1.12, y[-1], "%s (%d%%)" % (ct, round(100 * k["frac_mean"][c])), va="center",
+                fontsize=13, color=cols.get(ct, C_GREY))
+    ax.axvline(7, color=C_GREY, ls=":", lw=1.5)
+    ax.text(7 * 1.06, 2.2, "Kang: 7 donors", color="#555555", fontsize=12, va="top")
+    ax.set_title("Paired design (Kang IFN-β), by cell type", loc="left", fontsize=15)
+    for a in axs:
+        a.axhline(0.1, color=C_TRUTH, ls="--", lw=1.2)
+        a.set_xscale("log"); a.set_yscale("log")
+        a.set_xticks([3, 5, 10, 20, 50, 100, 200]); a.set_xticklabels([3, 5, 10, 20, 50, 100, 200])
+        a.minorticks_off()
+        a.set_xlabel("donors per arm")
+        a.set_ylim(0.008, 3)
+    axs[0].set_ylabel("smallest detectable change\n(pathway activity)")
+    axs[1].text(3, 0.108, "typical real change (0.1)", fontsize=12, color=C_TRUTH, va="bottom")
+    ax = axs[1]
+    nz = np.array(z["sizes"])
+    lab = {0.5: "half the spread", 1.0: "observed spread", 2.0: "double the spread"}
+    colz = {0.5: "#5aa9b5", 1.0: C_PALM, 2.0: "#004f5c"}
+    for i, s in enumerate(z["spreads"]):
+        if s not in lab:
+            continue
+        y = [float(np.median(np.array(v))) for v in z["mde"][i]]
+        ax.plot(nz, y, "-o", lw=2.5, ms=6, color=colz[s])
+        ax.text(nz[-1] * 1.12, y[-1], lab[s], va="center", fontsize=13, color=colz[s])
+    ax.axvline(20, color=C_GREY, ls=":", lw=1.5)
+    ax.text(20 * 1.06, 2.2, "Zhang: 20 per arm", color="#555555", fontsize=12, va="top")
+    ax.set_title("Composition spread (Zhang TNBC blood)", loc="left", fontsize=15)
+    fig.text(0.07, -0.06, "Computed from the design alone (fractions, reference, programs, noise): no estimator can go "
+             "below these lines without extra assumptions.\nRare cell types and similar compositions across samples "
+             "need many more donors.", fontsize=12.5, color="#555555", ha="left", va="top")
+    save(fig, "2_4_design_power")
+
+
 if __name__ == "__main__":
     only = sys.argv[2].split(",") if len(sys.argv) > 2 else None
     figs = dict(concept=fig_concept, fractions=fig_fractions, false_flags=fig_false_flags, controls=fig_controls,
                 cases=fig_case_studies, scorecard=fig_scorecard,
                 heat=fig_heatmaps,
-                heat_lab=lambda: fig_heatmaps(competitor="lab"), attenuation=fig_attenuation, kang=fig_kang_limit)
+                heat_lab=lambda: fig_heatmaps(competitor="lab"), attenuation=fig_attenuation, kang=fig_kang_limit, power=fig_power, answer_key=fig_answer_key)
     for k, f in figs.items():
         if only and k not in only:
             continue

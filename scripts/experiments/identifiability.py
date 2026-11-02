@@ -11,8 +11,17 @@ the share of the estimate that is the type's own signal. Both are computed from 
 The check: across datasets, splits, types and programs, does MDE predict PALM's error, interval width and
 which real effects get detected?
 
+Formal statement (docs/method_spec.md, "Identifiability"): with reallocated activity
+    r_n = a + T_n A_n beta + e_n,   e_n ~ (0, diag(s^2)),
+every linear unbiased estimator of beta has covariance >= M = [(X' W X)^-1]_beta (Gauss-Markov; X stacks
+[I, T_n A_n], W = diag(s^-2)), so no estimator without extra assumptions detects beta_cp below
+MDE_cp = (z_0.95 + z_0.80) sqrt(M_cp,cp). Paired designs: per-donor intercepts, removed by centring the rows
+within donor (Frisch-Waugh-Lovell). Fraction uncertainty: MDE over the posterior draws of pi.
+power: MDE against arm size n (samples resampled per arm) and composition spread s (pi -> mean + s (pi - mean)).
+
 Usage: python identifiability.py run DATASETS SPLITS   |   python identifiability.py summary
-Writes benchmarks/dev/identifiability/{ds}__s{split}.json
+       python identifiability.py power DATASETS [SPLIT]   |   python identifiability.py powerfig
+Writes benchmarks/dev/identifiability/{ds}__s{split}.json and power__{ds}.json
 """
 import json, os, sys
 import numpy as np
@@ -56,6 +65,102 @@ def design_calculator(pi, B, G, T, raw, groups=None, seed=0):
     return dict(mde=mde, mde_full=mde_full, self_share=share, cond=float(np.linalg.cond(Ab)),
                 contrast_se=se.reshape(C, P), frac_mean=pi.mean(0),
                 frac_cv=pi.std(0) / np.maximum(pi.mean(0), 1e-9))
+
+
+def _sample_info(A, T, sd, groups=None):
+    """Per-sample information blocks X_n' W X_n (N, 2CP, 2CP) of the design [I, T_n A_n] (rows / sd); with
+    groups, rows centred within group (per-group intercepts) and the intercept block dropped."""
+    N = A.shape[0]
+    K = A.shape[1] * A.shape[2]
+    An = A.reshape(N, K, K)
+    X = np.concatenate([np.broadcast_to(np.eye(K), (N, K, K)), np.asarray(T, float)[:, None, None] * An], 2)
+    X = X / sd[None, :, None]
+    if groups is not None:
+        g = np.asarray(groups).astype(str)
+        X = X[:, :, K:].copy()
+        for u in np.unique(g):
+            m = g == u
+            X[m] -= X[m].mean(0)
+    return np.einsum("nkj,nkl->njl", X, X)
+
+
+def _mde(info, K):
+    M = np.linalg.pinv(info.sum(0))
+    return Z * np.sqrt(np.clip(np.diag(M)[-K:], 0, None))
+
+
+def _noise_sd(y, T, groups=None):
+    res = np.asarray(y, float).copy()
+    T = np.asarray(T)
+    if groups is not None:                                       # within donor, after the arm effect
+        for t in (0, 1):
+            res[T == t] -= res[T == t].mean(0)
+        g = np.asarray(groups).astype(str)
+        for u in np.unique(g):
+            res[g == u] -= res[g == u].mean(0)
+        dof = len(res) - 1 - len(np.unique(g))
+    else:
+        for t in (0, 1):
+            res[T == t] -= res[T == t].mean(0)
+        dof = len(res) - 2
+    return np.sqrt((res ** 2).sum(0) / max(dof, 1))
+
+
+def power(dsn, split=0, sizes=(3, 5, 10, 20, 50, 100, 200), spreads=(0.25, 0.5, 1.0, 2.0), reps=20):
+    """MDE (C, P) against arm size and composition spread, unpaired (paired designs: also paired); and under
+    fraction uncertainty (posterior draws) at the observed design."""
+    from palm_bulk.core import unmix as um
+    from palm_bulk.core.realloc import reallocate
+    pb, inp, T, beta, truth, src, fsrc, cal, donors = cl._setup(dsn, split)
+    if "fraction_draws" not in src:
+        return
+    draws = np.asarray(src["fraction_draws"])
+    pi = np.median(draws, 0)
+    raw = reallocate(inp.Y, pi, inp.B, inp.Gmat)
+    N, C, P = raw.shape
+    K = C * P
+    y = raw.reshape(N, K)
+    sd = _noise_sd(y, T)
+    rng = np.random.default_rng(split)
+    i1, i0 = np.flatnonzero(T == 1), np.flatnonzero(T == 0)
+    out = dict(dataset=dsn, split=split, cell_types=list(inp.cell_types), programs=list(inp.programs),
+               beta=beta.tolist(), sizes=list(sizes), spreads=list(spreads), n_obs=[int(len(i0)), int(len(i1))],
+               frac_mean=pi.mean(0).tolist(), mde=[])
+    for s in spreads:
+        ps = np.clip(pi.mean(0) + s * (pi - pi.mean(0)), 1e-4, None)
+        ps = ps / ps.sum(1, keepdims=True)
+        info = _sample_info(um.leakage_operator(ps, inp.B, inp.Gmat, diagonal=False), T, sd)
+        row = []
+        for m in sizes:
+            v = [_mde(info[np.concatenate([rng.choice(i0, m), rng.choice(i1, m)])], K) for _ in range(reps)]
+            row.append(np.median(v, 0).reshape(C, P).tolist())
+        out["mde"].append(row)
+    A = um.leakage_operator(pi, inp.B, inp.Gmat, diagonal=False)
+    out["mde_observed"] = _mde(_sample_info(A, T, sd), K).reshape(C, P).tolist()
+    sub = draws[np.linspace(0, len(draws) - 1, 10).astype(int)]
+    md = [_mde(_sample_info(um.leakage_operator(z, inp.B, inp.Gmat, diagonal=False), T, sd), K) for z in sub]
+    out["mde_draws_q90"] = np.quantile(md, 0.9, 0).reshape(C, P).tolist()
+    if dsn in ("kang", "zhang"):                                   # paired: per-donor intercepts
+        sdp = _noise_sd(y, T, donors)
+        out["mde_paired_observed"] = _mde(_sample_info(A, T, sdp, donors), K).reshape(C, P).tolist()
+        # arm size for paired designs: resample whole donors
+        g = np.asarray(donors).astype(str)
+        units = np.unique(g)
+        infop = _sample_info(A, T, sdp, donors)
+        row = []
+        for m in sizes:
+            v = []
+            for _ in range(reps):
+                pick = rng.choice(units, m)
+                v.append(_mde(np.concatenate([infop[g == u] for u in pick]), K))
+            row.append(np.median(v, 0).reshape(C, P).tolist())
+        out["mde_paired"] = row
+    with open(os.path.join(OUT, "power__%s.json" % dsn), "w") as fh:
+        json.dump(out, fh)
+    obs = np.array(out["mde_observed"])
+    print("%s: observed median MDE %.3f; at n=20/arm %.3f; fraction-uncertainty q90 %.3f" % (
+        dsn, np.median(obs), np.median(out["mde"][spreads.index(1.0)][sizes.index(20)]),
+        np.median(out["mde_draws_q90"])), flush=True)
 
 
 def run(datasets, splits):
@@ -127,5 +232,8 @@ def summary(name="auto_abs"):
 if __name__ == "__main__":
     if sys.argv[1] == "run":
         run(sys.argv[2].split(","), cl.db._splits(sys.argv[3]))
+    elif sys.argv[1] == "power":
+        for d in sys.argv[2].split(","):
+            power(d, int(sys.argv[3]) if len(sys.argv) > 3 else 0)
     else:
         summary(*(sys.argv[2:3]))

@@ -409,6 +409,51 @@ trametinib's earlier PALM-lite rows kept in `causal_loop/lite/`):
 - unmix_m, auto_m, auto_m_pair (pev + misfit);
 - direct, direct_pair, direct_nb.
 
+### 4.6 Identifiability: the design limit (added 2026-11-02, `scripts/experiments/identifiability.py`)
+
+**Model.** Reallocated activity of sample n, type c, program p (Step 2) is, to first order around the reference,
+r_n = a + T_n A_n β + e_n, with A_n = `core.unmix.leakage_operator(pi_n, B, G)` ((C·P) × (C·P)), a per-(c, p)
+intercept, β the true per-type program effects and e_n noise with within-arm sd s.
+
+**Statement.** Stack X_n = [I, T_n A_n] / s. Every linear unbiased estimator of β has covariance at least
+M = [(Σ_n X_nᵀ X_n)⁻¹]_ββ (Gauss–Markov). So, without extra assumptions (shrinkage, priors, a shared-response
+constraint), no method detects β_cp below
+
+MDE_cp = (z_0.95 + z_0.80) · sqrt(M_cp,cp)   (90% two-sided, 80% power).
+
+- **Paired designs:** per-donor intercepts, removed by centring rows within donor (Frisch–Waugh–Lovell).
+- **Fraction uncertainty:** MDE over the posterior draws of pi (q90 reported).
+
+**What the limit depends on.** It is computed from the design alone, with no truth.
+- **Fractions:** a rare type has small columns of A, so its MDE is large.
+- **Composition spread across samples:** with identical compositions, types are separated only through the
+  gene weights in A.
+- **Program overlap between types:** this enters through A.
+- **Noise and n:** MDE ∝ 1/sqrt(n).
+
+**Checks** (`identifiability.py summary` and `power`; splits 0–2).
+
+| Check | Result |
+|---|---|
+| Real effects (\|β\| ≥ 0.1) with \|β\| < MDE | 28; PALM called 0% |
+| Real effects with \|β\| ≥ MDE | 73; PALM called 58% |
+| Power: MDE vs n | ∝ 1/sqrt(n) |
+| Power: composition spread | Halving the observed spread raises MDE ×1.7 (Zhang, 20 per arm: 0.13 → 0.21); doubling it lowers MDE ×0.6 |
+| Kang, paired, 7 donors: median MDE | Monocyte 0.06, T 0.16, NK 0.21, B 0.83 |
+
+Kang, n = 7: B cells (5% of reads) need about 200 donors per arm to reach 0.1. Figure:
+docs/figures/talk/2_4_design_power.
+
+**Efficiency gap (open).** Kang JAK-STAT in monocytes, split 0:
+- True change 0.35; MDE 0.105.
+- auto_m 90% interval: [−1.10, 1.83].
+- auto_abs: [0.12, 0.62] (detected).
+- Half-width: bound 0.07, auto_abs 0.25.
+
+PALM is conservative here, not limited by the design. The calibrated path's leakage allowance is a worst case
+over simulated designs, while the bound assumes A is known. Closing this gap is the main power target: an
+efficient estimator that also stays honest when A is misspecified.
+
 ---
 
 ## 5. Outputs
