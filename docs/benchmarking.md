@@ -187,6 +187,16 @@ and TEN stay unflagged.
   check.
 - Vehicle vs vehicle (`tahoe_dmso2`): PALM 0 calls, coverage 0.90–0.98; CIBERSORT or reallocation + t-test flag
   66–70% of boxes.
+- Oxaliplatin at 5 µM barely acts in these lines (max true change 0.087): a second near-null arm.
+
+| Arm (splits 0–2, BH q < 0.1) | Unchanged flagged: deconvolution + t-test (4 tools) | PALM | PALM module on the tools' fractions | 90% coverage: tools / PALM | AUROC: InstaPrism / PALM |
+|---|---|---|---|---|---|
+| Vehicle vs vehicle | 72–76% | 0% | 0% | 22–33% / 94% | n/a |
+| Oxaliplatin | 68–90% | 1% | 0–2% | 22–32% / 93% | n/a |
+| Trametinib | 63–87% | 1% | 0–1% | 9–20% / 91% | n/a (all lines respond) |
+| Dabrafenib | 64–78% | 1% | 2–6% | 10–17% / 92% | 0.83 / 0.91 |
+| Gemcitabine | 73–83% | 1% | 0–2% | 19–31% / 90% | 0.89 / 0.81 |
+| Adagrasib (0.05 µM) | 69–95% | 1% | 0–3% | 22–30% / 94% | 0.26 / 0.29 |
 
 **Composition shift** (`mcf_ida_shift`, responder lines ×1.6 under treatment): responders found, unchanged
 flagged 0–9%, coverage 0.86–0.98, but part of the responders' p53 signal moves to COLO680N (true +0.04–0.05,

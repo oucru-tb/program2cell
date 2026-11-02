@@ -1,0 +1,1 @@
+[{"cov": 0.9761904761904762, "r": 0.9174545809846778, "rmse": 0.06280582165536257, "width": 0.31294473416921964, "r_t": 0.9174545809846778, "calls": 3, "fpr_null": 0.0, "auroc": 1.0, "tpr": 1.0, "fpr": 0.0, "tpr_t": 1.0, "cov_known": 1.0, "dataset": "mcf_ida_tight", "split": 1, "method": "reallocation", "kind": "palm_module", "rule": "palm", "seconds": 259.937472820282}]

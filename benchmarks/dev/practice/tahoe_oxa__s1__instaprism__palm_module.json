@@ -1,0 +1,1 @@
+[{"cov": 0.9523809523809523, "r": 0.5794088833083832, "rmse": 0.021883789519968944, "width": 0.11501483196964282, "r_t": NaN, "calls": 0, "fpr_null": 0.0, "dataset": "tahoe_oxa", "split": 1, "method": "instaprism", "kind": "palm_module", "rule": "palm", "seconds": 372.9449427127838}]

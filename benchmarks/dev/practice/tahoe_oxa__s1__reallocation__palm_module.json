@@ -1,0 +1,1 @@
+[{"cov": 0.9206349206349206, "r": 0.4540490713380785, "rmse": 0.02455259820998835, "width": 0.11316215901838109, "r_t": NaN, "calls": 1, "fpr_null": 0.017857142857142856, "dataset": "tahoe_oxa", "split": 1, "method": "reallocation", "kind": "palm_module", "rule": "palm", "seconds": 393.11242055892944}]
