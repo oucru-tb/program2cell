@@ -62,7 +62,7 @@ def scan():
     print("median UMI per cell", float(np.median(obs.tscp_count)))
 
 
-def cells(chunk=200_000):
+def cells(chunk=60_000):
     import h5py
     import anndata as ad
     lines = json.load(open(LINES_FILE))["lines"]
@@ -105,7 +105,7 @@ def mix():
     X = sp.csr_matrix(a.X)
     o = a.obs
     dmso = sorted(o.loc[o.drug == "DMSO_TF", "sample"].unique())
-    arm = o["drug"].map(DRUGS).astype(object).values
+    arm = np.array(o["drug"].astype(str).map(DRUGS), dtype=object)
     arm[(o["sample"] == dmso[1]).values] = "dmso2"
     line = o["cell_name"].astype(str).values
     arms = ["ctrl"] + [v for v in dict.fromkeys(DRUGS.values()) if v != "ctrl"] + ["dmso2"]

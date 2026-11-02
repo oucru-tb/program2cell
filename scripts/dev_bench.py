@@ -85,6 +85,13 @@ DATASETS = {
     "mcf_tram": dict(path=os.path.join(ROOT, "data", "pert", "mcfarland_mix.h5ad"), contrast=("label", "tram", "ctrl"),
                      n_test=20, ref_filter=("label", "refctrl"), all_test_specimens=True, types=MCF_LINES),
 }
+# Tahoe-100M plate 3 (5 uM), 9 pooled cancer lines (scripts/experiments/build_tahoe.py); one dataset per drug arm
+# vs the first DMSO well; tahoe_dmso2 = the second DMSO well (negative control)
+TAHOE_LINES = sorted(["LOX-IMVI", "HT-29", "RKO", "NCI-H2030", "HOP62", "PANC-1", "A549", "A-172", "J82"])
+for _arm in ("tram", "dab", "adag", "oxa", "gem", "ptx", "alp", "evr", "afa", "bor", "dmso2"):
+    DATASETS["tahoe_" + _arm] = dict(path=os.path.join(ROOT, "data", "tahoe", "tahoe_mix.h5ad"),
+                                     contrast=("label", _arm, "ctrl"), n_test=20, ref_filter=("label", "refctrl"),
+                                     all_test_specimens=True, types=TAHOE_LINES)
 
 
 def _types(ds):

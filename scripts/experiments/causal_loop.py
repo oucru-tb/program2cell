@@ -25,7 +25,17 @@ import dev_bench as db
 OUT = os.path.join(ROOT, "benchmarks", "dev", "causal_loop")
 KNOWN = {"mcf_ida": dict(program="p53", types=["LNCAPCLONEFGC", "RCC10RGB", "SNU1079"], sign=1),
          "mcf_tram": dict(program="MAPK", types=None, sign=-1),
-         "kang": dict(program="JAK-STAT", types=None, sign=1)}
+         "kang": dict(program="JAK-STAT", types=None, sign=1),
+         # Tahoe plate 3: responders from the lines' genetics, confirmed by the mean log2 FC of 10 target genes
+         # per line (MAPK: DUSP6, SPRY4, ETV4/5 ...; p53: CDKN1A, MDM2, BAX ...) vs DMSO well 1, 2026-11-02:
+         # trametinib -2.5..-3.3 in all; dabrafenib -0.39..-0.72 in the BRAF-V600 lines (+0.23..+0.28 in RAS-mutant
+         # HOP62, PANC-1: paradoxical activation); adagrasib -0.72..-0.78 in the G12C lines (RKO -0.45 off-target);
+         # gemcitabine p53 +0.52..+0.63 in TP53-wt A-172, A549, RKO (LOX-IMVI 0.15; mutant lines up to 0.36);
+         # oxaliplatin: no p53 response (no known answer)
+         "tahoe_tram": dict(program="MAPK", types=None, sign=-1),
+         "tahoe_dab": dict(program="MAPK", types=["LOX-IMVI", "HT-29", "RKO"], sign=-1),
+         "tahoe_adag": dict(program="MAPK", types=["NCI-H2030", "HOP62"], sign=-1),
+         "tahoe_gem": dict(program="p53", types=["A-172", "A549", "RKO"], sign=1)}
 TARGETS = dict(cov=(">=", 0.85), r=(">=", 0.9), auroc=(">=", 0.95), tpr_t=(">=", 0.9), fpr_null=("<=", 0.1))
 # r is a target only where the truth has effects (max |beta| >= 0.1): with a null truth (zhang) it is noise
 R_MIN_EFFECT = 0.1
