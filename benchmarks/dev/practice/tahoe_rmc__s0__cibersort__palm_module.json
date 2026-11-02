@@ -1,0 +1,1 @@
+[{"cov": 0.9682539682539683, "r": 0.8541769041618312, "rmse": 0.04547133799117244, "width": 0.20342950324787862, "r_t": 0.8541769041618312, "calls": 9, "fpr_null": 0.0, "auroc": NaN, "tpr": 1.0, "fpr": NaN, "tpr_t": 1.0, "cov_known": 1.0, "dataset": "tahoe_rmc", "split": 0, "method": "cibersort", "kind": "palm_module", "rule": "palm", "seconds": 399.1368021965027}]

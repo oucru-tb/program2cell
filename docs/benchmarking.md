@@ -197,10 +197,24 @@ and TEN stay unflagged.
 | Dabrafenib | 64–78% | 1% | 2–6% | 10–17% / 92% | 0.83 / 0.91 |
 | Gemcitabine | 73–83% | 1% | 0–2% | 19–31% / 90% | 0.89 / 0.81 |
 | Adagrasib (0.05 µM) | 69–95% | 1% | 0–3% | 22–30% / 94% | 0.26 / 0.29 |
+| RMC-6236 (strong-dose set) | 59–71% | 1% | 0–1% | 12–14% / 94% | real changes found: tools 74–100%, PALM 93% |
+| Encorafenib (strong-dose set) | 73–100% | 1% | 0–1% | 11–16% / 92% | real changes found: tools 100%, PALM 67% |
+
+- Strong-dose set, against the genetics: RMC-6236 lowers MAPK in all 9 lines (−0.13 to −0.32), not only the
+  RAS-mutant ones, so its label was changed to "shared" after split 0 (post hoc; the measured truth is
+  unaffected). PALM unmixed MAPK in all 3 splits (r 0.79–0.82), unlike trametinib. Encorafenib moves MAPK clearly
+  only in HT-29 (−0.135; LOX-IMVI and RKO ≤ 0.05); PALM finds HT-29 in 2 of 3 splits and overestimates NCI-H2030
+  (true −0.087, estimated −0.19) in one.
 
 **Composition shift** (`mcf_ida_shift`, responder lines ×1.6 under treatment): responders found, unchanged
 flagged 0–9%, coverage 0.86–0.98, but part of the responders' p53 signal moves to COLO680N (true +0.04–0.05,
 estimated +0.16 to +0.48) in all three splits: a false flag in two, "can't tell" everywhere in the third.
+With trametinib (`mcf_tram_shift`, the non-responder LNCaP ×1.6) nothing moves: all real MAPK drops found,
+LNCaP left alone, coverage 0.95–1.00, r 0.92–0.94. The risk is specific to responders that expand.
+
+**Less composition spread** (`mcf_ida_tight`, Dirichlet 10): split 0 "can't tell" everywhere (intervals ±0.8),
+split 1 all responders plus one non-responder flagged, split 2 clean (AUROC 1.00, r 0.93): fewer calls, as the
+design limit predicts, and the unmix/calibrate choice varies between splits.
 
 ### 0.7 Fairness review and stress tests (2026-11-02)
 
