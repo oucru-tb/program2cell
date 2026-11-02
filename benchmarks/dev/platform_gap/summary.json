@@ -1,0 +1,10 @@
+{
+ "n_samples": 125,
+ "n_genes": 6462,
+ "offset_sd": 1.889326810836792,
+ "offset_split_half_r": 0.9983658781386955,
+ "var_explained_by_gene_offset": 0.8874959349632263,
+ "sample_r_median": 0.35042955874166987,
+ "sample_r_after_offset_median": 0.9607650473958701,
+ "resid_sd": 0.6822890043258667
+}

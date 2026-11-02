@@ -1,0 +1,252 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1600 900" width="1600" height="900" font-family="Helvetica, Arial, sans-serif">
+  <defs>
+    <marker id="arr" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M0,0 L10,5 L0,10 z" fill="#5c6670"/>
+    </marker>
+    <marker id="arrT" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M0,0 L10,5 L0,10 z" fill="#00798c"/>
+    </marker>
+  </defs>
+
+  <rect width="1600" height="900" fill="#ffffff"/>
+
+  <!-- Title -->
+  <text x="30" y="50" font-size="30" font-weight="bold" fill="#2b2d42">From a new cohort to cell-type answers: the PALM workflow</text>
+  <text x="30" y="82" font-size="17" fill="#5c6670">Example: bulk PBMC RNA-seq, TB vs healthy, with a public annotated PBMC atlas as the reference</text>
+
+  <!-- Column headers -->
+  <g font-size="20" font-weight="bold" fill="#ffffff">
+    <rect x="30" y="105" width="360" height="46" rx="8" fill="#3d405b"/>
+    <text x="50" y="135">1  Prepare (before any results)</text>
+    <rect x="420" y="105" width="380" height="46" rx="8" fill="#00798c"/>
+    <text x="440" y="135">2  Run PALM</text>
+    <rect x="835" y="105" width="330" height="46" rx="8" fill="#3d405b"/>
+    <text x="855" y="135">3  Check</text>
+    <rect x="1205" y="105" width="365" height="46" rx="8" fill="#3d405b"/>
+    <text x="1225" y="135">4  Read and report</text>
+  </g>
+
+  <!-- Arrows between columns -->
+  <g stroke="#5c6670" stroke-width="3" fill="none" marker-end="url(#arr)">
+    <line x1="394" y1="470" x2="414" y2="470"/>
+    <line x1="804" y1="470" x2="829" y2="470"/>
+    <line x1="1169" y1="470" x2="1199" y2="470"/>
+  </g>
+
+  <!-- ========== Column 1: Prepare ========== -->
+  <!-- Bulk -->
+  <rect x="30" y="170" width="360" height="120" rx="10" fill="#eef1f3"/>
+  <circle cx="70" cy="225" r="26" fill="#ffffff" stroke="#9aa0a6" stroke-width="1.5"/>
+  <g>
+    <circle cx="60" cy="214" r="5" fill="#e9a23b"/><circle cx="76" cy="212" r="5" fill="#6c5b9e"/>
+    <circle cx="84" cy="228" r="5" fill="#4c9f70"/><circle cx="66" cy="230" r="5" fill="#e9a23b"/>
+    <circle cx="56" cy="238" r="5" fill="#8fb8de"/><circle cx="76" cy="241" r="5" fill="#4c9f70"/>
+    <circle cx="70" cy="221" r="4" fill="#e9a23b"/>
+  </g>
+  <text x="110" y="202" font-size="17" font-weight="bold" fill="#2b2d42">Bulk PBMC RNA-seq</text>
+  <text x="110" y="227" font-size="15" fill="#333">TB patients vs healthy</text>
+  <text x="110" y="250" font-size="15" fill="#333">raw counts + age, sex, batch</text>
+  <text x="110" y="273" font-size="13" fill="#5c6670">all cells mixed in each sample</text>
+
+  <!-- Atlas -->
+  <rect x="30" y="305" width="360" height="140" rx="10" fill="#eef1f3"/>
+  <g>
+    <circle cx="52" cy="345" r="5" fill="#e9a23b"/><circle cx="62" cy="340" r="5" fill="#e9a23b"/><circle cx="57" cy="352" r="5" fill="#e9a23b"/>
+    <circle cx="82" cy="342" r="5" fill="#6c5b9e"/><circle cx="91" cy="350" r="5" fill="#6c5b9e"/><circle cx="80" cy="354" r="5" fill="#6c5b9e"/>
+    <circle cx="55" cy="375" r="5" fill="#4c9f70"/><circle cx="65" cy="380" r="5" fill="#4c9f70"/><circle cx="54" cy="387" r="5" fill="#4c9f70"/>
+    <circle cx="84" cy="377" r="5" fill="#8fb8de"/><circle cx="92" cy="386" r="5" fill="#8fb8de"/><circle cx="81" cy="389" r="5" fill="#8fb8de"/>
+  </g>
+  <text x="110" y="337" font-size="17" font-weight="bold" fill="#2b2d42">Public PBMC atlas</text>
+  <text x="270" y="337" font-size="13" fill="#5c6670">(reference)</text>
+  <text x="110" y="361" font-size="15" fill="#333">single cells: raw counts,</text>
+  <text x="110" y="381" font-size="15" fill="#333">cell-type label, donor ID</text>
+  <text x="110" y="408" font-size="14" font-weight="bold" fill="#d1495b">must contain every cell type</text>
+  <text x="110" y="427" font-size="14" font-weight="bold" fill="#d1495b">in the bulk, incl. neutrophils</text>
+
+  <!-- Programs -->
+  <rect x="30" y="460" width="360" height="115" rx="10" fill="#eef1f3"/>
+  <g fill="#00798c">
+    <rect x="48" y="498" width="8" height="30"/><rect x="60" y="488" width="8" height="40"/>
+    <rect x="72" y="505" width="8" height="23"/><rect x="84" y="494" width="8" height="34"/>
+  </g>
+  <text x="110" y="492" font-size="17" font-weight="bold" fill="#2b2d42">Gene programs</text>
+  <text x="110" y="517" font-size="15" fill="#333">IFN-γ, TNF, TLR, NLR, BCR, TCR</text>
+  <text x="110" y="539" font-size="15" fill="#333">(+ PROGENy as a cross-check)</text>
+  <text x="110" y="561" font-size="14" fill="#5c6670">check gene overlap between sets</text>
+
+  <!-- Plan -->
+  <rect x="30" y="590" width="360" height="180" rx="10" fill="#ffffff" stroke="#3d405b" stroke-width="2" stroke-dasharray="7 5"/>
+  <text x="50" y="620" font-size="17" font-weight="bold" fill="#2b2d42">Write the plan before looking</text>
+  <g font-size="15" fill="#333">
+    <text x="50" y="648">• contrast: TB vs healthy,</text>
+    <text x="64" y="668">adjusted for age and sex</text>
+    <text x="50" y="694">• positive control: TB interferon</text>
+    <text x="64" y="714">signature (Berry 2010)</text>
+    <text x="50" y="740">• negative controls: random gene</text>
+    <text x="64" y="760">sets, shuffled TB/healthy labels</text>
+  </g>
+
+  <!-- ========== Column 2: PALM ========== -->
+  <rect x="420" y="165" width="380" height="605" rx="12" fill="#e6f2f4" stroke="#00798c" stroke-width="2"/>
+
+  <!-- Step A -->
+  <rect x="440" y="182" width="340" height="163" rx="10" fill="#ffffff"/>
+  <text x="458" y="211" font-size="18" font-weight="bold" fill="#00798c">A · How many cells?</text>
+  <g font-size="15" fill="#333">
+    <text x="458" y="240">proportion of each</text>
+    <text x="458" y="260">cell type in every</text>
+    <text x="458" y="280">sample</text>
+  </g>
+  <text x="458" y="320" font-size="13" fill="#5c6670">(deconvolution)</text>
+  <!-- healthy bar: N45 M15 T30 B10 of 110 -->
+  <rect x="680" y="215" width="34" height="49.5" fill="#e9a23b"/>
+  <rect x="680" y="264.5" width="34" height="16.5" fill="#6c5b9e"/>
+  <rect x="680" y="281" width="34" height="33" fill="#4c9f70"/>
+  <rect x="680" y="314" width="34" height="11" fill="#8fb8de"/>
+  <!-- TB bar: N60 M18 T15 B7 -->
+  <rect x="730" y="215" width="34" height="66" fill="#e9a23b"/>
+  <rect x="730" y="281" width="34" height="19.8" fill="#6c5b9e"/>
+  <rect x="730" y="300.8" width="34" height="16.5" fill="#4c9f70"/>
+  <rect x="730" y="317.3" width="34" height="7.7" fill="#8fb8de"/>
+  <text x="697" y="340" font-size="12" fill="#333" text-anchor="middle">Healthy</text>
+  <text x="747" y="340" font-size="12" fill="#333" text-anchor="middle">TB</text>
+
+  <line x1="610" y1="347" x2="610" y2="370" stroke="#00798c" stroke-width="3" marker-end="url(#arrT)"/>
+
+  <!-- Step B -->
+  <rect x="440" y="373" width="340" height="180" rx="10" fill="#ffffff"/>
+  <text x="458" y="402" font-size="18" font-weight="bold" fill="#00798c">B · Per-cell change</text>
+  <g font-size="15" fill="#333">
+    <text x="458" y="430">inside each cell</text>
+    <text x="458" y="450">type, did the</text>
+    <text x="458" y="470">program change?</text>
+  </g>
+  <g font-size="14" fill="#5c6670">
+    <text x="458" y="500">size + 90% range,</text>
+    <text x="458" y="519">or “can't tell”</text>
+  </g>
+  <line x1="715" y1="418" x2="715" y2="538" stroke="#9aa0a6" stroke-width="1.5" stroke-dasharray="4 3"/>
+  <g font-size="12" fill="#333" text-anchor="end">
+    <text x="678" y="444">Mono</text><text x="678" y="484">Neut</text><text x="678" y="524">T</text>
+  </g>
+  <line x1="728" y1="440" x2="768" y2="440" stroke="#6c5b9e" stroke-width="3"/><circle cx="748" cy="440" r="6" fill="#6c5b9e"/>
+  <line x1="695" y1="480" x2="752" y2="480" stroke="#e9a23b" stroke-width="3"/><circle cx="724" cy="480" r="6" fill="#e9a23b"/>
+  <line x1="707" y1="520" x2="723" y2="520" stroke="#4c9f70" stroke-width="3"/><circle cx="715" cy="520" r="6" fill="#4c9f70"/>
+
+  <line x1="610" y1="555" x2="610" y2="578" stroke="#00798c" stroke-width="3" marker-end="url(#arrT)"/>
+
+  <!-- Step C -->
+  <rect x="440" y="581" width="340" height="174" rx="10" fill="#ffffff"/>
+  <text x="458" y="610" font-size="18" font-weight="bold" fill="#00798c">C · Contribution</text>
+  <g font-size="15" fill="#333">
+    <text x="458" y="638">where the bulk</text>
+    <text x="458" y="658">program change</text>
+    <text x="458" y="678">comes from</text>
+  </g>
+  <g font-size="14" fill="#5c6670">
+    <text x="458" y="708">more cells vs</text>
+    <text x="458" y="727">cells that changed</text>
+  </g>
+  <!-- stacked bar, 125 tall: mono 75% (dark 60 / light 15), neut 25% (light 18 / dark 7) -->
+  <rect x="690" y="615" width="44" height="75" fill="#6c5b9e"/>
+  <rect x="690" y="690" width="44" height="18.75" fill="#6c5b9e" fill-opacity="0.35"/>
+  <rect x="690" y="708.75" width="44" height="22.5" fill="#e9a23b" fill-opacity="0.35"/>
+  <rect x="690" y="731.25" width="44" height="8.75" fill="#e9a23b"/>
+  <text x="742" y="667" font-size="13" fill="#333">75%</text>
+  <text x="742" y="729" font-size="13" fill="#333">25%</text>
+
+  <!-- Cell-type legend -->
+  <g font-size="13" fill="#333">
+    <rect x="428" y="784" width="12" height="12" fill="#e9a23b"/><text x="445" y="795">Neutrophils</text>
+    <rect x="530" y="784" width="12" height="12" fill="#6c5b9e"/><text x="547" y="795">Monocytes</text>
+    <rect x="625" y="784" width="12" height="12" fill="#4c9f70"/><text x="642" y="795">T cells</text>
+    <rect x="702" y="784" width="12" height="12" fill="#8fb8de"/><text x="719" y="795">B cells</text>
+  </g>
+
+  <!-- ========== Column 3: Check ========== -->
+  <g>
+    <rect x="835" y="170" width="330" height="90" rx="10" fill="#eef1f3"/><rect x="835" y="170" width="6" height="90" fill="#00798c"/>
+    <text x="855" y="198" font-size="16" font-weight="bold" fill="#2b2d42">Design limit <tspan font-weight="normal" font-size="13" fill="#5c6670">(do first)</tspan></text>
+    <text x="855" y="222" font-size="14" fill="#333">which cell type × program boxes</text>
+    <text x="855" y="242" font-size="14" fill="#333">this cohort can resolve</text>
+
+    <rect x="835" y="269" width="330" height="90" rx="10" fill="#eef1f3"/><rect x="835" y="269" width="6" height="90" fill="#00798c"/>
+    <text x="855" y="297" font-size="16" font-weight="bold" fill="#2b2d42">Proportions</text>
+    <text x="855" y="321" font-size="14" fill="#333">predicted vs measured blood</text>
+    <text x="855" y="341" font-size="14" fill="#333">counts in the same patients</text>
+
+    <rect x="835" y="368" width="330" height="90" rx="10" fill="#eef1f3"/><rect x="835" y="368" width="6" height="90" fill="#00798c"/>
+    <text x="855" y="396" font-size="16" font-weight="bold" fill="#2b2d42">Positive control</text>
+    <text x="855" y="420" font-size="14" fill="#333">interferon up in neutrophils and</text>
+    <text x="855" y="440" font-size="14" fill="#333">monocytes (known TB biology)</text>
+
+    <rect x="835" y="467" width="330" height="90" rx="10" fill="#eef1f3"/><rect x="835" y="467" width="6" height="90" fill="#00798c"/>
+    <text x="855" y="495" font-size="16" font-weight="bold" fill="#2b2d42">Negative controls</text>
+    <text x="855" y="519" font-size="14" fill="#333">random gene sets, shuffled labels:</text>
+    <text x="855" y="539" font-size="14" fill="#333">should give no calls</text>
+
+    <rect x="835" y="566" width="330" height="90" rx="10" fill="#eef1f3"/><rect x="835" y="566" width="6" height="90" fill="#00798c"/>
+    <text x="855" y="594" font-size="16" font-weight="bold" fill="#2b2d42">Robustness</text>
+    <text x="855" y="618" font-size="14" fill="#333">drop a reference donor or a cell</text>
+    <text x="855" y="638" font-size="14" fill="#333">type: do the calls still hold?</text>
+
+    <rect x="835" y="665" width="330" height="90" rx="10" fill="#eef1f3"/><rect x="835" y="665" width="6" height="90" fill="#00798c"/>
+    <text x="855" y="693" font-size="16" font-weight="bold" fill="#2b2d42">Side by side</text>
+    <text x="855" y="717" font-size="14" fill="#333">InstaPrism → GSVA → test on the</text>
+    <text x="855" y="737" font-size="14" fill="#333">same reference, genes and samples</text>
+  </g>
+
+  <!-- ========== Column 4: Read ========== -->
+  <!-- Contribution -->
+  <rect x="1205" y="170" width="365" height="255" rx="10" fill="#eef1f3"/>
+  <text x="1225" y="198" font-size="17" font-weight="bold" fill="#00798c">Contribution</text>
+  <text x="1225" y="221" font-size="14" fill="#333">Where does the IFN-γ increase come from?</text>
+  <text x="1347" y="252" font-size="13" fill="#333" text-anchor="middle">Monocytes 75%</text>
+  <text x="1550" y="252" font-size="13" fill="#333" text-anchor="end">Neutrophils 25%</text>
+  <rect x="1225" y="260" width="195" height="36" fill="#6c5b9e"/>
+  <rect x="1420" y="260" width="48.75" height="36" fill="#6c5b9e" fill-opacity="0.35"/>
+  <rect x="1468.75" y="260" width="58.5" height="36" fill="#e9a23b" fill-opacity="0.35"/>
+  <rect x="1527.25" y="260" width="22.75" height="36" fill="#e9a23b"/>
+  <g font-size="13" fill="#333">
+    <rect x="1225" y="310" width="14" height="14" fill="#5c6670"/><text x="1246" y="322">solid: cells that changed</text>
+    <rect x="1225" y="332" width="14" height="14" fill="#5c6670" fill-opacity="0.35"/><text x="1246" y="344">light: more cells</text>
+  </g>
+  <g font-size="14" font-style="italic" fill="#2b2d42">
+    <text x="1225" y="374">“75% from monocytes, mostly cells that</text>
+    <text x="1225" y="394">changed; 25% from neutrophils, mostly</text>
+    <text x="1225" y="414">more cells.”</text>
+  </g>
+
+  <!-- Per-cell change -->
+  <rect x="1205" y="440" width="365" height="190" rx="10" fill="#eef1f3"/>
+  <text x="1225" y="468" font-size="17" font-weight="bold" fill="#00798c">Per-cell change</text>
+  <text x="1225" y="491" font-size="14" fill="#333">Inside each cell type: IFN-γ, TB vs healthy</text>
+  <line x1="1385" y1="505" x2="1385" y2="610" stroke="#9aa0a6" stroke-width="1.5" stroke-dasharray="4 3"/>
+  <text x="1385" y="624" font-size="12" fill="#5c6670" text-anchor="middle">0</text>
+  <g font-size="14" fill="#333">
+    <text x="1225" y="530">Monocytes</text><text x="1225" y="565">Neutrophils</text><text x="1225" y="600">T cells</text>
+  </g>
+  <line x1="1400" y1="525" x2="1460" y2="525" stroke="#6c5b9e" stroke-width="3"/><circle cx="1430" cy="525" r="6" fill="#6c5b9e"/>
+  <line x1="1360" y1="560" x2="1440" y2="560" stroke="#e9a23b" stroke-width="3"/><circle cx="1400" cy="560" r="6" fill="#e9a23b"/>
+  <line x1="1372" y1="595" x2="1398" y2="595" stroke="#4c9f70" stroke-width="3"/><circle cx="1385" cy="595" r="6" fill="#4c9f70"/>
+  <g font-size="14" font-weight="bold">
+    <text x="1475" y="530" fill="#00798c">up</text>
+    <text x="1475" y="565" fill="#5c6670">can't tell</text>
+    <text x="1475" y="600" fill="#5c6670">no change</text>
+  </g>
+
+  <!-- Caveats -->
+  <rect x="1205" y="645" width="365" height="125" rx="10" fill="#fdf3e3"/>
+  <text x="1225" y="672" font-size="16" font-weight="bold" fill="#2b2d42">Keep in mind</text>
+  <g font-size="14" fill="#333">
+    <text x="1225" y="697">• TB vs healthy compares people:</text>
+    <text x="1239" y="716">associations, not causes</text>
+    <text x="1225" y="740">• “more cells” means more reads,</text>
+    <text x="1239" y="759">so it includes RNA content per cell</text>
+  </g>
+
+  <!-- Footer -->
+  <line x1="30" y1="822" x2="1570" y2="822" stroke="#d5d9dd" stroke-width="1.5"/>
+  <text x="800" y="853" font-size="18" fill="#3d405b" text-anchor="middle">Fix the plan first  →  run once  →  checks decide what we trust  →  report every answer with its range</text>
+  <text x="1570" y="882" font-size="12" fill="#9aa0a6" text-anchor="end">Numbers in the example panels are illustrative</text>
+</svg>

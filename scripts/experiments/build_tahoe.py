@@ -29,6 +29,14 @@ RAW = os.path.join(D, "raw", "plate3.h5ad")
 DRUGS = {"DMSO_TF": "ctrl", "Trametinib": "tram", "Dabrafenib": "dab", "Adagrasib": "adag", "Oxaliplatin": "oxa",
          "Gemcitabine": "gem", "Paclitaxel": "ptx", "Alpelisib": "alp", "Everolimus": "evr", "Afatinib": "afa",
          "Bortezomib": "bor"}
+# NB adagrasib is the one plate-3 drug at 0.05 uM (sample_metadata; every other plate-3 drug is at 5 uM), so its
+# responses are weak. TAHOE_SET=x: a second, strong-dose (5 uM) set built into separate files (so the first set's
+# mixtures stay as they are): RMC-6236 (RAS(ON) inhibitor: MAPK down in the RAS-mutant lines, not in BRAF-V600 lines)
+# and encorafenib (BRAF V600: MAPK down in BRAF-V600 lines; paradoxical activation possible in RAS-mutant lines).
+SET = os.environ.get("TAHOE_SET", "")
+if SET == "x":
+    DRUGS = {"DMSO_TF": "ctrl", "RMC-6236": "rmc", "Encorafenib": "enc"}
+SUFFIX = "_" + SET if SET else ""
 LINES_FILE = os.path.join(D, "plate3_lines.json")       # the chosen panel (written after the scan)
 N_TEST, N_REF, CELLS, MIN_PER_LINE = 40, 30, 400, 20
 
@@ -55,7 +63,7 @@ def scan():
     obs = obs[obs.pass_filter == "full"]
     obs["drug"] = obs["drug"].str.strip()
     t = obs[obs.drug.isin(DRUGS)].groupby(["cell_name", "sample", "drug"]).size().rename("n").reset_index()
-    t.to_csv(os.path.join(D, "plate3_cells.csv"), index=False)
+    t.to_csv(os.path.join(D, "plate3_cells%s.csv" % SUFFIX), index=False)
     print(len(obs), "cells pass filter;", obs.cell_name.nunique(), "lines;", obs["sample"].nunique(), "wells")
     w = t.pivot_table(index="cell_name", columns="drug", values="n", aggfunc="sum", fill_value=0)
     print(w.to_string())
@@ -93,7 +101,7 @@ def cells(chunk=60_000):
     o.index = o.index.astype(str)
     res = ad.AnnData(Xs, obs=o, var=pd.DataFrame(index=pd.Index(genes)))
     res.var_names_make_unique()
-    res.write_h5ad(os.path.join(D, "plate3_subset.h5ad"), compression="gzip")
+    res.write_h5ad(os.path.join(D, "plate3_subset%s.h5ad" % SUFFIX), compression="gzip")
     print("wrote", res)
 
 
@@ -101,7 +109,7 @@ def mix():
     import anndata as ad
     spec = json.load(open(LINES_FILE))
     lines = spec["lines"]
-    a = ad.read_h5ad(os.path.join(D, "plate3_subset.h5ad"))
+    a = ad.read_h5ad(os.path.join(D, "plate3_subset%s.h5ad" % SUFFIX))
     X = sp.csr_matrix(a.X)
     o = a.obs
     dmso = sorted(o.loc[o.drug == "DMSO_TF", "sample"].unique())
@@ -139,7 +147,7 @@ def mix():
     P = sp.vstack(mats).tocsr()
     obs["n_counts"] = np.asarray(P.sum(1)).ravel()
     res = ad.AnnData(P.astype(np.float32), obs=obs, var=pd.DataFrame(index=a.var_names))
-    dst = os.path.join(D, "tahoe_mix.h5ad")
+    dst = os.path.join(D, "tahoe_mix%s.h5ad" % SUFFIX)
     res.write_h5ad(dst)
     print("%d specimens (%d mixtures x %d arms, %d reference) -> %s" % (obs.specimen.nunique(), N_TEST, len(arms),
                                                                      N_REF, dst))

@@ -97,6 +97,18 @@ for _arm in ("tram", "dab", "adag", "oxa", "gem", "ptx", "alp", "evr", "afa", "b
     DATASETS["tahoe_" + _arm] = dict(path=os.path.join(ROOT, "data", "tahoe", "tahoe_mix.h5ad"),
                                      contrast=("label", _arm, "ctrl"), n_test=20, ref_filter=("label", "refctrl"),
                                      all_test_specimens=True, types=TAHOE_LINES)
+# Parse 10M PBMC cytokines (fetch_parse.py, build_parse.py): 12 donors x (PBS + 9 cytokines), 3 pseudo-replicates
+# each; 6 test donors (all their specimens, paired), reference and calibration from the other donors' PBS cells
+PARSE_TYPES = ["B", "CD14 Mono", "CD16 Mono", "CD4 T", "CD8 T", "DC", "NK"]
+for _arm in ("ifng", "ifnb", "ifna", "tnf", "il1b", "il6", "il10", "gmcsf", "il4"):
+    DATASETS["parse_" + _arm] = dict(path=os.path.join(ROOT, "data", "parse", "parse_pseudobulk.h5ad"),
+                                     contrast=("label", _arm, "PBS"), n_test=6, ref_filter=("label", "PBS"),
+                                     all_test_specimens=True, types=PARSE_TYPES)
+# second, strong-dose set (build_tahoe.py with TAHOE_SET=x; adagrasib on plate 3 is at 0.05 uM, these are at 5 uM)
+for _arm in ("rmc", "enc"):
+    DATASETS["tahoe_" + _arm] = dict(path=os.path.join(ROOT, "data", "tahoe", "tahoe_mix_x.h5ad"),
+                                     contrast=("label", _arm, "ctrl"), n_test=20, ref_filter=("label", "refctrl"),
+                                     all_test_specimens=True, types=TAHOE_LINES)
 
 
 def _types(ds):
