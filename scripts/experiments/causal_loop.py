@@ -32,6 +32,10 @@ KNOWN = {"mcf_ida": dict(program="p53", types=["LNCAPCLONEFGC", "RCC10RGB", "SNU
          # HOP62, PANC-1: paradoxical activation); adagrasib -0.72..-0.78 in the G12C lines (RKO -0.45 off-target);
          # gemcitabine p53 +0.52..+0.63 in TP53-wt A-172, A549, RKO (LOX-IMVI 0.15; mutant lines up to 0.36);
          # oxaliplatin: no p53 response (no known answer)
+         "mcf_ida_shift": dict(program="p53", types=["LNCAPCLONEFGC", "RCC10RGB", "SNU1079"], sign=1),
+         "mcf_ida_tight": dict(program="p53", types=["LNCAPCLONEFGC", "RCC10RGB", "SNU1079"], sign=1),
+         "mcf_tram_shift": dict(program="MAPK", types=None, sign=-1),
+         "mcf_tram_tight": dict(program="MAPK", types=None, sign=-1),
          "tahoe_tram": dict(program="MAPK", types=None, sign=-1),
          "tahoe_dab": dict(program="MAPK", types=["LOX-IMVI", "HT-29", "RKO"], sign=-1),
          "tahoe_adag": dict(program="MAPK", types=["NCI-H2030", "HOP62"], sign=-1),

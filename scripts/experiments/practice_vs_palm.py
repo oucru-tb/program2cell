@@ -120,7 +120,10 @@ def run(datasets, splits, only=None):
                     if m in CSDE:
                         eff = z["model__effects"]
                         lfc_path = os.path.join(DEV, "work", dsn, "s%d" % split, m, "logfc.csv")
-                        lfc = pd.read_csv(lfc_path, index_col=0).reindex(index=list(inp.genes), columns=ct).values.T
+                        lfc = pd.read_csv(lfc_path, index_col=0)
+                        if list(lfc.columns) == ["ct%d" % i for i in range(len(ct))]:    # R wrappers write ct0..
+                            lfc.columns = ct
+                        lfc = lfc.reindex(index=list(inp.genes), columns=ct).values.T
                         p = ulm_p(lfc, np.asarray(inp.Gmat))
                         rows = rows_for(eff, None, None, p, {})
                     else:

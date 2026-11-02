@@ -85,6 +85,11 @@ DATASETS = {
     "mcf_tram": dict(path=os.path.join(ROOT, "data", "pert", "mcfarland_mix.h5ad"), contrast=("label", "tram", "ctrl"),
                      n_test=20, ref_filter=("label", "refctrl"), all_test_specimens=True, types=MCF_LINES),
 }
+# stress tests (build_mcfarland.py MIX_VARIANT): composition shifted with treatment; less composition spread
+for _v in ("shift", "tight"):
+    for _arm, _lab in (("ida", "ida"), ("tram", "tram")):
+        DATASETS["mcf_%s_%s" % (_arm, _v)] = dict(DATASETS["mcf_" + _arm],
+                                                  path=os.path.join(ROOT, "data", "pert", "mcfarland_mix_%s.h5ad" % _v))
 # Tahoe-100M plate 3 (5 uM), 9 pooled cancer lines (scripts/experiments/build_tahoe.py); one dataset per drug arm
 # vs the first DMSO well; tahoe_dmso2 = the second DMSO well (negative control)
 TAHOE_LINES = sorted(["LOX-IMVI", "HT-29", "RKO", "NCI-H2030", "HOP62", "PANC-1", "A549", "A-172", "J82"])

@@ -2,7 +2,174 @@
 
 A living document: what we compare, against what truth, with which metrics, and why. Update the
 **Changelog** and **Current results** sections whenever the protocol or the numbers change.
-Last updated: 2026-10-27.
+Last updated: 2026-11-02.
+
+**Two benchmarks live here:**
+- **Section 0 (current, from 2026-10-28):** the known-answer benchmark for **attribution**, i.e. which cell type
+  changed which gene program after a treatment. It is the one the paper rests on. A short version for external
+  review is in `docs/benchmark_review_brief.md`.
+- **Sections 1–8:** the earlier activity benchmark (PBMC COVID, OneK1K sex), which compares per-sample activity
+  estimators. It is kept for the record.
+
+---
+
+## 0. Known-answer benchmark for attribution (current)
+
+### 0.1 The question and the claims under test
+The question: *for each cell type c and gene program p, did p change in c under treatment, by how much, and
+can the data tell?* We call this attribution. It is distinct from deconvolution (how many cells) and from bulk
+differential expression (what changed in the sample).
+
+Claims tested:
+1. **Calls:** unchanged (cell type, program) boxes are not flagged, and real changes are found with the right
+   sign.
+2. **Honest ranges:** the 90% range holds the true change about 90% of the time.
+3. **Accuracy:** estimated changes track the true ones (r, error).
+4. **Design limit:** the identifiability calculator predicts which boxes any method can resolve
+   (`scripts/experiments/identifiability.py`, `method_spec.md` §4.6).
+
+### 0.2 How the answer key is built (three rules)
+1. **Hide the answer in a real sample.**
+   - Real single-cell perturbation data: real drugs, real cytokines.
+   - Each test specimen's cells are split by binomial thinning. One half, summed over cell types, is the
+     bulk the method sees. The other half, kept per cell type, gives the true change β_cp. The method never
+     sees it.
+   - The truth is scored on 7 PROGENy footprint programs with `estimate_delta`.
+2. **Controls fixed by biology before any run.**
+   - Responders are set from genetics and confirmed on target genes (below).
+   - Negative controls:
+     - every box with |β| < 0.05;
+     - the non-target programs in responding types;
+     - the non-responder types;
+     - DMSO vs DMSO (Tahoe).
+3. **Honest test.**
+   - Reference profiles and PALM's calibration come only from other donors, or from a separate control-cell
+     pool.
+   - Success targets are set in advance: unchanged flagged ≤ 10%, coverage ≥ 85%, r ≥ 0.9, responders
+     found ≥ 90%.
+   - Development splits 0–9.
+   - The v1 freeze was checked once on held-out splits 10–12. The freeze was lifted 2026-10-30, so a new
+     freeze plus fresh held-out splits is required before paper numbers.
+
+### 0.3 Datasets (ladder of evidence)
+
+| Rung | Dataset | Cell types | Design | Known answer |
+|---|---|---|---|---|
+| 2 | McFarland 2020 (MIX-Seq): `mcf_ida`, `mcf_tram` | 6 cancer lines | 20 paired mixtures per split, Dirichlet(2) proportions, same proportions in both arms | Idasanutlin: p53 up in the 3 TP53-wt lines only. Trametinib: MAPK down in the MEK-dependent lines (LNCaP flat) |
+| 2 | Kang 2018 IFN-β: `kang` | B, Mono, NK, T | 4 test donors, paired stim/ctrl pseudo-replicates | JAK-STAT up in every type |
+| 2 | Zhang 2021 TNBC blood: `zhang` | immune types | 10 test patients, before vs after paclitaxel ± anti-PD-L1 | No strong response (negative control for a whole dataset) |
+| 2 | **Tahoe-100M plate 3** (5 µM): `tahoe_*` | 9 cancer lines pooled per well (LOX-IMVI, HT-29, RKO, NCI-H2030, HOP62, PANC-1, A549, A-172, J82) | 40 mixtures per arm, 12 arms, controls from the same plate's DMSO well | See below |
+| 3 | GSE60424 (Linsley 2014): whole blood + sorted neutrophils, monocytes, B, CD4, CD8 of the same 20 donors | 5–6 | Real sequenced bulk; truth from the sorted cells | MS before/after IFN-β; sepsis, T1D, ALS vs healthy |
+| 4 | In-house PTB vs healthy PBMC | PBMC + neutrophils | Application | Berry 2010 IFN signature (positive), random gene sets and shuffled labels (negative) |
+
+**Tahoe known answers** (`build_tahoe.py`; the mean log2 FC of 10 target genes per line vs DMSO well 1 was
+checked before scoring):
+
+| Drug | Measured response |
+|---|---|
+| Trametinib | MAPK −2.5 to −3.3 in all lines |
+| Dabrafenib | MAPK −0.39 to −0.72 in the BRAF-V600 lines; +0.23 to +0.28 in RAS-mutant HOP62 and PANC-1 (paradoxical activation) |
+| Adagrasib | MAPK −0.72 to −0.78 in the G12C lines; RKO −0.45 off-target |
+| Gemcitabine | p53 +0.52 to +0.63 in TP53-wt A-172, A549 and RKO |
+| Oxaliplatin | No p53 response, so it has no known answer |
+| DMSO well 2 vs well 1 | Negative control |
+
+### 0.4 Comparators and calling rules
+- **Comparators:** CIBERSORT, InstaPrism (fractions + per-type expression), NNLS, a bulk score, each followed by a
+  paired t-test. Also our lab workflow (InstaPrism → GSVA → correlation) and TCA and TOAST (cell-type-specific
+  DE, scored by a ULM of their per-type log fold changes on the program weights).
+- **Calling rules, reported side by side** (`scripts/experiments/fair_rules.py`):
+  1. BH q < 0.1;
+  2. q < 0.1 and |change| ≥ 0.1 (a relevant change);
+  3. threshold-free ranking (AUROC of |estimate|).
+- **Why rules 2 and 3 are needed:** the assembled bulk is nearly noise-free, so a q-only t-test turns small
+  biases into "significant" calls. On idasanutlin its false flags rise with the number of paired mixtures:
+  24, 58, 79 and 96% at 3, 5, 10 and 20.
+
+### 0.5 Metrics
+- **unchanged flagged:** calls on |β| < 0.05; also a curve over 0.02–0.1.
+- **real found:** calls on |β| ≥ 0.1 with the right sign; also a curve over 0.05–0.2.
+- **responders found:** in the known program.
+- **non-responders flagged:** in the known program.
+- **coverage** of the 90% range; **r**; **MAE**; **AUROC**.
+- **Second answer key:** ULM on the truth half, a different activity model. Only scale-free metrics are used
+  against it (Spearman, sign agreement on the top 20% |ULM| boxes, AUROC top 20% vs bottom 50%).
+
+### 0.6 Results so far (development splits)
+
+**InstaPrism + paired t-test vs PALM (default `auto_m`), splits 0–2:**
+
+| | p53 drug | MEK drug | Interferon |
+|---|---|---|---|
+| Unchanged flagged, q only / q + cut-off / PALM | 91 / 7 / 5% | 81 / 5 / 4% | 83 / 5 / 0% |
+| 90% range holds the truth, t-test / PALM | 7 / 92% | 2 / 97% | 55 / 100% |
+| Real found at 0.1, t-test with cut-off / PALM | 49 / 57% | 69 / 80% | 94 / 2% |
+| Mean abs error, t-test / PALM | 0.066 / 0.044 | 0.038 / 0.032 | 0.047 / 0.039 |
+| AUROC vs δ truth, t-test / PALM | 0.80 / 0.79 | 0.93 / 0.95 | 0.99 / 0.98 |
+| Spearman vs the second (ULM) truth, t-test / PALM | 0.56 / 0.58 | 0.73 / 0.71 | 0.59 / 0.61 |
+| p53-mutant lines flagged on p53 (t-test with cut-off) | all | n/a | n/a |
+
+PALM flags only BICR31 among the label-based non-responders; its weak p53 response (0.12) is real. COLO680N
+and TEN stay unflagged.
+
+**Reading:**
+- PALM's advantage is honest ranges, and attributions that survive a fair cut-off. It is not ranking: under
+  either truth, both methods rank boxes about equally.
+- Against the fair comparator, PALM finds more cell-type-specific changes. It finds far fewer changes shared
+  by every type (interferon), where it reports the program-level change instead (`shared_response`
+  `net_change`, 10 of 10 correct calls on Kang).
+- **v1 held-out check** (splits 10–12, run once): PALM flagged 0–1% of unchanged boxes, CIBERSORT + t-test
+  69–78%.
+
+**Design limit** (420 boxes, splits 0–2):
+- Real changes below the limit: 28; PALM called 0% of them.
+- Above the limit: 73; PALM called 58%.
+
+**Tahoe** (fast fraction engine; one full NB fit on `tahoe_dab` split 0, kept as `s0__joint_nb_full`):
+- Dabrafenib splits 0–2: coverage 0.89–0.98, no false flags, AUROC 0.89–0.94, no responders found.
+- The true MAPK changes are only −0.07 to +0.08: the response is near the noise floor. Even oracle
+  reallocation recovers about 0.54 of the effect size.
+- Split 0 against InstaPrism + t-test: r 0.55 vs 0.66; coverage 0.94 vs 0.22; unchanged flagged 0 vs 53%
+  (q only) or 0% (with a 0.05 cut-off).
+- Other arms: running.
+
+**GSE60424** (real whole blood, sorted cells as truth):
+
+| Comparison | PALM | InstaPrism + t-test |
+|---|---|---|
+| MS IFN-β (3 v 3) | r 0.85, 0% unchanged flagged, 29% found, coverage 0.94 | r 0.88, 0%, 82%, 0.57 |
+| Sepsis (3 v 4) | 0% flagged | 24% flagged |
+| T1D, ALS | no calls | no calls |
+
+- Caveat: sorting shifts stress and NF-κB genes in the sorted "truth".
+- Only 0–2 of 35 boxes are above the design limit at n = 3–4.
+
+### 0.7 Fairness review and stress tests (2026-11-02)
+
+| # | Concern | Status |
+|---|---|---|
+| 1 | Composition is identical in both arms (paired mixtures); real disease shifts composition | **Running:** `mcf_*_shift` (responder lines ×1.6 in the idasanutlin arm; LNCaP ×1.6 in the trametinib arm) |
+| 2 | "Home field": the truth is scored with PALM's activity model | **Done:** the second (ULM) truth gives the same ranking for both methods (table above). No home-field advantage in ranking |
+| 3 | Reference and calibration from the same experiment (no batch or platform shift) | Planned: reference from another study, or another Tahoe plate |
+| 4 | Development and test overlap; freeze lifted | Planned: write the evaluation protocol, freeze v2, then fresh splits and untouched datasets |
+| 5 | Strongest competitors and their native tests missing (CIBERSORTx high-resolution, bMIND, ENIGMA; TCA/TOAST native tests) | Planned. TCA/TOAST scoring bug (column names) fixed 2026-11-02; rescoring |
+| 6 | Assembled bulk is nearly noise-free | Partly addressed by calling rules 2 and 3; planned: realistic added noise; real bulk with truth (GSE60424, more) |
+| 7 | Arbitrary thresholds | **Done:** threshold curves; conclusions hold over 0.02–0.1 (unchanged) and 0.05–0.2 (real) |
+| 8 | Splits reuse the same cells, so they aren't independent | Planned: report per experiment; add more Tahoe arms and Parse cytokines |
+| 9 | Composition spread more generous than in blood cohorts | **Running:** `mcf_*_tight` (Dirichlet 10 instead of 2) |
+
+### 0.8 How to run
+
+```
+bash scripts/experiments/tahoe_chain.sh       # Tahoe plate 3 (build_tahoe.py scan|cells|mix first)
+bash scripts/experiments/stress_chain.sh      # composition shift / tight spread
+python scripts/experiments/causal_loop.py run DATASETS SPLITS auto_m,auto_abs
+python scripts/experiments/practice_vs_palm.py run DATASETS SPLITS        # competitors + t-test, TCA/TOAST
+python scripts/experiments/fair_rules.py      # three calling rules + sample-size curve
+python scripts/experiments/robustness.py DATASETS SPLITS                  # second truth + threshold curves
+python scripts/experiments/identifiability.py run|summary|power ...       # design limit
+python scripts/experiments/real_truth_gse60424.py                         # real blood, sorted-cell truth
+```
 
 ---
 
@@ -554,6 +721,20 @@ Rows from before then have no `.npz` and keep their old metrics: the PBMC config
 
 ## Changelog
 
+- **2026-11-02**
+  - Section 0 added: the known-answer attribution benchmark (design, datasets, calling rules, results,
+    fairness review).
+  - Fair calling rules (`fair_rules.py`): q only, q + |change| ≥ 0.1, and AUROC; sample-size curve.
+  - Second-truth and threshold-curve analysis (`robustness.py`).
+  - Stress-test datasets `mcf_{ida,tram}_{shift,tight}` (`build_mcfarland.py MIX_VARIANT`).
+  - Tahoe-100M plate 3 (`build_tahoe.py`, `tahoe_chain.sh`): 9 lines, 12 arms, answers confirmed on target
+    genes.
+  - Fixed the TCA/TOAST scoring bug: the R wrappers name columns ct0.., which were looked up by cell-type name,
+    so every value was NaN and no calls were made.
+  - Design limit: power curves, paired designs and fraction uncertainty (`identifiability.py power`).
+- **2026-10-31 to 11-01**
+  - GSE60424 real-truth validation (`real_truth_gse60424.py`).
+  - Identifiability calculator; scorecard and talk figures.
 - **2026-10-30**
   - The BayesPrism-model competitor is now InstaPrism (Hu & Chikina 2024: same model, fixed-point solver,
     seconds instead of minutes); the BayesPrism wrapper and its outputs were removed.

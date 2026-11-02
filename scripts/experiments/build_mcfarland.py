@@ -15,7 +15,13 @@ pool (disjoint cells):
     profiles and the calibration set
 obs: donor_id (mixture id), label (ctrl / ida / tram / refctrl), specimen, cell_type (line), n_cells.
 Responder truth for the metrics is the measured per-line effect (benchmark truth), with the TP53 grouping above.
-Usage: python build_mcfarland.py"""
+Variants (robustness, docs/benchmarking.md "Stress tests"):
+  MIX_VARIANT=shift  the treated arms' line proportions differ from the control's: the p53 responders x1.6 in
+                     the idasanutlin arm (composition change correlated with the response, the hardest case),
+                     LNCaP (the MAPK non-responder) x1.6 in the trametinib arm -> mcfarland_mix_shift.h5ad
+  MIX_VARIANT=tight  less composition spread across mixtures (Dirichlet concentration 10 instead of 2, like
+                     blood cohorts) -> mcfarland_mix_tight.h5ad
+Usage: [MIX_VARIANT=shift|tight] python build_mcfarland.py"""
 import os
 import numpy as np, pandas as pd, scipy.sparse as sp
 import anndata as ad
@@ -25,6 +31,15 @@ LINES = ["LNCAPCLONEFGC", "RCC10RGB", "SNU1079", "COLO680N", "BICR31", "TEN"]
 P53_RESPONDERS = ["LNCAPCLONEFGC", "RCC10RGB", "SNU1079"]
 ARMS = {"control": "ctrl", "Idasanutlin": "ida", "Trametinib": "tram"}
 N_TEST, N_REF, CELLS, MIN_PER_LINE = 40, 30, 240, 20
+VARIANT = os.environ.get("MIX_VARIANT", "")
+ALPHA = 10.0 if VARIANT == "tight" else 2.0
+SHIFT = {"ida": dict.fromkeys(P53_RESPONDERS, 1.6), "tram": {"LNCAPCLONEFGC": 1.6}} if VARIANT == "shift" else {}
+
+
+def shifted(props, arm):
+    f = np.array([SHIFT.get(arm, {}).get(ln, 1.0) for ln in LINES])
+    q = props * f
+    return q / q.sum()
 
 a = ad.read_h5ad(os.path.join(ROOT, "data", "pert", "mcfarland_2020.h5ad"), backed="r")
 o = a.obs
@@ -58,11 +73,11 @@ def mixture(donor, label, arm_key, which, props):
 
 
 for k in range(N_TEST):
-    props = rng.dirichlet(np.full(len(LINES), 2.0))
+    props = rng.dirichlet(np.full(len(LINES), ALPHA))
     for ar in ARMS.values():
-        mixture("mix%02d" % k, ar, ar, "test", props)
+        mixture("mix%02d" % k, ar, ar, "test", shifted(props, ar))
 for k in range(N_REF):
-    mixture("ref%02d" % k, "refctrl", "ctrl", "ref", rng.dirichlet(np.full(len(LINES), 2.0)))
+    mixture("ref%02d" % k, "refctrl", "ctrl", "ref", rng.dirichlet(np.full(len(LINES), ALPHA)))
 
 obs = pd.DataFrame(rows)
 obs.index = obs["specimen"] + "::" + obs["cell_type"]
@@ -71,6 +86,6 @@ P = sp.vstack(mats).tocsr()
 obs["n_counts"] = np.asarray(P.sum(1)).ravel()
 res = ad.AnnData(P.astype(np.float32), obs=obs, var=pd.DataFrame(index=pd.Index(genes)))
 res.var_names_make_unique()
-dst = os.path.join(ROOT, "data", "pert", "mcfarland_mix.h5ad")
+dst = os.path.join(ROOT, "data", "pert", "mcfarland_mix%s.h5ad" % ("_" + VARIANT if VARIANT else ""))
 res.write_h5ad(dst)
 print("%d specimens (%d test mixtures x 3 arms, %d reference) -> %s" % (obs["specimen"].nunique(), N_TEST, N_REF, dst))
