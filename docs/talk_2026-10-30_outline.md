@@ -10,7 +10,7 @@ splits unless marked "held-out".*
 |---|---|---|---|
 | 1 | TB cohort: proportions, pathway correlations | deck slides 1–6 | 6.5 min |
 | Bridge | Correlation ≠ causality: which cells changed? | deck slide 7 | 0.5 min |
-| 2.1 | The question: attribution | 1 | 1.5 min |
+| 2.1 | The question: attribution (three explanations; which cell type changed which gene program) | 2 | 2 min |
 | 2.2 | Why it is hard: spillover, shown on our own workflow | 1 | 1 min |
 | 2.3 | **How to test attribution: building an answer key** | 2 | 2.5 min |
 | 2.4 | How PALM answers it | 1 | 1 min |
@@ -20,7 +20,7 @@ splits unless marked "held-out".*
 | 2.8 | Next: our PTB cohort, and a 50-cell-line drug screen | 1 | 1 min |
 | 2.9 | Outlook: spatial transcriptomics | 1 | 0.5 min |
 | 2.10 | Conclusion | 1 | 1 min |
-| | **Total** | **19** | **≈ 20 min** |
+| | **Total** | **20** | **≈ 20.5 min** |
 
 If time is short, drop 2.7 and 2.9 to backup (−1.5 min).
 
@@ -101,37 +101,52 @@ the standard workflow can make pathways *look* coordinated across cell types; pa
 
 ## Part 2: Which cells changed?
 
-### 2.1 The question: attribution (1.5 min)
+### 2.1 The question: attribution (2 min, 2 slides)
+Goal: by the end, everyone in the room can say the question in one sentence, and sees that no standard tool
+answers it.
+
+**Slide 2.1a: one bulk signal, three explanations (1 min).**
+- **Slide title:** "The same rise in blood can mean three different things"
 - **Visual:** `2_1_three_causes.png`.
-- **Everyday picture first:** "A choir recording gets louder. Did more singers join, did the sopranos sing
-  louder, or did the altos sing louder and we hear it as sopranos? The recording alone sounds the same in
-  all three cases. Bulk RNA-seq is that recording."
-- **Say:** "The neutrophil inflammatory score is higher in PTB. Three reasons give the *same* bulk signal:
-  1. more neutrophils;
-  2. monocytes switched on, and part of their signal is counted as neutrophils;
-  3. neutrophils themselves switched on.
+- **Open with the everyday picture (15 s):** "A choir recording gets louder. Did more singers join? Did the
+  sopranos sing louder? Or did the altos sing louder, and we hear it as sopranos? The recording sounds the
+  same in all three cases. Bulk RNA-seq is that recording."
+- **Then our data (45 s):** "In part 1, the neutrophil inflammatory score was higher in PTB. Three
+  explanations give exactly the same bulk signal:
+  1. **more neutrophils**, each one unchanged;
+  2. **monocytes switched on**, and part of their signal spills into the neutrophil estimate;
+  3. **neutrophils switched on**: the neutrophils themselves changed.
 
-  Only the third is a change *in* neutrophils."
-- **The question, stated once on the slide:** *For each cell type and each pathway: did it change, by how
-  much, and can the data tell?*
-- **Why this is a new question:**
+  For biology and for follow-up experiments, only the third is a change *in* neutrophils. Today's tools can't
+  tell the three apart."
+- **Point at the figure:** the dashed line, where all three reach the same bulk signal; then the highlighted
+  third panel, "what we want to know".
 
-  | Existing tool | Answers | Doesn't answer |
+**Slide 2.1b: the question, and the gap (1 min).**
+- **Slide title:** "Attribution: which cell type changed which gene program?"
+- **Top of slide, the question in one line (large font):**
+  > *For each cell type and each gene program: did it change, by how much, and can the data tell?*
+- **Define "gene program" in plain words (10 s):** "A gene program is a set of genes that switch on together
+  for one job, like the interferon response or TLR signalling. Our part-1 pathways are gene programs."
+- **Why programs and not single genes (20 s; one line on the slide: "programs pool many genes → enough
+  signal")**:
+  - "One gene in one cell type is too noisy to pin down from bulk. A program pools 50–200 genes that move
+    together, so there is enough signal to tell cell types apart."
+  - "It is also how we think: we say 'interferon response in monocytes', not 'IFI44L in monocytes'."
+- **Why this is a new question (30 s; the table, bottom half of the slide):**
+
+  | What we use today | It answers | It doesn't answer |
   |---|---|---|
   | Deconvolution (CIBERSORT, InstaPrism) | How many cells of each type? | Did those cells change? |
-  | Differential expression on bulk | What changed in the sample? | In which cells? |
-  | Per-cell-type expression (CIBERSORTx high-resolution, TCA, BayesPrism's per-type output) | Each gene's level in each cell type | Is a *pathway* change real, and in which cell type? Pathways are scored afterwards (e.g. GSVA), and spillover adds up gene by gene |
-  | Attribution (this talk) | Which cell type changed a **gene program**, by how much, how sure | n/a |
+  | Bulk differential expression | What changed in the sample? | In which cells? |
+  | Per-cell-type expression (CIBERSORTx high-resolution, TCA, BayesPrism) | Each gene's level in each cell type | Did a *program* change, and in which cell type? Programs are scored afterwards, and the borrowed signal adds up gene by gene |
+  | **Attribution (this talk)** | **Which cell type changed a gene program, by how much, how sure** | n/a |
 
-- **Why programs, not single genes (one sentence on the slide, the rest spoken):**
-  - "One gene in one cell type is too noisy to attribute from bulk. A program pools 50–200 genes that move
-    together, so there is enough signal to tell cell types apart."
-  - "It is also the unit we think in: 'interferon response in monocytes', not 'IFI44L in monocytes'. Our
-    part-1 pathways (TLR, NLR, IFN-γ) are programs."
-  - "PALM estimates the program change per cell type directly, instead of estimating every gene first and
-    scoring pathways afterwards."
-- **Say:** "Several tools output per-cell-type expression, but they are rarely tested on whether a pathway
-  change lands in the right cell type, against a known answer. That test is part of our work."
+  - **Say:** "Several tools give per-cell-type expression, but they are rarely checked against a known answer
+    on the question that matters to us: did the program change land in the right cell type? Answering that
+    needs a method, and a fair way to test it. That is the rest of this talk."
+- **Transition to 2.2 (one line):** "First, let me show that this is not a theoretical worry: it happens with
+  our own workflow."
 
 ### 2.2 Why it is hard: spillover, on our own workflow (1 min)
 - **Visual:** `2_5_heatmap_lab_workflow.png` (answer key | our workflow; reveal PALM's panel in 2.5).
@@ -345,7 +360,8 @@ and `python scripts/experiments/benchmark_heatmaps.py`.
 
 | Slide | Visual | File |
 |---|---|---|
-| 2.1 | Three causes of the same bulk signal; table of tools vs questions | `2_1_three_causes.png` + text |
+| 2.1a | Three explanations of the same bulk signal | `2_1_three_causes.png` |
+| 2.1b | The question in one line; table of tools vs questions | text + table |
 | 2.2 | Our workflow on idasanutlin | `2_5_heatmap_lab_workflow.png` |
 | 2.3a | Answer key: split cells, controls from biology, honest test | draw (`2_3_answer_key.png`, to make) |
 | 2.3b | Ladder of evidence | table or ladder graphic |
