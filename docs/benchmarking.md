@@ -151,16 +151,57 @@ and TEN stay unflagged.
 - Caveat: sorting shifts stress and NF-κB genes in the sorted "truth".
 - Only 0–2 of 35 boxes are above the design limit at n = 3–4.
 
+**COMBAT** (real whole-blood bulk, truth from the same samples' PBMC single-cell data; `build_combat.py`,
+`platform_gap.py`, `combat_real.py`; 125 paired samples, 7 broad PBMC types, splits 0–2, PALM-lite fractions):
+- Platform gap: real bulk vs the same sample's single-cell pseudobulk correlate at median r 0.35 (log CPM). A
+  per-gene offset explains 89% of the gap, and offsets from two donor halves agree at r 0.998; after removing it
+  the per-sample r is 0.96.
+
+| Bulk given to PALM | Sepsis vs healthy (20 test donors): r / RMSE | Severe vs mild COVID (40): r / RMSE | Unchanged flagged | Coverage |
+|---|---|---|---|---|
+| Single-cell pseudobulk (the usual assembled bulk) | 0.58 / 0.066 | 0.60 / 0.055 | 0% | 97–99% |
+| Real bulk, raw | 0.12 / 0.101 | 0.21 / 0.148 | 0–1% | 97% |
+| Real bulk ÷ offsets from paired samples of other donors | 0.36 / 0.156 | 0.21 / 0.108 | 1–2% | 96–99% |
+| **Real bulk ÷ offsets estimated from the study bulk itself** | **0.52 / 0.102** | **0.64 / 0.061** | 0–1% | 96–99% |
+
+- Raw real bulk loses most of the signal: the main sepsis change (CD14 monocytes TNF-α +0.27, NF-κB −0.26) is
+  estimated at +0.03 to +0.09 and −0.03 to −0.06. Methods validated only on assembled bulk are over-optimistic.
+- Study-estimated offsets (`combat_real._self_offsets`: PALM-lite fractions and a per-gene median log ratio,
+  alternated four times; no paired data) restore single-cell-level accuracy. They cost proportion accuracy (read
+  fractions vs truth r 0.25–0.40, against 0.58–0.92), so read proportions from the uncorrected fit.
+- Built-in caveat: the bulk is whole blood and the reference PBMC, so neutrophils and red-cell RNA are only in the
+  bulk. Paired offsets learned on other patients probably miss each study's average whole-blood component, which
+  the study's own offsets absorb.
+
+**Tahoe plate 3** (9 lines, splits 0–2, PALM-lite):
+- **Adagrasib on plate 3 is at 0.05 µM** (every other plate-3 drug is at 5 µM), so its weak, misplaced MAPK
+  responses (true −0.08 to −0.11 in the G12C lines; PALM and InstaPrism both spread the drop over all lines) are
+  not a 5 µM result. A strong-dose set replaces it (`TAHOE_SET=x`: RMC-6236, RAS-mutant responders; encorafenib,
+  BRAF-V600 responders).
+- Dabrafenib and gemcitabine (5 µM): true per-line changes ≤ 0.1; no method places them; PALM makes no false
+  calls (gemcitabine AUROC 0.83).
+- Trametinib: MAPK down in every line (−0.17 to −0.36). PALM finds all 9 lines in split 1 and none in splits 0
+  and 2: the design check chooses calibrated reallocation over unmixing, and more simulated cohorts (40) do not
+  change the choice (the simulation plants mostly type-specific effects; this response is shared). InstaPrism
+  copies the bulk change to every line and is right here. Open: let the shared-response check inform the design
+  check.
+- Vehicle vs vehicle (`tahoe_dmso2`): PALM 0 calls, coverage 0.90–0.98; CIBERSORT or reallocation + t-test flag
+  66–70% of boxes.
+
+**Composition shift** (`mcf_ida_shift`, responder lines ×1.6 under treatment): responders found, unchanged
+flagged 0–9%, coverage 0.86–0.98, but part of the responders' p53 signal moves to COLO680N (true +0.04–0.05,
+estimated +0.16 to +0.48) in all three splits: a false flag in two, "can't tell" everywhere in the third.
+
 ### 0.7 Fairness review and stress tests (2026-11-02)
 
 | # | Concern | Status |
 |---|---|---|
-| 1 | Composition is identical in both arms (paired mixtures); real disease shifts composition | **Running:** `mcf_*_shift` (responder lines ×1.6 in the idasanutlin arm; LNCaP ×1.6 in the trametinib arm) |
+| 1 | Composition is identical in both arms (paired mixtures); real disease shifts composition | **Idasanutlin done:** `mcf_ida_shift` moves part of the responders' signal onto a non-responder (above). Trametinib shift running |
 | 2 | "Home field": the truth is scored with PALM's activity model | **Done:** the second (ULM) truth gives the same ranking for both methods (table above). No home-field advantage in ranking |
-| 3 | Reference and calibration from the same experiment (no batch or platform shift) | Planned: reference from another study, or another Tahoe plate |
+| 3 | Reference and calibration from the same experiment (no batch or platform shift) | **COMBAT done:** real bulk vs single-cell reference loses most signal; study-estimated per-gene offsets restore it (above). Still planned: reference from another study |
 | 4 | Development and test overlap; freeze lifted | Planned: write the evaluation protocol, freeze v2, then fresh splits and untouched datasets |
 | 5 | Strongest competitors and their native tests missing (CIBERSORTx high-resolution, bMIND, ENIGMA; TCA/TOAST native tests) | Planned. TCA/TOAST rescored after the bug fix (BH q < 0.1, unchanged flagged / real found): TOAST 0–12% / 100% on ida, tram, Kang; 21% on Zhang. TCA 11–34% / 58–100%; 49% on Zhang. TOAST is the strongest comparator on per-cell calls (no intervals) |
-| 6 | Assembled bulk is nearly noise-free | Partly addressed by calling rules 2 and 3; planned: realistic added noise; real bulk with truth (GSE60424, more) |
+| 6 | Assembled bulk is nearly noise-free | Calling rules 2 and 3; real bulk with same-sample truth: GSE60424, COMBAT (125 paired samples) |
 | 7 | Arbitrary thresholds | **Done:** threshold curves; conclusions hold over 0.02–0.1 (unchanged) and 0.05–0.2 (real) |
 | 8 | Splits reuse the same cells, so they aren't independent | Planned: report per experiment; add more Tahoe arms and Parse cytokines |
 | 9 | Composition spread more generous than in blood cohorts | **Running:** `mcf_*_tight` (Dirichlet 10 instead of 2) |
@@ -728,6 +769,13 @@ Rows from before then have no `.npz` and keep their old metrics: the PBMC config
 
 ## Changelog
 
+- **2026-11-02 (evening)**
+  - COMBAT real bulk with same-sample single-cell truth (`build_combat.py`, `platform_gap.py`,
+    `combat_real.py`): platform gap measured; study-estimated per-gene offsets restore single-cell-level accuracy.
+  - Parse 10M PBMC cytokines (`fetch_parse.py`, `build_parse.py`, `parse_chain.sh`): pseudobulk subset (PBS + 9
+    cytokines) by HTTP range reads; datasets `parse_*`.
+  - Tahoe: adagrasib found to be at 0.05 µM on plate 3; strong-dose set (`TAHOE_SET=x`); trametinib design-check
+    instability; vehicle-vs-vehicle control.
 - **2026-11-02**
   - Section 0 added: the known-answer attribution benchmark (design, datasets, calling rules, results,
     fairness review).

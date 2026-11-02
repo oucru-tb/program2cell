@@ -1,0 +1,1 @@
+[{"cov": 0.9206349206349206, "r": 0.5851834184784218, "rmse": 0.0208217078996493, "width": 0.078663736580497, "r_t": NaN, "calls": 0, "fpr_null": 0.0, "dataset": "tahoe_dmso2", "split": 2, "method": "cibersort", "kind": "palm_module", "rule": "palm", "seconds": 381.82074308395386}]
