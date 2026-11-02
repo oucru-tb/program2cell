@@ -159,7 +159,7 @@ and TEN stay unflagged.
 | 2 | "Home field": the truth is scored with PALM's activity model | **Done:** the second (ULM) truth gives the same ranking for both methods (table above). No home-field advantage in ranking |
 | 3 | Reference and calibration from the same experiment (no batch or platform shift) | Planned: reference from another study, or another Tahoe plate |
 | 4 | Development and test overlap; freeze lifted | Planned: write the evaluation protocol, freeze v2, then fresh splits and untouched datasets |
-| 5 | Strongest competitors and their native tests missing (CIBERSORTx high-resolution, bMIND, ENIGMA; TCA/TOAST native tests) | Planned. TCA/TOAST scoring bug (column names) fixed 2026-11-02; rescoring |
+| 5 | Strongest competitors and their native tests missing (CIBERSORTx high-resolution, bMIND, ENIGMA; TCA/TOAST native tests) | Planned. TCA/TOAST rescored after the bug fix (BH q < 0.1, unchanged flagged / real found): TOAST 0–12% / 100% on ida, tram, Kang; 21% on Zhang. TCA 11–34% / 58–100%; 49% on Zhang. TOAST is the strongest comparator on per-cell calls (no intervals) |
 | 6 | Assembled bulk is nearly noise-free | Partly addressed by calling rules 2 and 3; planned: realistic added noise; real bulk with truth (GSE60424, more) |
 | 7 | Arbitrary thresholds | **Done:** threshold curves; conclusions hold over 0.02–0.1 (unchanged) and 0.05–0.2 (real) |
 | 8 | Splits reuse the same cells, so they aren't independent | Planned: report per experiment; add more Tahoe arms and Parse cytokines |

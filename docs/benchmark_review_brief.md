@@ -154,8 +154,13 @@ method-agnostic.
 3. **The method was developed on these datasets.** A new freeze, a written protocol, fresh splits and
    untouched datasets (rest of Tahoe; Parse 10M PBMC cytokines) are planned before final numbers.
 4. **Comparators:** CIBERSORTx high-resolution, bMIND and ENIGMA are not yet included. TCA and TOAST are
-   scored with our ULM-on-log-fold-change test, not their native tests. A scoring bug in that step was found
-   and fixed today, and they are being rescored.
+   scored with our ULM-on-log-fold-change test, not their native tests. After fixing a scoring bug, BH q < 0.1
+   gives these unchanged-box false flags:
+   - TOAST: 0–12% on the three response datasets, 21% on the chemotherapy negative control. It finds all real
+     changes, including interferon.
+   - TCA: 11–34% on the response datasets, 49% on the negative control.
+
+   TOAST is the strongest comparator so far on per-cell calls. It gives no intervals.
 5. **Independence:** splits reuse the same cells, so the replication unit should be the experiment, not the
    split.
 6. **Composition spread** in assembled mixtures is larger than in blood cohorts. A tighter-spread variant is
