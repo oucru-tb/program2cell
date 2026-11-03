@@ -34,6 +34,43 @@ how to test any method on it fairly, including whether a study can answer it at 
 **Updates of 2026-11-03, for the 4-section version** (PTB results / attribution and approach / evaluation
 design / PTB application). Development numbers unless marked held-out.
 
+*Section 2, attribution and approach: two principle slides in the talk, two graphical models in backup.*
+
+All four use one colour code: 🔵 blue = how many cells (fraction), 🟠 orange = program switched on in a cell
+(activity), ⚪ grey = reference profile (atlas), 🟢 green = program genes. Keep the same colours on the
+results slides.
+
+| Order | Slide | File (`docs/figures/talk/`) | Time | Message |
+|---|---|---|---|---|
+| 2.1 | **"One bulk sample = many cell types, each with programs switched on or off"** | `2_2_principle_formula.svg/.png` | 45 s | Bulk = Σ cell types 🔵 fraction × ⚪ reference profile × exp(🟠 activity × 🟢 program genes). Blue changed → more cells; orange changed → cells switched on |
+| 2.2 | **"Where does a bulk change come from?"** | `2_2b_principle_contributions.svg/.png` | 30 s | The same equation read the other way: the bulk change = Σ cell types (more-cells part + cells-changed part), adding up exactly; contribution and per-cell change can disagree |
+| Backup | **"PALM as a graphical model"** (two-group design) | `2_2c_graphical_model.svg/.png` | — | Plate diagram (T → γ → π, T → β → δ, π + δ + B + G → Y), then the four steps from model to answers (fit, split reads, calibrate, effect per cell type) |
+| Backup | **"PALM with TB patients only"** | `2_2d_graphical_model_tb_only.svg/.png` | — | No treatment node; per-patient mix and activity compared with a clinical measure after the fit; what you can and can't claim (not yet benchmarked: see `benchmarking.md` §0.8) |
+
+- **One sentence (slide 2.1, or a title):** "Bulk = a mix of cell types, each one its atlas profile with
+  gene programs turned up or down; we estimate both the mix and the switches."
+- **Script for slide 2.1 (≈ 30–45 s):**
+  > "We treat each blood sample as a mix of cell types. For each cell type we know from a single-cell atlas
+  > what it normally looks like, and from public databases which genes make up each program, such as the
+  > interferon response. A cell type that switches a program on raises that program's genes above its normal
+  > level. So the sample we sequence is the sum, over cell types, of how many of those cells there are times
+  > their atlas profile, shifted by whichever programs they have switched on. PALM works backwards from
+  > hundreds of genes and many patients to how much of each cell type there is and how strongly each one
+  > switched each program on, each with a 90% range. When two cell types look too alike to separate, the
+  > range widens: 'can't tell' instead of a guess."
+- **Script for slide 2.2 (≈ 30 s):**
+  > "The same equation, read the other way. The change we see in blood is a sum over cell types, and each
+  > part splits into *more of them* and *each of them changed*. So instead of 'IFN-γ is up' we can say
+  > 'three quarters of it comes from monocytes, mostly because they switched on'."
+- **If asked "is the atlas profile a resting cell?":** no. It is the atlas's average cell of that type, so
+  activity is relative to that average. We use healthy donors and merge activation-state clusters into their
+  parent type (`model_dag.md`, review point 2).
+- **If asked "can it run on TB patients only?":** yes, for each patient's mix and activity and for
+  comparisons within TB. There is no TB-vs-healthy effect without controls, and the platform correction then
+  needs outside offsets (backup slide `2_2d`).
+- The numbers in the slide examples (75% monocytes, and so on) are illustrations, not results. Replace them
+  with PTB results when available.
+
 *Section 3, evaluation design: one new line and one new row on the ladder.*
 - **Real bulk rung (COMBAT):** 125 people with whole-blood bulk *and* single-cell data from the same tube.
   - On real bulk, the usual workflow (InstaPrism + t-test) flags 59–67% of unchanged cell-type × program
@@ -317,6 +354,10 @@ standard tools, dark = truth. Rebuild with `python scripts/experiments/talk_figu
 | A2 | The question; table of tools vs questions | text + table |
 | A3 | Answer key vs our workflow (first two panels) | `2_5_heatmap_lab_workflow.png` |
 | B | Pipeline + three new boxes | draw |
+| 2.1 (new) | Colour-coded model equation + smoothie + two answers | `2_2_principle_formula.png` |
+| 2.2 (new) | Contribution split: more cells / cells changed, stacked bar | `2_2b_principle_contributions.png` |
+| Backup | Graphical model, two-group design | `2_2c_graphical_model.png` |
+| Backup | Graphical model, TB patients only | `2_2d_graphical_model_tb_only.png` |
 | C1 | Three rules for an answer key | `2_3_answer_key.png` |
 | C2 | Ladder of evidence | draw (four rungs) |
 | C3 | Design limit vs donors; composition spread | `2_4_design_power.png` |
@@ -356,6 +397,9 @@ standard tools, dark = truth. Rebuild with `python scripts/experiments/talk_figu
   CIBERSORT + t-test 69–78%.
 
 **Method questions**
+- **"What exactly is the model?"** Graphical model: `2_2c_graphical_model.png`. Full pipeline graph:
+  `docs/model_dag.md`.
+- **"Does it need a healthy group?"** No, but then there is no TB-vs-healthy effect: `2_2d_graphical_model_tb_only.png`.
 - **"Is it fair to our workflow?"**
   - The emulation is InstaPrism per-type expression → log CPM → GSVA → Spearman with treatment → BH q < 0.1.
   - Gene sets are the up-weighted genes of each PROGENy program.

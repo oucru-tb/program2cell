@@ -266,7 +266,70 @@ design limit predicts, and the unmix/calibrate choice varies between splits.
 | 8 | Splits reuse the same cells, so they aren't independent | Planned: report per experiment; add more Tahoe arms and Parse cytokines |
 | 9 | Composition spread more generous than in blood cohorts | **Running:** `mcf_*_tight` (Dirichlet 10 instead of 2) |
 
-### 0.8 How to run
+### 0.8 Planned: single-group cohorts (e.g. TB patients only, no comparison group)
+
+**Status:** planned 2026-11-03, not run. Freeze v2 covers two-group effects only. Everything here is new
+evidence: develop on splits 0–9, then report on fresh held-out splits, as for v2.
+
+**The use case.** Bulk from one disease group only. PALM is run without T. It gives each patient's fractions and
+per-cell-type activity δ_icp with 90% ranges, and the user compares patients against a clinical measure Z
+(bacterial load, cavitation, time on treatment, severity). Graphical model:
+`docs/figures/talk/2_2d_graphical_model_tb_only.png`.
+
+**Claims to test (each with a pass target fixed now):**
+
+| # | Claim | Metric | Target |
+|---|---|---|---|
+| S1 | Per-patient activity ranges are honest without T | coverage of the 90% activity interval vs the per-sample truth | ≥ 0.85 |
+| S2 | Patients are ranked correctly within a cell type | Spearman across patients, estimated vs true δ_icp, per (type, program) with true between-patient SD ≥ 0.05; median over pairs | report; ≥ comparator |
+| S3 | An association with Z is found when it exists and not otherwise | (a) planted gradient: power at α = 0.1; (b) Z permuted: false-positive rate per (type, program) | (b) ≤ 0.1, with (a) reported |
+| S4 | The association lands in the right cell type | AUROC of \|association\| for the responding type vs the others | ≥ 0.9 |
+| S5 | Absolute level (δ relative to the reference) is or isn't trustworthy | mean (estimated − true) δ per (type, program): bias | report; expected biased on real bulk |
+| S6 | The study-estimated platform correction absorbs signal shared by all patients | S1, S2 and S5 on real bulk with self-offsets from (i) the single group alone, (ii) group + controls, (iii) paired offsets | expected: (i) loses the shared level (S5) but keeps the ranking (S2) |
+
+**Datasets:**
+1. **Semi-synthetic gradient (McFarland; Kang).** New mixture variant (`build_mcfarland.py MIX_VARIANT=gradient`,
+   to write). In each mixture, the cells of each responder line are a share z_i ~ U(0, 1) treated and 1 − z_i
+   control, so its true δ rises smoothly with z_i. Z = z_i, plus noise for an imperfect clinical measure.
+   - Truth: the held-out half, as usual.
+   - Non-responder lines give the null cell types; a permuted Z gives the null association.
+   - Kang the same: share of stimulated cells per mixture.
+2. **COMBAT, COVID-19 only (real bulk, same-sample single-cell truth).**
+   - 91 paired samples with severity HCW-mild 13, mild 18, severe 41, critical 19, used as an ordinal Z.
+   - Truth: each sample's own single-cell per-type activity.
+   - No healthy samples enter the run.
+   - Also sepsis-only (24) as a second single group.
+3. **Parse, one cytokine arm only:** 12 donors, real donor-to-donor variation; S1, S2 and S5 only (no Z).
+
+**Methods and comparators (each on the same samples and truth):**
+- **PALM:** `program_deconvolution` without treatment, with calibrated activity and intervals; then per
+  (type, program) a regression of δ_icp on Z:
+  - the patient-level intervals propagated by resampling the fraction draws;
+  - p-values by permutation of Z.
+  - This association step is new code (`palm_bulk.associate`, to write), opt-in, chosen on development
+    splits.
+- **Lab workflow:** InstaPrism → per-type GSVA → Spearman with Z → BH (`lab_workflow.py`, extended to a
+  continuous Z).
+- **InstaPrism or CIBERSORT + reallocation activity → Spearman with Z.**
+- **Bulk-only baseline:** PROGENy score of the bulk vs Z (no cell type; for the "is it cell-type-specific"
+  contrast).
+
+**Platform arms on COMBAT (S6):** raw real bulk; `correct_platform` on COVID-only bulk; `correct_platform` on
+COVID + healthy bulk (offsets then applied to the COVID samples); offsets from paired samples of other donors;
+single-cell pseudobulk (ceiling).
+
+**Splits:** development 0–9 (patients split into reference/calibration donors and test patients, as now), then
+held-out on fresh splits after the association step is frozen.
+
+**Scripts to write:** `single_group.py run|summary` (rows in `benchmarks/dev/single_group/`), the gradient
+mixture variant, `palm_bulk.associate`.
+
+**Compute:**
+- McFarland gradient with PALM-lite fractions: about 5 min per split.
+- COMBAT: about 3 min per split and arm.
+- In total, about 3–4 h on 4 lanes for splits 0–9.
+
+### 0.9 How to run
 
 ```
 bash scripts/experiments/tahoe_chain.sh       # Tahoe plate 3 (build_tahoe.py scan|cells|mix first)
