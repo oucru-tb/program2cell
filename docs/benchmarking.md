@@ -166,9 +166,24 @@ and TEN stay unflagged.
 
 - Raw real bulk loses most of the signal: the main sepsis change (CD14 monocytes TNF-α +0.27, NF-κB −0.26) is
   estimated at +0.03 to +0.09 and −0.03 to −0.06. Methods validated only on assembled bulk are over-optimistic.
-- Study-estimated offsets (`combat_real._self_offsets`: PALM-lite fractions and a per-gene median log ratio,
-  alternated four times; no paired data) restore single-cell-level accuracy. They cost proportion accuracy (read
-  fractions vs truth r 0.25–0.40, against 0.58–0.92), so read proportions from the uncorrected fit.
+- Study-estimated offsets restore single-cell-level accuracy. They are now in the package as
+  `palm_bulk.correct_platform` (PALM-lite fractions and a per-gene median log ratio, alternated four times; no
+  paired data). They cost proportion accuracy (read fractions vs truth r 0.25–0.40, against 0.58–0.92). An
+  offset on a type's markers and a different mean fraction fit the bulk equally well, so the study's mean
+  composition is not identifiable from the bulk alone. Read proportions from the uncorrected fit, or anchor
+  them with paired samples or measured counts.
+
+Comparator on the same bulks (InstaPrism + Welch t-test, BH q < 0.1; splits 0–2):
+
+| Bulk | Sepsis: unchanged flagged, InstaPrism / PALM | Sepsis: r, InstaPrism / PALM | Severe: unchanged flagged | Severe: r | Coverage, InstaPrism / PALM |
+|---|---|---|---|---|---|
+| Single-cell pseudobulk | 25% / 0% | 0.53 / 0.58 | 34% / 0% | 0.57 / 0.60 | 57–63% / 97–99% |
+| Real bulk, raw | 59% / 0% | −0.03 / 0.12 | 67% / 1% | 0.00 / 0.21 | 29–33% / 97% |
+| Real bulk, study offsets | 56% / 0% | 0.35 / 0.52 | 63% / 1% | 0.42 / 0.64 | 35% / 96–99% |
+
+- On real bulk, the usual workflow flags most unchanged cell-type × program boxes, and its estimates do not
+  track the truth (r ≈ 0).
+- The platform correction helps InstaPrism too (r 0.35–0.42), but its intervals stay overconfident.
 - Built-in caveat: the bulk is whole blood and the reference PBMC, so neutrophils and red-cell RNA are only in the
   bulk. Paired offsets learned on other patients probably miss each study's average whole-blood component, which
   the study's own offsets absorb.
@@ -202,8 +217,10 @@ and TEN stay unflagged.
 - Trametinib: MAPK down in every line (−0.17 to −0.36). PALM finds all 9 lines in split 1 and none in splits 0
   and 2: the design check chooses calibrated reallocation over unmixing, and more simulated cohorts (40) do not
   change the choice (the simulation plants mostly type-specific effects; this response is shared). InstaPrism
-  copies the bulk change to every line and is right here. Open: let the shared-response check inform the design
-  check.
+  copies the bulk change to every line and is right here. **Fixed in freeze v2** (method_spec 4.8): the route
+  is now the narrower simulation-calibrated interval with a per-type guard, which finds 0.89 of the lines over
+  splits 0–2 (Kang 0.23 → 0.48). Planting the shared-response common effect in the design check was tried
+  first and rejected: the flip moved, and Zhang coverage fell to 0.82–0.89.
 - Vehicle vs vehicle (`tahoe_dmso2`): PALM 0 calls, coverage 0.90–0.98; CIBERSORT or reallocation + t-test flag
   66–70% of boxes.
 - Oxaliplatin at 5 µM barely acts in these lines (max true change 0.087): a second near-null arm.
@@ -242,7 +259,7 @@ design limit predicts, and the unmix/calibrate choice varies between splits.
 | 1 | Composition is identical in both arms (paired mixtures); real disease shifts composition | **Idasanutlin done:** `mcf_ida_shift` moves part of the responders' signal onto a non-responder (above). Trametinib shift running |
 | 2 | "Home field": the truth is scored with PALM's activity model | **Done:** the second (ULM) truth gives the same ranking for both methods (table above). No home-field advantage in ranking |
 | 3 | Reference and calibration from the same experiment (no batch or platform shift) | **COMBAT done:** real bulk vs single-cell reference loses most signal; study-estimated per-gene offsets restore it (above). Still planned: reference from another study |
-| 4 | Development and test overlap; freeze lifted | Planned: write the evaluation protocol, freeze v2, then fresh splits and untouched datasets |
+| 4 | Development and test overlap; freeze lifted | **Freeze v2 done (2026-11-03, tag `method-freeze-v2`):** protocol written first (method_spec, freeze v2); held-out splits 20–29 of 14 datasets + COMBAT running |
 | 5 | Strongest competitors and their native tests missing (CIBERSORTx high-resolution, bMIND, ENIGMA; TCA/TOAST native tests) | Planned. TCA/TOAST rescored after the bug fix (BH q < 0.1, unchanged flagged / real found): TOAST 0–12% / 100% on ida, tram, Kang; 21% on Zhang. TCA 11–34% / 58–100%; 49% on Zhang. TOAST is the strongest comparator on per-cell calls (no intervals) |
 | 6 | Assembled bulk is nearly noise-free | Calling rules 2 and 3; real bulk with same-sample truth: GSE60424, COMBAT (125 paired samples) |
 | 7 | Arbitrary thresholds | **Done:** threshold curves; conclusions hold over 0.02–0.1 (unchanged) and 0.05–0.2 (real) |
@@ -811,6 +828,19 @@ Rows from before then have no `.npz` and keep their old metrics: the PBMC config
 ---
 
 ## Changelog
+
+- **2026-11-03**
+  - **Method freeze v2** (tag `method-freeze-v2`; method_spec "Method freeze v2" and 4.8):
+    - `auto` now routes by the narrower simulation-calibrated interval, with a per-type guard;
+    - `sim_widen="abs"` is the default;
+    - older `causal_loop` estimators are pinned to their v1 settings;
+    - the development comparison is in `benchmarks/dev/route_rule_2026-11-03.txt`.
+  - `palm_bulk.correct_platform` / `platform_offsets`: study-estimated per-gene platform offsets for real bulk.
+    Tested; the limit on mean composition is documented.
+  - COMBAT: InstaPrism + t-test on the same real bulks (table in 0.6).
+  - Held-out v2 (`heldout_v2_chain.sh`, splits 20–29) started 12:18.
+  - Scratch caches: InstaPrism and cellGeometry work folders are deleted after use (disk).
+  - McFarland TP53 status checked in Cellosaurus: genetics agree with the measured responders.
 
 - **2026-11-02 (evening)**
   - COMBAT real bulk with same-sample single-cell truth (`build_combat.py`, `platform_gap.py`,

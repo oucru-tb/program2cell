@@ -1,7 +1,7 @@
 # Benchmark design for cell-type attribution from bulk RNA-seq: request for review
 
-*PALM project, OUCRU. Draft of 2026-11-02. We would value your critique of the evaluation design before we
-freeze the method and run the final held-out test.*
+*PALM project, OUCRU. Draft of 2026-11-03. The method is now frozen (v2), and the held-out protocol was written
+before the held-out run. We would value your critique of the evaluation design and of that protocol.*
 
 ## Summary
 
@@ -16,13 +16,16 @@ types, how much from more cells versus cells that changed, and which cell types 
   - The comparators' 90% intervals still hold the truth only 2–55% of the time (ours 92–100%), and they still
     label non-responding cell lines as responders.
   - Ranking accuracy is similar for both, under two independent answer keys.
-  - Our method misses per-cell changes shared by all cell types (interferon), but recovers where that signal
-    comes from better than the comparator.
+  - On **real bulk** (COMBAT: whole-blood bulk and single-cell data from the same samples), the comparator flags
+    59–67% of unchanged boxes and its estimates do not track the truth. Ours flags 0–1%, and after a per-gene
+    platform correction its accuracy returns to about the single-cell level.
+  - Per-cell changes shared by all cell types (interferon, MEK inhibition) were our main weakness. A revised
+    rule for choosing between our two estimators now finds most of them; the cost is lower point accuracy on
+    two datasets.
 - **Known weaknesses:**
-  - composition identical across arms;
-  - reference from the same experiment;
-  - development and test overlap;
-  - missing comparators.
+  - composition shifts that follow the response;
+  - development and test overlap until the held-out run (now running);
+  - missing comparators (CIBERSORTx high-resolution, bMIND, ENIGMA).
 - We ask seven specific questions (section 6).
 
 ## 1. The question we evaluate
@@ -73,7 +76,9 @@ method-agnostic.
 | Rung | Data | Truth from | Weakness |
 |---|---|---|---|
 | Assembled bulk, real responses | McFarland 2020 MIX-Seq (6 lines; idasanutlin, trametinib); Kang 2018 IFN-β (PBMC, 4 types); Zhang 2021 TNBC blood (chemo ± anti-PD-L1); Tahoe-100M plate 3 (9 lines; 5 drugs + vehicle) | Split cells + genetics | Bulk is assembled, not sequenced |
+| Assembled bulk, real blood responses | Parse 10M PBMC: 12 donors, 5 cytokines vs PBS | Split cells | Small per-cell effects (≤ 0.16) |
 | Real bulk | GSE60424: whole blood + sorted neutrophils, monocytes, B, CD4, CD8 from the same 20 donors | Sorted cells, same donors | Sorting shifts stress genes; n = 3–4 per group |
+| Real bulk, same-sample single-cell truth | COMBAT: 125 samples with whole-blood bulk and PBMC CITE-seq (sepsis, COVID-19, healthy) | Single-cell data of the same sample | Bulk is whole blood, reference PBMC (neutrophils only in bulk) |
 | Application | TB patients vs healthy (in-house) | Known TB biology (positive control); random gene sets, shuffled labels (negative) | No full answer key |
 
 ## 3. Comparators, calling rules, metrics
@@ -109,7 +114,7 @@ method-agnostic.
 
 ## 4. Results so far (development splits; not final)
 
-**Per-cell change** (InstaPrism + t-test vs PALM):
+**Per-cell change** (InstaPrism + t-test vs PALM v1; v2 changes noted below):
 
 | | p53 drug | MEK drug | Interferon |
 |---|---|---|---|
@@ -134,25 +139,42 @@ method-agnostic.
 - Both methods rank boxes about equally, under the main answer key and under the independent second one, so
   there is no home-field advantage.
 - The conclusions hold at every threshold tested (0.02–0.1 for "unchanged", 0.05–0.2 for "real").
-- PALM finds more cell-type-specific changes. It misses per-cell changes shared by all cell types
-  (interferon), but gets their contributions right.
+- PALM finds more cell-type-specific changes. v1 missed per-cell changes shared by all cell types
+  (interferon), but got their contributions right. v2 finds about half of the interferon (JAK-STAT) changes
+  (v1 none, v2 0.48) and most MEK-inhibitor changes in the 9-line screen (0.33 → 0.89), with coverage ≥ 93%.
 - On contributions the two methods are close on the drugs, each better on one.
 - In the cell-line data the "more cells" part is really *more reads*: the drugs change each line's RNA output
   while cell numbers are equal.
 - On real whole blood (GSE60424), PALM made no false calls in 4 comparisons. The comparator flagged 24% of
   unchanged boxes in sepsis.
-- On a 9-line drug screen (Tahoe, first drug only), PALM's intervals held the truth 89–100% of the time with no
-  false flags. The drug's effect was too small for either method to find the responders.
+- Tahoe-100M (9 lines, 8 arms including vehicle vs vehicle): deconvolution + t-test flagged 59–100% of
+  unchanged boxes; PALM flagged 0–1%, with coverage 90–94%.
+
+**Real bulk with same-sample truth (COMBAT, splits 0–2; InstaPrism + t-test / PALM):**
+
+| Bulk | Unchanged flagged | r with truth | 90% interval holds the truth |
+|---|---|---|---|
+| Single-cell pseudobulk (what assembled benchmarks use) | 25–34% / 0% | 0.53–0.57 / 0.58–0.60 | 57–63% / 97–99% |
+| Real bulk, as sequenced | 59–67% / 0–1% | ≈ 0 / 0.12–0.21 | 29–33% / 97% |
+| Real bulk, per-gene platform correction estimated from the study | 56–63% / 0–1% | 0.35–0.42 / 0.52–0.64 | 35% / 96–99% |
+
+- Real bulk differs from single-cell pseudobulk of the same sample mainly by a per-gene factor. That factor
+  explains 89% of the gap.
+- Estimating it from the study bulk alone restores most of the accuracy, but not the average composition: an
+  offset on a cell type's marker genes and a different average fraction fit the bulk equally well.
 
 ## 5. Known limitations and planned fixes
 
-1. **Composition is identical in both arms** of each assembled pair. In disease it shifts. A stress test with
-   treatment-correlated shifts (responder lines ×1.6) is running. It also tests the "more cells" vs
-   "cells changed" split.
-2. **Reference and calibration come from the same experiment** as the bulk, so there is no batch or platform
-   shift. Planned: reference from another study or plate.
-3. **The method was developed on these datasets.** A new freeze, a written protocol, fresh splits and
-   untouched datasets (rest of Tahoe; Parse 10M PBMC cytokines) are planned before final numbers.
+1. **Composition shifts with the response.** In the stress test the responder lines grew ×1.6 under treatment.
+   Responders were still found, but part of their signal moved onto one non-responder line (a false flag in
+   some splits). When non-responders grow, nothing moves.
+2. **Reference and calibration come from the same study** in the assembled rungs. COMBAT (real bulk, reference
+   from other people's single-cell data) now tests the platform gap. A reference from another study is
+   still planned.
+3. **The method was developed on these datasets.** It is now frozen (v2, 2026-11-03), and the protocol was
+   written first. The held-out run uses splits 20–29, never run before, across 14 datasets and COMBAT. The
+   splits reuse cells (item 5), so the held-out test checks against tuning to particular splits, not
+   generalisation to new experiments. Parse and the Tahoe strong-dose arms entered development only recently.
 4. **Comparators:** CIBERSORTx high-resolution, bMIND and ENIGMA are not yet included. TCA and TOAST are
    scored with our ULM-on-log-fold-change test, not their native tests. After fixing a scoring bug, BH q < 0.1
    gives these unchanged-box false flags:

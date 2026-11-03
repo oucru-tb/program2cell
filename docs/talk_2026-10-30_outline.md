@@ -31,6 +31,33 @@ how to test any method on it fairly, including whether a study can answer it at 
 3. **The evaluation design:** an answer key from real experiments, controls fixed by biology in advance, and a
    design limit that says before sequencing which cell types a study can resolve.
 
+**Updates of 2026-11-03, for the 4-section version** (PTB results / attribution and approach / evaluation
+design / PTB application). Development numbers unless marked held-out.
+
+*Section 3, evaluation design: one new line and one new row on the ladder.*
+- **Real bulk rung (COMBAT):** 125 people with whole-blood bulk *and* single-cell data from the same tube.
+  - On real bulk, the usual workflow (InstaPrism + t-test) flags 59–67% of unchanged cell-type × program
+    boxes, and its estimates do not track the truth (r ≈ 0).
+  - PALM flags 0–1%. After the platform correction its r is 0.52–0.64, about the level reached on
+    single-cell bulk (0.58–0.60).
+  - Say: "Methods tested only on simulated or assembled bulk look better than they are."
+- **Shared changes (the interferon weakness):** fixed in freeze v2.
+  - Responses shared by every cell type are now found: Tahoe trametinib 0.33 → 0.89 of the lines; Kang
+    interferon none (v1) → 0.48. Coverage stays ≥ 0.93.
+  - Say: "PALM now also finds changes that every cell type shares, not only cell-type-specific ones."
+- **Pre-registration:** the method was frozen (tag `method-freeze-v2`) and the held-out protocol written down
+  *before* the held-out run. That run uses splits 20–29 of 14 datasets plus COMBAT, with the results to come.
+- **Controls fixed by genetics:** the three idasanutlin responders are TP53 wild-type, and the three
+  non-responders carry homozygous TP53 mutations (Cellosaurus), so the "3 TP53 WT and 3 TP53 mutant" wording
+  is correct.
+
+*Section 4, PTB application (what changes in the plan):*
+- The PTB bulk is real PBMC bulk with an atlas reference, the COMBAT situation. Run
+  `bulk = pb.correct_platform(bulk, ref)` first: one offset per gene, estimated from the study itself, which
+  cannot absorb the PTB vs healthy difference.
+- Read cell proportions from the uncorrected bulk, or check them against the measured blood counts. The
+  correction fixes gene shapes, not the average composition.
+
 **Words used on the slides (keep them the same throughout):**
 
 | Word on slide | Meaning | Technical term (backup only) |
