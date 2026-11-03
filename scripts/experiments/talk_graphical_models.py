@@ -89,7 +89,7 @@ def slide(tb_only):
     if tb_only:
         s.append(circle(115, 320, 40, BLUE_F, BLUE, "a", "average", "cell mix", lab_size=28))
     else:
-        s.append(circle(115, 320, 40, BLUE_F, BLUE, "γ", "treatment", "shifts the mix", lab_size=28))
+        s.append(circle(115, 320, 40, BLUE_F, BLUE, "γ", "disease", "shifts the mix", lab_size=28))
     s.append(circle(115, 500, 40, ORANGE_F, ORANGE, "κ", "average program", "activity", lab_size=28))
 
     s.append(plate(220, 190, 670, 520, "each patient i", dash="0", color="#9aa0a6", width=2.5))
@@ -100,7 +100,7 @@ def slide(tb_only):
     if tb_only:
         s.append(box(240, 215, 125, 66, PURPLE_F, PURPLE, "z", "clinical measure", dash="7 4", size=22))
     else:
-        s.append(box(240, 215, 125, 66, "#ffffff", DARK, "T", "TB / healthy", color=DARK, size=22))
+        s.append(box(240, 215, 125, 66, "#ffffff", DARK, "D", "TB or healthy", color=DARK, size=22))
     s.append(circle(460, 375, 46, BLUE_F, BLUE, "π", "fraction", "how many cells"))
     s.append(circle(640, 375, 42, ORANGE_F, ORANGE, "δ", None))
     s.append(text(690, 372, "activity", 15, ORANGE, "bold"))
@@ -199,7 +199,8 @@ def slide(tb_only):
     lx = 40
     s.append(text(lx, 728, "Legend", 15, DARK, "bold"))
     s.append('<circle cx="%g" cy="750" r="10" fill="%s" stroke="%s" stroke-width="2"/>' % (lx + 10, BLUE_F, BLUE))
-    s.append(text(lx + 28, 755, "estimated", 13.5, "#333"))
+    s.append('<circle cx="%g" cy="750" r="10" fill="%s" stroke="%s" stroke-width="2"/>' % (lx + 34, ORANGE_F, ORANGE))
+    s.append(text(lx + 52, 755, "estimated: cell mix / program activity", 13.5, "#333"))
     s.append('<rect x="%g" y="767" width="20" height="20" rx="4" fill="%s" stroke="%s" stroke-width="2"/>' % (lx, GREY_F, GREY))
     s.append(text(lx + 28, 782, "known input", 13.5, "#333"))
     s.append('<circle cx="%g" cy="804" r="10" fill="%s"/>' % (lx + 10, DARK))

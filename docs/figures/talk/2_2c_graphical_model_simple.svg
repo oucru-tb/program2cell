@@ -11,7 +11,7 @@
 
   <!-- Title -->
   <text x="40" y="58" font-size="34" font-weight="bold" fill="#2b2d42">PALM as a graphical model</text>
-  <text x="40" y="92" font-size="19" fill="#5c6670">Arrows mean "influences". Known inputs are squares; what we estimate are circles; the bulk data are filled</text>
+  <text x="40" y="92" font-size="19" fill="#5c6670">Arrows mean "influences". Squares are known inputs, circles are estimated (blue = cell mix, orange = program activity), filled = measured</text>
 
   <!-- ===================== LEFT: plate diagram ===================== -->
   <!-- population-level (outside plates) -->
@@ -19,22 +19,22 @@
 
   <circle cx="135" cy="300" r="42" fill="#dbeafe" stroke="#2563eb" stroke-width="3"/>
   <text x="135" y="309" font-size="28" font-weight="bold" fill="#2563eb" text-anchor="middle">γ</text>
-  <text x="135" y="362" font-size="14" fill="#2563eb" text-anchor="middle">treatment shifts</text>
+  <text x="135" y="362" font-size="14" fill="#2563eb" text-anchor="middle">disease shifts</text>
   <text x="135" y="379" font-size="14" fill="#2563eb" text-anchor="middle">the cell mix</text>
 
   <circle cx="135" cy="490" r="42" fill="#ffedd5" stroke="#ea580c" stroke-width="3"/>
   <text x="135" y="499" font-size="28" font-weight="bold" fill="#ea580c" text-anchor="middle">β</text>
-  <text x="135" y="552" font-size="14" fill="#ea580c" text-anchor="middle">treatment switches</text>
+  <text x="135" y="552" font-size="14" fill="#ea580c" text-anchor="middle">disease changes</text>
   <text x="135" y="569" font-size="14" fill="#ea580c" text-anchor="middle">programs per cell type</text>
 
   <!-- sample plate -->
   <rect x="270" y="130" width="720" height="580" rx="16" fill="none" stroke="#9aa0a6" stroke-width="2.5"/>
   <text x="975" y="158" font-size="18" font-weight="bold" fill="#5c6670" text-anchor="end">each patient i</text>
 
-  <!-- treatment -->
+  <!-- disease status -->
   <rect x="320" y="190" width="90" height="70" rx="8" fill="#ffffff" stroke="#2b2d42" stroke-width="2.5"/>
-  <text x="365" y="222" font-size="22" font-weight="bold" fill="#2b2d42" text-anchor="middle">T</text>
-  <text x="365" y="246" font-size="13" fill="#5c6670" text-anchor="middle">TB / healthy</text>
+  <text x="365" y="222" font-size="22" font-weight="bold" fill="#2b2d42" text-anchor="middle">D</text>
+  <text x="365" y="246" font-size="13" fill="#5c6670" text-anchor="middle">TB or healthy</text>
 
   <!-- cell type plate -->
   <rect x="440" y="250" width="410" height="300" rx="14" fill="none" stroke="#c4c8cc" stroke-width="2" stroke-dasharray="6 4"/>
@@ -58,8 +58,8 @@
   <text x="960" y="598" font-size="15" font-weight="bold" fill="#5c6670" text-anchor="end">each gene g</text>
   <circle cx="780" cy="640" r="44" fill="#2b2d42" stroke="#2b2d42" stroke-width="3"/>
   <text x="780" y="650" font-size="28" font-weight="bold" fill="#ffffff" text-anchor="middle">Y</text>
-  <text x="640" y="635" font-size="16" font-weight="bold" fill="#2b2d42" text-anchor="middle">bulk counts</text>
-  <text x="640" y="656" font-size="14" fill="#5c6670" text-anchor="middle">(measured)</text>
+  <text x="640" y="635" font-size="16" font-weight="bold" fill="#2b2d42" text-anchor="middle">bulk RNA-seq</text>
+  <text x="640" y="656" font-size="14" fill="#5c6670" text-anchor="middle">one sample per patient</text>
 
   <!-- known inputs below -->
   <rect x="440" y="760" width="170" height="90" rx="10" fill="#f1f3f5" stroke="#6b7280" stroke-width="2.5"/>
@@ -107,7 +107,7 @@
     <text x="1050" y="544" fill="#333">corrects spillover between cell types; gives 90% ranges</text>
 
     <rect x="1030" y="568" width="530" height="66" rx="10" fill="#ffedd5"/>
-    <text x="1050" y="596" font-weight="bold" fill="#ea580c">4  Treatment effect β per cell type</text>
+    <text x="1050" y="596" font-weight="bold" fill="#ea580c">4  Disease effect β per cell type (TB vs healthy)</text>
     <text x="1050" y="620" fill="#333">two estimators, checked by simulating this study; keep the sharper</text>
 
     <rect x="1030" y="644" width="530" height="66" rx="10" fill="#eaf7ee" stroke="#16a34a" stroke-width="1.5"/>
@@ -124,13 +124,15 @@
 
   <!-- legend -->
   <g font-size="15" fill="#333">
-    <circle cx="1048" cy="760" r="12" fill="#dbeafe" stroke="#2563eb" stroke-width="2"/>
-    <text x="1068" y="765">estimated</text>
-    <rect x="1170" y="748" width="24" height="24" rx="4" fill="#f1f3f5" stroke="#6b7280" stroke-width="2"/>
-    <text x="1204" y="765">known input</text>
-    <circle cx="1338" cy="760" r="12" fill="#2b2d42"/>
-    <text x="1358" y="765">measured</text>
-    <rect x="1030" y="790" width="40" height="26" rx="6" fill="none" stroke="#9aa0a6" stroke-width="2"/>
-    <text x="1080" y="808">box = repeated for each patient / cell type / program / gene</text>
+    <circle cx="1048" cy="752" r="12" fill="#dbeafe" stroke="#2563eb" stroke-width="2"/>
+    <text x="1068" y="757">estimated: cell mix (γ, π)</text>
+    <circle cx="1318" cy="752" r="12" fill="#ffedd5" stroke="#ea580c" stroke-width="2"/>
+    <text x="1338" y="757">estimated: program activity (β, δ)</text>
+    <rect x="1036" y="778" width="24" height="24" rx="4" fill="#f1f3f5" stroke="#6b7280" stroke-width="2"/>
+    <text x="1068" y="795">known input (atlas B, programs G)</text>
+    <circle cx="1318" cy="790" r="12" fill="#2b2d42"/>
+    <text x="1338" y="795">measured (bulk counts Y)</text>
+    <rect x="1030" y="818" width="40" height="26" rx="6" fill="none" stroke="#9aa0a6" stroke-width="2"/>
+    <text x="1080" y="836">box = repeated for each patient / cell type / program / gene</text>
   </g>
 </svg>
