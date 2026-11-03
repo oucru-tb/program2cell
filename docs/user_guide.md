@@ -96,6 +96,12 @@ Against a two-step baseline (NNLS fractions, then reference program scores), the
 ## Limits you should know before using it on real data
 
 * **A missing cell type gives confidently wrong answers.** Its signal is absorbed by the cell types that are present, errors grow about 4x, and the intervals do not widen (0% coverage above). The built-in compatibility check (`diagnose_inputs`, an NNLS fit of each bulk profile on the reference) is only a weak detector: median R^2 was 0.83 with a missing type vs 0.91 without, and the ranges overlapped across replicates. Do not rely on it alone. Make sure the reference covers the tissue. A posterior predictive check is the next planned addition.
+* **The reference profile is the atlas's average cell of each type, not a "resting" cell.** Program activity is
+  therefore relative to that average. Build the reference from the atlas's **healthy donors**, so activity
+  reads as "relative to healthy". **Merge activation-state clusters into their parent type** (e.g.
+  IFN-stimulated monocytes into monocytes). Kept as separate types, a cell switching a program on is counted
+  as more cells of the activated type. As a check, rebuild the reference from another donor subset and
+  confirm the treatment effects barely move.
 * Platform bias matters: keep `use_m=True` for real data.
 * **Real bulk with a single-cell reference** (e.g. sequenced PBMC bulk with an atlas reference): the two platforms
   differ by a per-gene factor that costs most of the attribution if left in. On COMBAT, where the same samples

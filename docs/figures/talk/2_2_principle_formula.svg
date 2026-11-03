@@ -35,9 +35,9 @@
 
   <text x="652" y="248" font-size="44" fill="#2b2d42" text-anchor="middle">×</text>
 
-  <!-- Grey: resting profile -->
+  <!-- Grey: reference profile -->
   <rect x="680" y="190" width="270" height="80" rx="12" fill="#f1f3f5" stroke="#6b7280" stroke-width="3"/>
-  <text x="815" y="242" font-size="30" font-weight="bold" fill="#4b5563" text-anchor="middle">resting profile</text>
+  <text x="815" y="242" font-size="30" font-weight="bold" fill="#4b5563" text-anchor="middle">reference profile</text>
 
   <text x="977" y="248" font-size="44" fill="#2b2d42" text-anchor="middle">×</text>
 
@@ -54,8 +54,8 @@
     <text x="525" y="300" font-weight="bold" fill="#2563eb">How many cells?</text>
     <text x="525" y="322" fill="#333">estimated</text>
 
-    <text x="815" y="300" font-weight="bold" fill="#4b5563">What the cell normally looks like</text>
-    <text x="815" y="322" fill="#333">single-cell atlas (known)</text>
+    <text x="815" y="300" font-weight="bold" fill="#4b5563">Average cell of that type</text>
+    <text x="815" y="322" fill="#333">healthy single-cell atlas (known)</text>
 
     <text x="1145" y="225" font-weight="bold" fill="#ea580c">How strongly this cell</text>
     <text x="1145" y="246" font-weight="bold" fill="#ea580c">type switched it on</text>

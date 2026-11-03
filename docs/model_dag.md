@@ -180,18 +180,31 @@ These are places where the pipeline makes a choice that could be changed. None i
 
 1. **B is plugged in.** Donor-to-donor variation of the baseline is not a model parameter. Calibration
    carries it into the intervals only through the reference folds.
-2. **Two estimates of activity.** The model's δ (stage A) and the calibrated reallocation (stage C) are not
+2. **B is the atlas average of a cell type, not a "resting" state.** Every atlas cell with that label goes
+   into it, activated ones included. So δ means "program level relative to the reference's average cell of
+   that type".
+   - Group contrasts (β) are mostly unaffected: the baseline cancels, up to the small dependence of leakage
+     and the exp() scale on B.
+   - Absolute activity is only interpretable if the reference is a known state. In the benchmarks it was
+     control cells only (vehicle / PBS / unstimulated; COMBAT used other people's cells, sick ones included).
+     For a cohort, use the healthy donors of the atlas.
+   - **Activation-state clusters must be merged into their parent type** (e.g. "IFN-stimulated monocytes"
+     into monocytes). Kept as separate types, a cell that switches a program on is counted as *more cells
+     of the activated type* (composition) instead of *cells switched on* (activity).
+   - Sensitivity check: rebuild B from another donor subset, or without the activated clusters, and confirm
+     the effects barely move.
+3. **Two estimates of activity.** The model's δ (stage A) and the calibrated reallocation (stage C) are not
    the same estimator. The frozen method reports the latter, because only it is checked against a known
    truth. The model's δ is used only through the fractions.
-3. **G is fixed and the same in every cell type.** A program's footprint can differ by lineage.
-4. **The leakage operator is a linearisation at δ = 0.** Strong shared responses can leak nonlinearly. The
+4. **G is fixed and the same in every cell type.** A program's footprint can differ by lineage.
+5. **The leakage operator is a linearisation at δ = 0.** Strong shared responses can leak nonlinearly. The
    misfit term and the guard limit the damage; they don't remove it.
-5. **Composition shifts that follow the response.** In the stress test, responder lines grew ×1.6 under
+6. **Composition shifts that follow the response.** In the stress test, responder lines grew ×1.6 under
    treatment, and part of their signal moved to a non-responder. The unmixing assumes the leakage is
    explained by the fractions it is given.
-6. **Composition noise ε_ic is independent across cell types** (no covariance), and treatment enters
+7. **Composition noise ε_ic is independent across cell types** (no covariance), and treatment enters
    linearly, with no dose or interactions.
-7. **The design check uses about 10 cohorts.** Route choices close to a tie can still differ between
+8. **The design check uses about 10 cohorts.** Route choices close to a tie can still differ between
    studies. The v2 rule compares interval widths, which are less noisy than the simulated RMSEs.
-8. **Read shares, not cell numbers.** Contributions and the "more cells" part are shares of RNA. A type that
+9. **Read shares, not cell numbers.** Contributions and the "more cells" part are shares of RNA. A type that
    makes more RNA per cell looks like more cells unless RNA content is modelled.

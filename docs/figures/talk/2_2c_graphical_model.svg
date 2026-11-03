@@ -64,8 +64,8 @@
   <!-- known inputs below -->
   <rect x="440" y="760" width="170" height="90" rx="10" fill="#f1f3f5" stroke="#6b7280" stroke-width="2.5"/>
   <text x="525" y="798" font-size="24" font-weight="bold" fill="#4b5563" text-anchor="middle">B</text>
-  <text x="525" y="824" font-size="14" fill="#4b5563" text-anchor="middle">resting profiles</text>
-  <text x="525" y="841" font-size="13" fill="#6b7280" text-anchor="middle">single-cell atlas</text>
+  <text x="525" y="824" font-size="14" fill="#4b5563" text-anchor="middle">reference profiles</text>
+  <text x="525" y="841" font-size="13" fill="#6b7280" text-anchor="middle">healthy atlas average</text>
 
   <rect x="660" y="760" width="170" height="90" rx="10" fill="#dcfce7" stroke="#16a34a" stroke-width="2.5"/>
   <text x="745" y="798" font-size="24" font-weight="bold" fill="#16a34a" text-anchor="middle">G</text>
