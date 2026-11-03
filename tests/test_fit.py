@@ -33,7 +33,11 @@ def test_run_palm_tables():
     inp = pb.prepare_inputs(bulk, ref, prog, treatment=s["T"], max_genes=100, min_program_genes=5)
     res = pb.run_palm(inp, use_m=False, theta=40.0, num_warmup=100, num_samples=100)
     assert res.fractions()["median"].shape == (8, 3)
-    assert abs(res.cell_fractions()["median"].sum(axis=1).mean() - 1) < 1e-3
+    # every draw is renormalised exactly; per-type medians of a simplex need not sum to 1 (they drift by
+    # ~1e-3 with 100 draws, platform-dependent), so they get a looser check
+    w = res.draws["pi"] / inp.rna_content
+    assert np.allclose((w / w.sum(-1, keepdims=True)).sum(-1), 1)
+    assert abs(res.cell_fractions()["median"].sum(axis=1).mean() - 1) < 0.01
     assert {"sample", "program", "cell_type", "share"} <= set(res.attribution().columns)
     assert len(res.effects()) == 2 * 3 * 2
     assert set(res.effect_totals().columns) >= {"total", "intrinsic", "composition"}
