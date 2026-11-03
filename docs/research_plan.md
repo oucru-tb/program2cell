@@ -648,6 +648,9 @@ Check access and licences of each public dataset before use.
 
 ### 7.1 Spatial niches and microdissection (idea, 2026-10-29; nothing tested)
 
+**Expanded into a plan on 2026-11-03: docs/spatial_extension.md** (Visium, GeoMx, CosMx/Xenium and niche
+level; patient-level resampling; neighbour leakage operator; pseudo-spot benchmark; C-SIDE; TB datasets).
+
 **Unit of analysis = the niche, not the spot or cell.** A niche (granuloma core, rim, lymphoid aggregate,
 normal lung) is a pooled sample of mixed cells, which is what PALM already models. The question per niche:
 does a pathway differ because the cell mix differs, or because a cell type changed its activity there?
