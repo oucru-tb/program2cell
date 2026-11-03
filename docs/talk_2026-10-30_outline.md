@@ -44,8 +44,10 @@ results slides.
 |---|---|---|---|---|
 | 2.1 | **"One bulk sample = many cell types, each with programs switched on or off"** | `2_2_principle_formula.svg/.png` | 45 s | Bulk = Σ cell types 🔵 fraction × ⚪ reference profile × exp(🟠 activity × 🟢 program genes). Blue changed → more cells; orange changed → cells switched on |
 | 2.2 | **"Where does a bulk change come from?"** | `2_2b_principle_contributions.svg/.png` | 30 s | The same equation read the other way: the bulk change = Σ cell types (more-cells part + cells-changed part), adding up exactly; contribution and per-cell change can disagree |
-| Backup | **"PALM as a graphical model"** (two-group design) | `2_2c_graphical_model.svg/.png` | — | Plate diagram (T → γ → π, T → β → δ, π + δ + B + G → Y), then the four steps from model to answers (fit, split reads, calibrate, effect per cell type) |
-| Backup | **"PALM with TB patients only"** | `2_2d_graphical_model_tb_only.svg/.png` | — | No treatment node; per-patient mix and activity compared with a clinical measure after the fit; what you can and can't claim (not yet benchmarked: see `benchmarking.md` §0.8) |
+| 2.3 (optional) | **"PALM as a graphical model"**, simple | `2_2c_graphical_model_simple.svg/.png` | 30 s | Plate diagram (T → γ → π, T → β → δ, π + δ + B + G → Y) and the four steps from model to answers. For a mixed audience |
+| Backup | **"PALM as a graphical model"**, detailed | `2_2c_graphical_model.svg/.png` (`scripts/experiments/talk_graphical_models.py`) | — | Faithful to the frozen method. Left: the model PALM fits (it gives π); B and G in the gene plate, the cell-profile node E = B·exp(δ×G). Right: the reported β comes from split reads → calibrate on atlas donors → unmix across patients; the atlas feeds both B and the calibration; contributions from π and β |
+| Backup | **"PALM with TB patients only"**, simple | `2_2d_graphical_model_tb_only_simple.svg/.png` | — | No treatment node; what you can and can't claim; the comparison along Z is marked "being validated" |
+| Backup | **"PALM with TB patients only"**, detailed | `2_2d_graphical_model_tb_only.svg/.png` | — | Same layout as the detailed two-group slide; unmixing along the clinical measure z gives the change over the z range; "not yet validated" box with the first-split numbers (`benchmarking.md` §0.8) |
 
 - **One sentence (slide 2.1, or a title):** "Bulk = a mix of cell types, each one its atlas profile with
   gene programs turned up or down; we estimate both the mix and the switches."
@@ -356,8 +358,9 @@ standard tools, dark = truth. Rebuild with `python scripts/experiments/talk_figu
 | B | Pipeline + three new boxes | draw |
 | 2.1 (new) | Colour-coded model equation + smoothie + two answers | `2_2_principle_formula.png` |
 | 2.2 (new) | Contribution split: more cells / cells changed, stacked bar | `2_2b_principle_contributions.png` |
-| Backup | Graphical model, two-group design | `2_2c_graphical_model.png` |
-| Backup | Graphical model, TB patients only | `2_2d_graphical_model_tb_only.png` |
+| 2.3 (optional) | Graphical model, simple | `2_2c_graphical_model_simple.png` |
+| Backup | Graphical model, detailed (model + calibrated estimator) | `2_2c_graphical_model.png` |
+| Backup | TB patients only, simple / detailed | `2_2d_graphical_model_tb_only_simple.png` / `2_2d_graphical_model_tb_only.png` |
 | C1 | Three rules for an answer key | `2_3_answer_key.png` |
 | C2 | Ladder of evidence | draw (four rungs) |
 | C3 | Design limit vs donors; composition spread | `2_4_design_power.png` |
@@ -397,8 +400,12 @@ standard tools, dark = truth. Rebuild with `python scripts/experiments/talk_figu
   CIBERSORT + t-test 69–78%.
 
 **Method questions**
-- **"What exactly is the model?"** Graphical model: `2_2c_graphical_model.png`. Full pipeline graph:
-  `docs/model_dag.md`.
+- **"What exactly is the model?"** The model fits the cell mix; the per-cell change comes from a calibrated
+  estimator on top of it (split reads, calibrate on atlas donors with a known answer, unmix across patients).
+  Detailed graphical model: `2_2c_graphical_model.png`; full pipeline graph: `docs/model_dag.md`.
+- **"Is it a Bayesian method?"** For the cell mix, yes (posterior draws). The per-cell change is not the
+  model's posterior: it is a calibrated, spillover-aware estimate, because it was more accurate and its ranges
+  more honest on the benchmarks.
 - **"Does it need a healthy group?"** No, but then there is no TB-vs-healthy effect: `2_2d_graphical_model_tb_only.png`.
 - **"Is it fair to our workflow?"**
   - The emulation is InstaPrism per-type expression → log CPM → GSVA → Spearman with treatment → BH q < 0.1.

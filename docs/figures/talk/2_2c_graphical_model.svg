@@ -1,136 +1,108 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1600 900" width="1600" height="900" font-family="Helvetica, Arial, sans-serif">
-  <defs>
-    <marker id="arr" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse">
-      <path d="M0,0 L10,5 L0,10 z" fill="#4b5563"/>
-    </marker>
-    <marker id="arrW" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse">
-      <path d="M0,0 L10,5 L0,10 z" fill="#ffffff"/>
-    </marker>
-  </defs>
-  <rect width="1600" height="900" fill="#ffffff"/>
-
-  <!-- Title -->
-  <text x="40" y="58" font-size="34" font-weight="bold" fill="#2b2d42">PALM as a graphical model</text>
-  <text x="40" y="92" font-size="19" fill="#5c6670">Arrows mean "influences". Known inputs are squares; what we estimate are circles; the bulk data are filled</text>
-
-  <!-- ===================== LEFT: plate diagram ===================== -->
-  <!-- population-level (outside plates) -->
-  <text x="60" y="160" font-size="16" font-weight="bold" fill="#5c6670">shared by all patients</text>
-
-  <circle cx="135" cy="300" r="42" fill="#dbeafe" stroke="#2563eb" stroke-width="3"/>
-  <text x="135" y="309" font-size="28" font-weight="bold" fill="#2563eb" text-anchor="middle">γ</text>
-  <text x="135" y="362" font-size="14" fill="#2563eb" text-anchor="middle">treatment shifts</text>
-  <text x="135" y="379" font-size="14" fill="#2563eb" text-anchor="middle">the cell mix</text>
-
-  <circle cx="135" cy="490" r="42" fill="#ffedd5" stroke="#ea580c" stroke-width="3"/>
-  <text x="135" y="499" font-size="28" font-weight="bold" fill="#ea580c" text-anchor="middle">β</text>
-  <text x="135" y="552" font-size="14" fill="#ea580c" text-anchor="middle">treatment switches</text>
-  <text x="135" y="569" font-size="14" fill="#ea580c" text-anchor="middle">programs per cell type</text>
-
-  <!-- sample plate -->
-  <rect x="270" y="130" width="720" height="580" rx="16" fill="none" stroke="#9aa0a6" stroke-width="2.5"/>
-  <text x="975" y="158" font-size="18" font-weight="bold" fill="#5c6670" text-anchor="end">each patient i</text>
-
-  <!-- treatment -->
-  <rect x="320" y="190" width="90" height="70" rx="8" fill="#ffffff" stroke="#2b2d42" stroke-width="2.5"/>
-  <text x="365" y="222" font-size="22" font-weight="bold" fill="#2b2d42" text-anchor="middle">T</text>
-  <text x="365" y="246" font-size="13" fill="#5c6670" text-anchor="middle">TB / healthy</text>
-
-  <!-- cell type plate -->
-  <rect x="440" y="250" width="410" height="300" rx="14" fill="none" stroke="#c4c8cc" stroke-width="2" stroke-dasharray="6 4"/>
-  <text x="840" y="275" font-size="16" font-weight="bold" fill="#5c6670" text-anchor="end">each cell type c</text>
-
-  <circle cx="530" cy="400" r="48" fill="#dbeafe" stroke="#2563eb" stroke-width="3"/>
-  <text x="530" y="410" font-size="30" font-weight="bold" fill="#2563eb" text-anchor="middle">π</text>
-  <text x="530" y="470" font-size="15" font-weight="bold" fill="#2563eb" text-anchor="middle">fraction</text>
-  <text x="530" y="488" font-size="13" fill="#2563eb" text-anchor="middle">how many cells</text>
-
-  <!-- program plate (nested) -->
-  <rect x="630" y="300" width="200" height="230" rx="12" fill="none" stroke="#d9dcdf" stroke-width="2" stroke-dasharray="3 4"/>
-  <text x="820" y="322" font-size="14" font-weight="bold" fill="#5c6670" text-anchor="end">each program p</text>
-  <circle cx="730" cy="410" r="48" fill="#ffedd5" stroke="#ea580c" stroke-width="3"/>
-  <text x="730" y="420" font-size="30" font-weight="bold" fill="#ea580c" text-anchor="middle">δ</text>
-  <text x="730" y="480" font-size="15" font-weight="bold" fill="#ea580c" text-anchor="middle">activity</text>
-  <text x="730" y="498" font-size="13" fill="#ea580c" text-anchor="middle">program on in this cell</text>
-
-  <!-- gene plate inside sample -->
-  <rect x="520" y="575" width="450" height="120" rx="12" fill="none" stroke="#c4c8cc" stroke-width="2" stroke-dasharray="6 4"/>
-  <text x="960" y="598" font-size="15" font-weight="bold" fill="#5c6670" text-anchor="end">each gene g</text>
-  <circle cx="780" cy="640" r="44" fill="#2b2d42" stroke="#2b2d42" stroke-width="3"/>
-  <text x="780" y="650" font-size="28" font-weight="bold" fill="#ffffff" text-anchor="middle">Y</text>
-  <text x="640" y="635" font-size="16" font-weight="bold" fill="#2b2d42" text-anchor="middle">bulk counts</text>
-  <text x="640" y="656" font-size="14" fill="#5c6670" text-anchor="middle">(measured)</text>
-
-  <!-- known inputs below -->
-  <rect x="440" y="760" width="170" height="90" rx="10" fill="#f1f3f5" stroke="#6b7280" stroke-width="2.5"/>
-  <text x="525" y="798" font-size="24" font-weight="bold" fill="#4b5563" text-anchor="middle">B</text>
-  <text x="525" y="824" font-size="14" fill="#4b5563" text-anchor="middle">reference profiles</text>
-  <text x="525" y="841" font-size="13" fill="#6b7280" text-anchor="middle">healthy atlas average</text>
-
-  <rect x="660" y="760" width="170" height="90" rx="10" fill="#dcfce7" stroke="#16a34a" stroke-width="2.5"/>
-  <text x="745" y="798" font-size="24" font-weight="bold" fill="#16a34a" text-anchor="middle">G</text>
-  <text x="745" y="824" font-size="14" fill="#16a34a" text-anchor="middle">program genes</text>
-  <text x="745" y="841" font-size="13" fill="#16a34a" text-anchor="middle">PROGENy</text>
-
-  <!-- edges -->
-  <g stroke="#4b5563" stroke-width="2.5" fill="none" marker-end="url(#arr)">
-    <path d="M177,300 L478,392"/>
-    <path d="M177,490 L680,418"/>
-    <path d="M410,236 L488,370"/>
-    <path d="M410,226 Q600,200 696,368"/>
-    <path d="M565,434 L748,602"/>
-    <path d="M778,418 Q835,500 800,598"/>
-    <path d="M560,760 L740,676"/>
-    <path d="M760,760 L775,686"/>
-  </g>
-
-  <!-- ===================== RIGHT: equation + pipeline ===================== -->
-  <rect x="1030" y="130" width="530" height="150" rx="14" fill="#f8fafc" stroke="#e1e4e8" stroke-width="2"/>
-  <text x="1055" y="165" font-size="18" font-weight="bold" fill="#2b2d42">The arrow into Y, written out</text>
-  <text x="1055" y="210" font-size="24" fill="#2b2d42">Y<tspan font-size="15" dy="6">ig</tspan><tspan dy="-6"> ≈ Σ</tspan><tspan font-size="15" dy="6">c</tspan><tspan dy="-6"> </tspan><tspan fill="#2563eb" font-weight="bold">π</tspan><tspan font-size="15" dy="6" fill="#2563eb">ic</tspan><tspan dy="-6"> · </tspan><tspan fill="#4b5563" font-weight="bold">B</tspan><tspan font-size="15" dy="6" fill="#4b5563">cg</tspan><tspan dy="-6"> · exp( </tspan><tspan fill="#ea580c" font-weight="bold">δ</tspan><tspan font-size="15" dy="6" fill="#ea580c">icp</tspan><tspan dy="-6"> × </tspan><tspan fill="#16a34a" font-weight="bold">G</tspan><tspan font-size="15" dy="6" fill="#16a34a">pg</tspan><tspan dy="-6"> )</tspan></text>
-  <text x="1055" y="248" font-size="15" fill="#5c6670">counts are noisy (negative binomial); π and δ</text>
-  <text x="1055" y="268" font-size="15" fill="#5c6670">get their uncertainty from the fit</text>
-
-  <text x="1030" y="325" font-size="20" font-weight="bold" fill="#2b2d42">From the model to the answers</text>
-
-  <g font-size="16">
-    <rect x="1030" y="340" width="530" height="66" rx="10" fill="#dbeafe"/>
-    <text x="1050" y="368" font-weight="bold" fill="#2563eb">1  Fit the model</text>
-    <text x="1050" y="392" fill="#333">cell fractions π for every patient, with uncertainty</text>
-
-    <rect x="1030" y="416" width="530" height="66" rx="10" fill="#f1f3f5"/>
-    <text x="1050" y="444" font-weight="bold" fill="#2b2d42">2  Split each sample's reads between cell types</text>
-    <text x="1050" y="468" fill="#333">→ program activity δ for each cell type</text>
-
-    <rect x="1030" y="492" width="530" height="66" rx="10" fill="#f1f3f5"/>
-    <text x="1050" y="520" font-weight="bold" fill="#2b2d42">3  Calibrate on atlas donors with a known answer</text>
-    <text x="1050" y="544" fill="#333">corrects spillover between cell types; gives 90% ranges</text>
-
-    <rect x="1030" y="568" width="530" height="66" rx="10" fill="#ffedd5"/>
-    <text x="1050" y="596" font-weight="bold" fill="#ea580c">4  Treatment effect β per cell type</text>
-    <text x="1050" y="620" fill="#333">two estimators, checked by simulating this study; keep the sharper</text>
-
-    <rect x="1030" y="644" width="530" height="66" rx="10" fill="#eaf7ee" stroke="#16a34a" stroke-width="1.5"/>
-    <text x="1050" y="672" font-weight="bold" fill="#166534">Answers</text>
-    <text x="1050" y="696" fill="#333">per-cell change ± 90% range; contributions (more cells / cells changed)</text>
-  </g>
-
-  <g stroke="#9aa0a6" stroke-width="2" marker-end="url(#arr)">
-    <line x1="1295" y1="406" x2="1295" y2="414"/>
-    <line x1="1295" y1="482" x2="1295" y2="490"/>
-    <line x1="1295" y1="558" x2="1295" y2="566"/>
-    <line x1="1295" y1="634" x2="1295" y2="642"/>
-  </g>
-
-  <!-- legend -->
-  <g font-size="15" fill="#333">
-    <circle cx="1048" cy="760" r="12" fill="#dbeafe" stroke="#2563eb" stroke-width="2"/>
-    <text x="1068" y="765">estimated</text>
-    <rect x="1170" y="748" width="24" height="24" rx="4" fill="#f1f3f5" stroke="#6b7280" stroke-width="2"/>
-    <text x="1204" y="765">known input</text>
-    <circle cx="1338" cy="760" r="12" fill="#2b2d42"/>
-    <text x="1358" y="765">measured</text>
-    <rect x="1030" y="790" width="40" height="26" rx="6" fill="none" stroke="#9aa0a6" stroke-width="2"/>
-    <text x="1080" y="808">box = repeated for each patient / cell type / program / gene</text>
-  </g>
+<defs>
+<marker id="arr" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#4b5563"/></marker>
+<marker id="arrO" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#ea580c"/></marker>
+<marker id="arrP" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#7c3aed"/></marker>
+<marker id="arrG" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#9aa0a6"/></marker>
+</defs>
+<rect width="1600" height="900" fill="#ffffff"/>
+<text x="40" y="56" font-size="32" fill="#2b2d42" font-weight="bold" text-anchor="start">PALM as a graphical model</text>
+<text x="40" y="88" font-size="18" fill="#5c6670" font-weight="normal" text-anchor="start">A model of the cell mix (left) and a calibrated estimate of each cell type's change (right)</text>
+<text x="40" y="140" font-size="20" fill="#2b2d42" font-weight="bold" text-anchor="start">1  The model PALM fits</text>
+<text x="40" y="162" font-size="14.5" fill="#5c6670" font-weight="normal" text-anchor="start">gives each patient's cell mix π, with uncertainty</text>
+<text x="48" y="222" font-size="13.5" fill="#5c6670" font-weight="bold" text-anchor="start">shared by</text>
+<text x="48" y="239" font-size="13.5" fill="#5c6670" font-weight="bold" text-anchor="start">all patients</text>
+<circle cx="115" cy="320" r="40" fill="#dbeafe" stroke="#2563eb" stroke-width="3"/>
+<text x="115" y="329.24" font-size="28" fill="#2563eb" font-weight="bold" text-anchor="middle">γ</text>
+<text x="115" y="382" font-size="15" fill="#2563eb" font-weight="bold" text-anchor="middle">treatment</text>
+<text x="115" y="400" font-size="13" fill="#2563eb" font-weight="normal" text-anchor="middle">shifts the mix</text>
+<circle cx="115" cy="500" r="40" fill="#ffedd5" stroke="#ea580c" stroke-width="3"/>
+<text x="115" y="509.24" font-size="28" fill="#ea580c" font-weight="bold" text-anchor="middle">κ</text>
+<text x="115" y="562" font-size="15" fill="#ea580c" font-weight="bold" text-anchor="middle">average program</text>
+<text x="115" y="580" font-size="13" fill="#ea580c" font-weight="normal" text-anchor="middle">activity</text>
+<rect x="220" y="190" width="670" height="520" rx="14" fill="none" stroke="#9aa0a6" stroke-width="2.5" stroke-dasharray="0"/><text x="878" y="214" font-size="15" fill="#5c6670" font-weight="bold" text-anchor="end">each patient i</text>
+<rect x="370" y="255" width="410" height="445" rx="14" fill="none" stroke="#c4c8cc" stroke-width="2" stroke-dasharray="6 4"/><text x="768" y="279" font-size="15" fill="#5c6670" font-weight="bold" text-anchor="end">each cell type c</text>
+<rect x="565" y="290" width="205" height="175" rx="14" fill="none" stroke="#d9dcdf" stroke-width="2" stroke-dasharray="3 4"/><text x="758" y="311" font-size="15" fill="#5c6670" font-weight="bold" text-anchor="end">each program p</text>
+<rect x="395" y="520" width="485" height="350" rx="14" fill="none" stroke="#c4c8cc" stroke-width="2" stroke-dasharray="6 4"/><text x="868" y="860" font-size="15" fill="#5c6670" font-weight="bold" text-anchor="end">each gene g</text>
+<rect x="240" y="215" width="125" height="66" rx="10" fill="#ffffff" stroke="#2b2d42" stroke-width="2.5"/>
+<text x="302.5" y="240" font-size="22" fill="#2b2d42" font-weight="bold" text-anchor="middle">T</text>
+<text x="302.5" y="264" font-size="13.5" fill="#2b2d42" font-weight="normal" text-anchor="middle">TB / healthy</text>
+<circle cx="460" cy="375" r="46" fill="#dbeafe" stroke="#2563eb" stroke-width="3"/>
+<text x="460" y="384.9" font-size="30" fill="#2563eb" font-weight="bold" text-anchor="middle">π</text>
+<text x="460" y="443" font-size="15" fill="#2563eb" font-weight="bold" text-anchor="middle">fraction</text>
+<text x="460" y="461" font-size="13" fill="#2563eb" font-weight="normal" text-anchor="middle">how many cells</text>
+<circle cx="640" cy="375" r="42" fill="#ffedd5" stroke="#ea580c" stroke-width="3"/>
+<text x="640" y="384.9" font-size="30" fill="#ea580c" font-weight="bold" text-anchor="middle">δ</text>
+<text x="690" y="372" font-size="15" fill="#ea580c" font-weight="bold" text-anchor="start">activity</text>
+<text x="690" y="390" font-size="13" fill="#ea580c" font-weight="normal" text-anchor="start">helps the fit</text>
+<polygon points="600,600 580,634.64 540,634.64 520,600 540,565.36 580,565.36" fill="#fff7e0" stroke="#b07d00" stroke-width="2.5"/>
+<text x="560" y="609" font-size="26" fill="#8a6100" font-weight="bold" text-anchor="middle">E</text>
+<text x="510" y="606" font-size="14" fill="#8a6100" font-weight="bold" text-anchor="end">cell profile</text>
+<circle cx="820" cy="600" r="42" fill="#2b2d42" stroke="#2b2d42" stroke-width="3"/>
+<text x="820" y="609.9" font-size="30" fill="#ffffff" font-weight="bold" text-anchor="middle">Y</text>
+<text x="820" y="668" font-size="15" fill="#2b2d42" font-weight="bold" text-anchor="middle">bulk counts</text>
+<text x="820" y="686" font-size="13" fill="#5c6670" font-weight="normal" text-anchor="middle">(measured)</text>
+<rect x="420" y="765" width="160" height="80" rx="10" fill="#f1f3f5" stroke="#6b7280" stroke-width="2.5"/>
+<text x="500" y="797" font-size="24" fill="#4b5563" font-weight="bold" text-anchor="middle">B<tspan font-size="14" dy="5">cg</tspan></text>
+<text x="500" y="821" font-size="13.5" fill="#4b5563" font-weight="normal" text-anchor="middle">reference profile</text>
+<text x="500" y="838" font-size="12.5" fill="#6b7280" font-weight="normal" text-anchor="middle">atlas average</text>
+<rect x="615" y="765" width="160" height="80" rx="10" fill="#dcfce7" stroke="#16a34a" stroke-width="2.5"/>
+<text x="695" y="797" font-size="24" fill="#16a34a" font-weight="bold" text-anchor="middle">G<tspan font-size="14" dy="5">pg</tspan></text>
+<text x="695" y="821" font-size="13.5" fill="#16a34a" font-weight="normal" text-anchor="middle">program genes</text>
+<text x="695" y="838" font-size="12.5" fill="#6b7280" font-weight="normal" text-anchor="middle">PROGENy</text>
+<path d="M155,325 L412,368" fill="none" stroke="#4b5563" stroke-width="2.5" marker-end="url(#arr)"/>
+<path d="M330,281 L422,340" fill="none" stroke="#4b5563" stroke-width="2.5" marker-end="url(#arr)"/>
+<path d="M350,232 Q560,200 630,336" fill="none" stroke="#4b5563" stroke-width="2.5" marker-end="url(#arr)"/>
+<path d="M155,500 L596,386" fill="none" stroke="#4b5563" stroke-width="2.5" marker-end="url(#arr)"/>
+<path d="M628,416 L582,564" fill="none" stroke="#4b5563" stroke-width="2.5" marker-end="url(#arr)"/>
+<path d="M500,780 L540,640" fill="none" stroke="#4b5563" stroke-width="2.5" marker-end="url(#arr)"/>
+<path d="M680,765 L585,640" fill="none" stroke="#4b5563" stroke-width="2.5" marker-end="url(#arr)"/>
+<path d="M600,600 L776,600" fill="none" stroke="#4b5563" stroke-width="2.5" marker-end="url(#arr)"/>
+<path d="M488,412 Q640,530 778,588" fill="none" stroke="#4b5563" stroke-width="2.5" marker-end="url(#arr)"/>
+<text x="40" y="620" font-size="17" fill="#2b2d42" font-weight="normal" text-anchor="start">Y ≈ Σ<tspan font-size="12" dy="4">c</tspan><tspan dy="-4"> π · E</tspan></text>
+<text x="40" y="643" font-size="17" fill="#2b2d42" font-weight="normal" text-anchor="start">E = B · exp(δ × G)</text>
+<text x="40" y="668" font-size="13" fill="#5c6670" font-weight="normal" text-anchor="start">noisy counts (neg. binomial)</text>
+<text x="935" y="140" font-size="20" fill="#2b2d42" font-weight="bold" text-anchor="start">2  Estimating each cell type's change</text>
+<text x="935" y="162" font-size="14.5" fill="#5c6670" font-weight="normal" text-anchor="start">the reported answer comes from here, not from δ in the model</text>
+<rect x="935" y="185" width="625" height="70" rx="10" fill="#f1f3f5"/>
+<text x="953" y="214" font-size="17" fill="#2b2d42" font-weight="bold" text-anchor="start">1  Split each patient's reads by π</text>
+<text x="953" y="239" font-size="14.5" fill="#333" font-weight="normal" text-anchor="start">→ program activity per cell type (still has spillover)</text>
+<path d="M1247.5,255 L1247.5,273" fill="none" stroke="#9aa0a6" stroke-width="2" marker-end="url(#arrG)"/>
+<rect x="935" y="275" width="625" height="70" rx="10" fill="#f1f3f5"/>
+<text x="953" y="304" font-size="17" fill="#2b2d42" font-weight="bold" text-anchor="start">2  Calibrate on atlas donors with a known answer</text>
+<text x="953" y="329" font-size="14.5" fill="#333" font-weight="normal" text-anchor="start">corrects the bias, sets honest 90% ranges</text>
+<path d="M1247.5,345 L1247.5,363" fill="none" stroke="#9aa0a6" stroke-width="2" marker-end="url(#arrG)"/>
+<rect x="935" y="365" width="625" height="70" rx="10" fill="#ffedd5"/>
+<text x="953" y="394" font-size="17" fill="#ea580c" font-weight="bold" text-anchor="start">3  Unmix across patients</text>
+<text x="953" y="419" font-size="14.5" fill="#333" font-weight="normal" text-anchor="start">spillover map from π and B; contrast = TB vs healthy</text>
+<path d="M478,330 C520,120 860,110 930,205" fill="none" stroke="#2563eb" stroke-width="2.2" stroke-dasharray="7 5" marker-end="url(#arr)"/>
+<text x="700" y="128" font-size="14" fill="#2563eb" font-weight="bold" text-anchor="middle">π (posterior draws)</text>
+<path d="M858,585 C895,520 892,300 930,236" fill="none" stroke="#4b5563" stroke-width="2.2" stroke-dasharray="7 5" marker-end="url(#arr)"/>
+<path d="M365,250 H 905 Q 918,250 918,280 V 388 Q 918,400 930,400" fill="none" stroke="#4b5563" stroke-width="2.2" stroke-dasharray="7 5" marker-end="url(#arr)"/>
+<path d="M1105,435 L1105,470" fill="none" stroke="#ea580c" stroke-width="2.5" marker-end="url(#arrO)"/>
+<circle cx="1105" cy="522" r="48" fill="#ffedd5" stroke="#ea580c" stroke-width="3"/>
+<text x="1105" y="531.9" font-size="30" fill="#ea580c" font-weight="bold" text-anchor="middle">β</text>
+<text x="1170" y="510" font-size="17" fill="#ea580c" font-weight="bold" text-anchor="start">per-cell change</text>
+<text x="1170" y="533" font-size="14.5" fill="#333" font-weight="normal" text-anchor="start">per cell type and program, ± 90% range</text>
+<rect x="995" y="588" width="565" height="56" rx="10" fill="none" stroke="#6b7280" stroke-width="2" stroke-dasharray="6 4"/>
+<text x="1015" y="612" font-size="15.5" fill="#2b2d42" font-weight="bold" text-anchor="start">contributions (from π and β)</text>
+<text x="1015" y="633" font-size="13.5" fill="#333" font-weight="normal" text-anchor="start">each cell type's share of the bulk change: more cells / cells changed</text>
+<path d="M1105,570 L1105,586" fill="none" stroke="#9aa0a6" stroke-width="2" marker-end="url(#arrG)"/>
+<rect x="1265" y="700" width="270" height="62" rx="10" fill="#f1f3f5" stroke="#6b7280" stroke-width="2.5"/>
+<text x="1400" y="726" font-size="16" fill="#4b5563" font-weight="bold" text-anchor="middle">single-cell atlas</text>
+<text x="1400" y="747" font-size="13" fill="#6b7280" font-weight="normal" text-anchor="middle">healthy donors, known answer</text>
+<path d="M1265,745 C1085,905 640,905 500,848" fill="none" stroke="#9aa0a6" stroke-width="2" stroke-dasharray="6 4" marker-end="url(#arrG)"/>
+<path d="M1525,700 C1595,550 1595,320 1558,347" fill="none" stroke="#9aa0a6" stroke-width="2" stroke-dasharray="6 4" marker-end="url(#arrG)"/>
+<text x="1275" y="688" font-size="13" fill="#6b7280" font-weight="normal" text-anchor="start">→ B, and → calibration (step 2)</text>
+<text x="40" y="728" font-size="15" fill="#2b2d42" font-weight="bold" text-anchor="start">Legend</text>
+<circle cx="50" cy="750" r="10" fill="#dbeafe" stroke="#2563eb" stroke-width="2"/>
+<text x="68" y="755" font-size="13.5" fill="#333" font-weight="normal" text-anchor="start">estimated</text>
+<rect x="40" y="767" width="20" height="20" rx="4" fill="#f1f3f5" stroke="#6b7280" stroke-width="2"/>
+<text x="68" y="782" font-size="13.5" fill="#333" font-weight="normal" text-anchor="start">known input</text>
+<circle cx="50" cy="804" r="10" fill="#2b2d42"/>
+<text x="68" y="809" font-size="13.5" fill="#333" font-weight="normal" text-anchor="start">measured</text>
+<polygon points="60,831 55,839.66 45,839.66 40,831 45,822.34 55,822.34" fill="#fff7e0" stroke="#b07d00" stroke-width="2"/>
+<text x="68" y="836" font-size="13.5" fill="#333" font-weight="normal" text-anchor="start">computed</text>
+<text x="40" y="862" font-size="12.5" fill="#5c6670" font-weight="normal" text-anchor="start">box = repeated for each</text>
+<text x="40" y="878" font-size="12.5" fill="#5c6670" font-weight="normal" text-anchor="start">patient / cell type / program / gene</text>
 </svg>
