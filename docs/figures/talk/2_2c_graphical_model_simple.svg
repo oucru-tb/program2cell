@@ -13,75 +13,77 @@
   <text x="40" y="58" font-size="34" font-weight="bold" fill="#2b2d42">PALM as a graphical model</text>
   <text x="40" y="92" font-size="19" fill="#5c6670">Arrows mean "influences". Squares are known inputs, circles are estimated (blue = cell mix, orange = program activity), filled = measured</text>
 
-  <!-- ===================== LEFT: plate diagram ===================== -->
-  <!-- population-level (outside plates) -->
-  <text x="60" y="160" font-size="16" font-weight="bold" fill="#5c6670">shared by all patients</text>
+  <!-- ===================== LEFT: plate diagram (centred on x = 515) ===================== -->
+  <!-- shared by all patients: disease effects on the mix (left) and on programs (right) -->
+  <g font-size="13" font-weight="bold" fill="#5c6670" text-anchor="middle">
+    <text x="95" y="330">shared by</text><text x="95" y="346">all patients</text>
+    <text x="935" y="330">shared by</text><text x="935" y="346">all patients</text>
+  </g>
+  <circle cx="95" cy="400" r="42" fill="#dbeafe" stroke="#2563eb" stroke-width="3"/>
+  <text x="95" y="409" font-size="28" font-weight="bold" fill="#2563eb" text-anchor="middle">γ</text>
+  <text x="95" y="462" font-size="14" fill="#2563eb" text-anchor="middle">disease shifts</text>
+  <text x="95" y="479" font-size="14" fill="#2563eb" text-anchor="middle">the cell mix</text>
 
-  <circle cx="135" cy="300" r="42" fill="#dbeafe" stroke="#2563eb" stroke-width="3"/>
-  <text x="135" y="309" font-size="28" font-weight="bold" fill="#2563eb" text-anchor="middle">γ</text>
-  <text x="135" y="362" font-size="14" fill="#2563eb" text-anchor="middle">disease shifts</text>
-  <text x="135" y="379" font-size="14" fill="#2563eb" text-anchor="middle">the cell mix</text>
-
-  <circle cx="135" cy="490" r="42" fill="#ffedd5" stroke="#ea580c" stroke-width="3"/>
-  <text x="135" y="499" font-size="28" font-weight="bold" fill="#ea580c" text-anchor="middle">β</text>
-  <text x="135" y="552" font-size="14" fill="#ea580c" text-anchor="middle">disease changes</text>
-  <text x="135" y="569" font-size="14" fill="#ea580c" text-anchor="middle">programs per cell type</text>
+  <circle cx="935" cy="400" r="42" fill="#ffedd5" stroke="#ea580c" stroke-width="3"/>
+  <text x="935" y="409" font-size="28" font-weight="bold" fill="#ea580c" text-anchor="middle">β</text>
+  <text x="935" y="462" font-size="14" fill="#ea580c" text-anchor="middle">disease changes</text>
+  <text x="935" y="479" font-size="14" fill="#ea580c" text-anchor="middle">programs per cell type</text>
 
   <!-- sample plate -->
-  <rect x="270" y="130" width="720" height="580" rx="16" fill="none" stroke="#9aa0a6" stroke-width="2.5"/>
-  <text x="975" y="158" font-size="18" font-weight="bold" fill="#5c6670" text-anchor="end">each patient i</text>
+  <rect x="190" y="130" width="650" height="580" rx="16" fill="none" stroke="#9aa0a6" stroke-width="2.5"/>
+  <text x="825" y="158" font-size="18" font-weight="bold" fill="#5c6670" text-anchor="end">each patient i</text>
 
   <!-- disease status -->
-  <rect x="320" y="190" width="90" height="70" rx="8" fill="#ffffff" stroke="#2b2d42" stroke-width="2.5"/>
-  <text x="365" y="222" font-size="22" font-weight="bold" fill="#2b2d42" text-anchor="middle">D</text>
-  <text x="365" y="246" font-size="13" fill="#5c6670" text-anchor="middle">TB or healthy</text>
+  <rect x="470" y="165" width="90" height="70" rx="8" fill="#ffffff" stroke="#2b2d42" stroke-width="2.5"/>
+  <text x="515" y="197" font-size="22" font-weight="bold" fill="#2b2d42" text-anchor="middle">D</text>
+  <text x="515" y="221" font-size="13" fill="#5c6670" text-anchor="middle">TB or healthy</text>
 
   <!-- cell type plate -->
-  <rect x="440" y="250" width="410" height="300" rx="14" fill="none" stroke="#c4c8cc" stroke-width="2" stroke-dasharray="6 4"/>
-  <text x="840" y="275" font-size="16" font-weight="bold" fill="#5c6670" text-anchor="end">each cell type c</text>
+  <rect x="230" y="255" width="570" height="295" rx="14" fill="none" stroke="#c4c8cc" stroke-width="2" stroke-dasharray="6 4"/>
+  <text x="245" y="280" font-size="16" font-weight="bold" fill="#5c6670">each cell type c</text>
 
-  <circle cx="530" cy="400" r="48" fill="#dbeafe" stroke="#2563eb" stroke-width="3"/>
-  <text x="530" y="410" font-size="30" font-weight="bold" fill="#2563eb" text-anchor="middle">π</text>
-  <text x="530" y="470" font-size="15" font-weight="bold" fill="#2563eb" text-anchor="middle">fraction</text>
-  <text x="530" y="488" font-size="13" fill="#2563eb" text-anchor="middle">how many cells</text>
+  <circle cx="345" cy="410" r="48" fill="#dbeafe" stroke="#2563eb" stroke-width="3"/>
+  <text x="345" y="420" font-size="30" font-weight="bold" fill="#2563eb" text-anchor="middle">π</text>
+  <text x="345" y="480" font-size="15" font-weight="bold" fill="#2563eb" text-anchor="middle">fraction</text>
+  <text x="345" y="498" font-size="13" fill="#2563eb" text-anchor="middle">how many cells</text>
 
   <!-- program plate (nested) -->
-  <rect x="630" y="300" width="200" height="230" rx="12" fill="none" stroke="#d9dcdf" stroke-width="2" stroke-dasharray="3 4"/>
-  <text x="820" y="322" font-size="14" font-weight="bold" fill="#5c6670" text-anchor="end">each program p</text>
-  <circle cx="730" cy="410" r="48" fill="#ffedd5" stroke="#ea580c" stroke-width="3"/>
-  <text x="730" y="420" font-size="30" font-weight="bold" fill="#ea580c" text-anchor="middle">δ</text>
-  <text x="730" y="480" font-size="15" font-weight="bold" fill="#ea580c" text-anchor="middle">activity</text>
-  <text x="730" y="498" font-size="13" fill="#ea580c" text-anchor="middle">program on in this cell</text>
+  <rect x="565" y="300" width="220" height="230" rx="12" fill="none" stroke="#d9dcdf" stroke-width="2" stroke-dasharray="3 4"/>
+  <text x="775" y="322" font-size="14" font-weight="bold" fill="#5c6670" text-anchor="end">each program p</text>
+  <circle cx="685" cy="410" r="48" fill="#ffedd5" stroke="#ea580c" stroke-width="3"/>
+  <text x="685" y="420" font-size="30" font-weight="bold" fill="#ea580c" text-anchor="middle">δ</text>
+  <text x="685" y="480" font-size="15" font-weight="bold" fill="#ea580c" text-anchor="middle">activity</text>
+  <text x="685" y="498" font-size="13" fill="#ea580c" text-anchor="middle">program on in this cell</text>
 
   <!-- gene plate inside sample -->
-  <rect x="520" y="575" width="450" height="120" rx="12" fill="none" stroke="#c4c8cc" stroke-width="2" stroke-dasharray="6 4"/>
-  <text x="960" y="598" font-size="15" font-weight="bold" fill="#5c6670" text-anchor="end">each gene g</text>
-  <circle cx="780" cy="640" r="44" fill="#2b2d42" stroke="#2b2d42" stroke-width="3"/>
-  <text x="780" y="650" font-size="28" font-weight="bold" fill="#ffffff" text-anchor="middle">Y</text>
+  <rect x="300" y="575" width="430" height="120" rx="12" fill="none" stroke="#c4c8cc" stroke-width="2" stroke-dasharray="6 4"/>
+  <text x="315" y="598" font-size="15" font-weight="bold" fill="#5c6670">each gene g</text>
+  <circle cx="515" cy="640" r="44" fill="#2b2d42" stroke="#2b2d42" stroke-width="3"/>
+  <text x="515" y="650" font-size="28" font-weight="bold" fill="#ffffff" text-anchor="middle">Y</text>
   <text x="640" y="635" font-size="16" font-weight="bold" fill="#2b2d42" text-anchor="middle">bulk RNA-seq</text>
   <text x="640" y="656" font-size="14" fill="#5c6670" text-anchor="middle">one sample per patient</text>
 
   <!-- known inputs below -->
-  <rect x="440" y="760" width="170" height="90" rx="10" fill="#f1f3f5" stroke="#6b7280" stroke-width="2.5"/>
-  <text x="525" y="798" font-size="24" font-weight="bold" fill="#4b5563" text-anchor="middle">B</text>
-  <text x="525" y="824" font-size="14" fill="#4b5563" text-anchor="middle">reference profiles</text>
-  <text x="525" y="841" font-size="13" fill="#6b7280" text-anchor="middle">healthy atlas average</text>
+  <rect x="320" y="760" width="170" height="90" rx="10" fill="#f1f3f5" stroke="#6b7280" stroke-width="2.5"/>
+  <text x="405" y="798" font-size="24" font-weight="bold" fill="#4b5563" text-anchor="middle">B</text>
+  <text x="405" y="824" font-size="14" fill="#4b5563" text-anchor="middle">reference profiles</text>
+  <text x="405" y="841" font-size="13" fill="#6b7280" text-anchor="middle">healthy atlas average</text>
 
-  <rect x="660" y="760" width="170" height="90" rx="10" fill="#dcfce7" stroke="#16a34a" stroke-width="2.5"/>
-  <text x="745" y="798" font-size="24" font-weight="bold" fill="#16a34a" text-anchor="middle">G</text>
-  <text x="745" y="824" font-size="14" fill="#16a34a" text-anchor="middle">program genes</text>
-  <text x="745" y="841" font-size="13" fill="#16a34a" text-anchor="middle">PROGENy</text>
+  <rect x="540" y="760" width="170" height="90" rx="10" fill="#dcfce7" stroke="#16a34a" stroke-width="2.5"/>
+  <text x="625" y="798" font-size="24" font-weight="bold" fill="#16a34a" text-anchor="middle">G</text>
+  <text x="625" y="824" font-size="14" fill="#16a34a" text-anchor="middle">program genes</text>
+  <text x="625" y="841" font-size="13" fill="#16a34a" text-anchor="middle">PROGENy</text>
 
-  <!-- edges -->
+  <!-- edges (mirror-symmetric about x = 515) -->
   <g stroke="#4b5563" stroke-width="2.5" fill="none" marker-end="url(#arr)">
-    <path d="M177,300 L478,392"/>
-    <path d="M177,490 L680,418"/>
-    <path d="M410,236 L488,370"/>
-    <path d="M410,226 Q600,200 696,368"/>
-    <path d="M565,434 L748,602"/>
-    <path d="M778,418 Q835,500 800,598"/>
-    <path d="M560,760 L740,676"/>
-    <path d="M760,760 L775,686"/>
+    <path d="M137,400 L295,408"/>
+    <path d="M893,400 L735,408"/>
+    <path d="M490,235 L375,370"/>
+    <path d="M540,235 L655,370"/>
+    <path d="M385,440 Q445,515 484,606"/>
+    <path d="M645,440 Q585,515 546,606"/>
+    <path d="M445,760 L492,682"/>
+    <path d="M585,760 L538,682"/>
   </g>
 
   <!-- ===================== RIGHT: equation + pipeline ===================== -->
