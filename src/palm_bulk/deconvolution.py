@@ -56,14 +56,15 @@ class DeconvolutionResult:
                                  lo=lo.ravel(), hi=hi.ravel()))
 
 
-# unmixing options on by default: valid intervals on the perturbation benchmarks (method_spec 4.5b)
-UNMIX_DEFAULTS = dict(pev=True, misfit=True)
+# unmixing options on by default: valid intervals on the perturbation benchmarks (method_spec 4.5b); route per
+# program by the narrower simulation-calibrated interval with the per-type guard (freeze v2, method_spec 4.8)
+UNMIX_DEFAULTS = dict(pev=True, misfit=True, choose="width_guard")
 
 
 def program_deconvolution(inputs, calibration, fractions=None, fraction_draws=None, engine=None, frac_fn=None,
                           treatment=None, effect_interval="lk", own=True, level=0.9, n_draws=50, seed=0,
                           covariates=None, groups=None, estimator="auto", decompose=False, n_sim=10, direct_kw=None,
-                          sim_widen=True, unmix_kw=None, **fit_kw):
+                          sim_widen="abs", unmix_kw=None, **fit_kw):
     """Per-sample per-cell-type program activity and treatment effects from bulk counts and fractions.
 
     inputs: prepared inputs (palm_bulk.prepare_inputs): Y, B, Gmat, cell_types, programs, T.
@@ -83,16 +84,18 @@ def program_deconvolution(inputs, calibration, fractions=None, fraction_draws=No
     estimator 'unmix' (core.unmix): cell-type-specific effects from how the bulk effect varies with the fractions
     across samples (reallocation alone leaks a type's shift into all types); intervals are cluster-bootstrap
     intervals widened by the studentised error of n_sim simulated cohorts with this design (design_check).
-    'auto': per program, 'unmix' where the simulated error is lower than calibrated reallocation's, else the
-    calibrated effects (with covariates / groups: 'ols'); sim_widen=True (default) also widens those programs'
+    'auto': per program, 'unmix' where its interval is narrower than calibrated reallocation's (unmix_kw choose;
+    freeze v1: where its simulated error is lower), else the calibrated effects (with covariates / groups:
+    'ols'); sim_widen=True also widens those programs'
     intervals to the simulated error of rescaled reallocation (False: the calibrated intervals as they are;
-    "abs": widen to the simulated level-quantile of the absolute leakage error per type and program (not studentised:
+    "abs" (default since freeze v2): widen to the simulated level-quantile of the absolute leakage error per type and program (not studentised:
     leakage bias does not grow with the study's noise, and the simulated cohorts are less noisy than real ones)
     plus the study's contrast noise in quadrature, so well-separated types are not widened like poorly separated ones;
     "replace": the simulated-error interval alone, i.e. the study's own (group-bootstrap) contrast standard error
     times the simulated studentised error quantile of rescaled reallocation, which carries its leakage bias).
-    Default (the causal setting, chosen on the perturbation benchmarks, method_spec 4.5b): estimator="auto" with
-    UNMIX_DEFAULTS (pev=True, misfit=True); estimator="diff" is the fast setting (seconds instead of minutes).
+    Default (the causal setting, freeze v2 2026-11-03, method_spec 4.8): estimator="auto", sim_widen="abs" and
+    UNMIX_DEFAULTS (pev=True, misfit=True, choose="width_guard"). Freeze v1: sim_widen=True, choose="rmse".
+    estimator="diff" is the fast setting (seconds instead of minutes).
     unmix_kw ('unmix', 'auto'): updates UNMIX_DEFAULTS; pev=True adds the prediction-error variance of the shrunk type deviations;
     separate=True / "program" gives the REML penalty groups (core.unmix._fit_joint); misfit=True measures the
     treatment response outside the programs on this bulk (offprogram_tau) and adds the error it causes

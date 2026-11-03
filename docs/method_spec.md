@@ -14,12 +14,48 @@ see `benchmarking.md`.*
 
 ---
 
+## Method freeze v2 (2026-11-03; git tag `method-freeze-v2`)
+
+**What changed from v1:** one change to how `estimator="auto"` picks the route per program, plus the
+interval allowance that v1 had as an option. Evidence: section 4.8.
+
+| Step | v1 | v2 |
+|---|---|---|
+| Fractions, activity, calibration | as v1 | unchanged |
+| Calibrated programs' interval | `sim_widen=True` (studentised) | `sim_widen="abs"` (absolute leakage error per type + study noise) |
+| Unmix or calibrate, per program | lower simulated RMSE | narrower simulation-calibrated interval, with a per-type guard: a type whose unmixed effect falls outside its calibrated interval keeps the calibrated result (`UNMIX_DEFAULTS["choose"] = "width_guard"`) |
+| Real bulk with a single-cell reference | — | `correct_platform(bulk, ref)` before `prepare_inputs` (opt-in step; COMBAT) |
+
+**Held-out protocol (fixed before any v2 held-out number exists):**
+- **Splits:** 20–29 of every dataset. They have never been run. Splits 10–12 were used by v1 and are not reused.
+- **Datasets** (`scripts/experiments/heldout_v2_chain.sh`, lanes a–d):
+  - McFarland idasanutlin and trametinib; Kang IFN-β; Zhang; Tahoe RMC-6236, encorafenib, trametinib and
+    gemcitabine; Parse IFN-γ, IFN-β, GM-CSF, IL-4 and TNF-α;
+  - COMBAT real bulk (sepsis and severe COVID; raw, paired-offset and study-offset bulk, and single-cell bulk).
+- **PALM:**
+  - fractions from the full NB fit where it is affordable (McFarland, Kang, Zhang), else PALM-lite;
+  - effects from `program_deconvolution` defaults (`causal_loop` estimator `auto_v2`); `diff` as reference.
+- **Comparators:**
+  - CIBERSORT, InstaPrism, NNLS reallocation and a naive bulk score, each followed by the usual t-test;
+  - TOAST, TCA and cellGeometry where affordable (McFarland, Kang, Zhang);
+  - PALM's module on each comparator's fractions;
+  - InstaPrism + t-test on COMBAT.
+- **Calling rules:** p < 0.1 and BH q < 0.1 for comparators; PALM's interval for PALM.
+- **Metrics and targets:** as v1 (coverage ≥ 0.85; r ≥ 0.9 where max |β| ≥ 0.1; calls on null pairs ≤ 0.1;
+  AUROC ≥ 0.95; truth-based TPR ≥ 0.9).
+- **Reporting:**
+  - every dataset and every metric, pass or fail;
+  - paired PALM − comparator differences with bootstrap CIs over dataset × split
+    (`practice_vs_palm.py summary heldout2`);
+  - `causal_loop.py summary heldout2` and `combat_real.py summary`;
+  - nothing is rerun or retuned after the results are seen.
+
 ## Method freeze v1 (2026-10-29; git tag `method-freeze-v1`)
 
 > **Freeze lifted 2026-10-30** for further development. Splits 10–12 have been used, so they are no longer
 > held out. A new freeze needs a new tag (`method-freeze-v2`) and fresh held-out splits (e.g. 20–22).
 > Development continues on splits 0–9 only. The v1 results below stay as the record of that freeze.
-> Post-freeze work: InstaPrism replaces BayesPrism as the competitor; opt-in `plant="observed"` design check
+> Superseded by freeze v2 (above). Post-freeze work: InstaPrism replaces BayesPrism as the competitor; opt-in `plant="observed"` design check
 > (not adopted); opt-in shared-response output (`unmix_kw=dict(shared=True)`, `shared_response`).
 
 **What is frozen** (the method reported in Paper 1):
@@ -550,6 +586,49 @@ Benchmarks report all three rules. The headline is coverage and attribution of n
 q-only false-flag rate. The calibrated path's leakage allowance is a worst case
 over simulated designs, while the bound assumes A is known. Closing this gap is the main power target: an
 efficient estimator that also stays honest when A is misspecified.
+
+### 4.8 Route choice for shared responses (2026-11-03, development splits; adopted in freeze v2)
+
+**Problem.** With v1's rule (unmix where the simulated RMSE is lower), a response shared by every type made
+the choice flip between splits:
+- On Tahoe trametinib, split 1 unmixed and found 9 of 9 lines. Splits 0 and 2 kept calibrated reallocation
+  and found none, because its leakage allowance gave half-widths of 0.31–0.38 around a true −0.26.
+- More simulated cohorts (40) did not change this. For a shared shift both routes have similar RMSE, so the
+  comparison is a near tie.
+
+**Tried and rejected:**
+
+| Variant | What it does | Result |
+|---|---|---|
+| `plant="shared"` (`auto_sh`) | design check plants the shared-response model's common effect plus deviations sized from the unmixed effects | flip moved instead of going away (Tahoe trametinib split 0 found 9/9, split 1 found 0); on Zhang (null) the noisy unmixed deviations made unmixing win and coverage fell to 0.82–0.89 |
+| `choose="width"` (`auto_w`) | route with the narrower simulation-calibrated interval, by its mean over types | power up, but one badly identified type can slip through: Kang NK NF-κB unmixed to −1.34 [−1.96, −0.73], truth +0.15; Kang r 0.96 → 0.65 |
+| `choose="width"`, per pair (`auto_wp`) | the same, per type × program | IFN-γ r 0.93 → 0.54 |
+
+**Adopted: `choose="width_guard"` (`auto_wg` = `auto_v2`).** It is `choose="width"` plus a per-type guard. A type
+whose unmixed effect lies outside its calibrated interval keeps the calibrated result. That interval is valid
+but wide, so an unmixed value outside it means unmixing failed for that type.
+
+Paired over the same splits (file: `benchmarks/dev/route_rule_2026-11-03.txt`; values are auto_abs → auto_wg):
+
+| Dataset (splits) | Coverage | r | Calls on null pairs | Responders found (truth-based) |
+|---|---|---|---|---|
+| Kang (10) | 1.00 → 1.00 | 0.96 → 0.82 | 0 → 0 | 0.23 → **0.48** |
+| McFarland idasanutlin (10) | 0.94 → 0.93 | 0.91 → 0.91 | 0.041 → 0.041 | 0.90 → 0.90 |
+| McFarland idasanutlin, shift (3) | 0.95 → 0.95 | 0.86 → 0.89 | 0.045 → 0.030 | 0.67 → **1.00** |
+| McFarland trametinib (10) | 0.95 → 0.96 | 0.89 → 0.91 | 0.104 → **0.070** | 1.00 → 1.00 |
+| Zhang, null (10) | 0.96 → 0.99 | — | 0.038 → **0.008** | — |
+| Parse IFN-γ (3) | 1.00 → 1.00 | 0.93 → 0.93 | 0 → 0 | — |
+| Tahoe trametinib (3) | 0.98 → 0.97 | 0.79 → 0.75 | 0.010 → 0.020 | 0.33 → **0.89** |
+| Tahoe encorafenib (3) | 0.95 → 0.95 | 0.48 → 0.48 | 0.007 → 0.014 | 0.67 → 0.67 |
+| Tahoe RMC-6236 (3) | 0.98 → 0.95 | 0.80 → **0.64** | 0.009 → 0.009 | 0.93 → **0.82** |
+
+**Reading:**
+- The shared-change weakness is largely fixed: Tahoe trametinib, Kang and the shift test.
+- False calls fall on the two datasets where they were highest.
+- The cost is point accuracy where unmixing is noisier than calibrated reallocation: Kang r 0.82, below the
+  0.9 target; RMC-6236 r and responders found.
+- Coverage stays ≥ 0.93 everywhere.
+- Not tuned further: the held-out v2 splits are the test.
 
 ---
 

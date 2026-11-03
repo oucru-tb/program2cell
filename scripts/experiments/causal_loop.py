@@ -73,9 +73,18 @@ ESTIMATORS = {"diff": dict(estimator="diff"),
                                                                               per_pair=True)),
               # 2026-11-03: + per-type guard (unmixed effect outside the calibrated interval -> calibrated)
               "auto_wg": dict(estimator="auto", sim_widen="abs", unmix_kw=dict(pev=True, misfit=True, choose="width_guard")),
+              # freeze v2 (2026-11-03): program_deconvolution defaults = auto_wg
+              "auto_v2": dict(estimator="auto"),
               "direct": dict(estimator="direct", direct_kw=dict(n_boot=40)),
               "direct_nb": dict(estimator="direct", direct_kw=dict(n_boot=40, weights="nb")),
               "direct_pair": dict(estimator="direct", paired=True, direct_kw=dict(n_boot=40))}
+
+# the defaults changed at freeze v2 (sim_widen "abs", choose "width_guard"): every older estimator keeps the
+# settings it was run with (freeze v1 defaults sim_widen=True, choose="rmse")
+for _n, _kw in ESTIMATORS.items():
+    if _kw.get("estimator") in ("auto", "unmix") and _n != "auto_v2":
+        _kw.setdefault("sim_widen", True)
+        _kw["unmix_kw"] = {"choose": "rmse", **_kw.get("unmix_kw", {})}
 
 
 def _setup(dsn, split):
