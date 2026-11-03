@@ -22,6 +22,11 @@ Variants (robustness, docs/benchmarking.md "Stress tests"):
                      LNCaP (the MAPK non-responder) x1.6 in the trametinib arm -> mcfarland_mix_shift.h5ad
   MIX_VARIANT=tight  less composition spread across mixtures (Dirichlet concentration 10 instead of 2, like
                      blood cohorts) -> mcfarland_mix_tight.h5ad
+  MIX_VARIANT=gradient  single-group cohort (benchmarking.md 0.8): each test mixture is one "patient" with a
+                     clinical value z ~ U(0, 1); every line contributes a share z of drug-treated cells and 1 - z
+                     control cells, so a responder line's true activity rises with z. Labels grad_ida and
+                     grad_tram (same z and proportions for both drugs), obs column z; reference as usual
+                     (refctrl) -> mcfarland_mix_gradient.h5ad
 Usage: [MIX_VARIANT=shift|tight] python build_mcfarland.py"""
 import os
 import numpy as np, pandas as pd, scipy.sparse as sp
@@ -63,18 +68,30 @@ for ln in LINES:
 rows, mats = [], []
 
 
-def mixture(donor, label, arm_key, which, props):
+def mixture(donor, label, arm_key, which, props, z=None):
     counts = np.maximum(np.rint(props * CELLS).astype(int), MIN_PER_LINE)
     for ln, n in zip(LINES, counts):
-        cand = pool[ln, arm_key, which]
-        pick = rng.choice(cand, size=min(n, len(cand)), replace=False)
+        if z is None:
+            cand = pool[ln, arm_key, which]
+            pick = rng.choice(cand, size=min(n, len(cand)), replace=False)
+        else:                                     # share z treated, 1 - z control (gradient variant)
+            nt = int(round(z * n))
+            pt, pc = pool[ln, arm_key, which], pool[ln, "ctrl", which]
+            pick = np.concatenate([rng.choice(pt, size=min(nt, len(pt)), replace=False),
+                                   rng.choice(pc, size=min(n - nt, len(pc)), replace=False)]).astype(int)
         mats.append(sp.csr_matrix(X[pick].sum(0)))
         rows.append(dict(donor_id=donor, label=label, specimen="%s|%s" % (donor, label), cell_type=ln,
-                         n_cells=len(pick), p53_responder=ln in P53_RESPONDERS))
+                         n_cells=len(pick), p53_responder=ln in P53_RESPONDERS,
+                         z=np.nan if z is None else float(z)))
 
 
 for k in range(N_TEST):
     props = rng.dirichlet(np.full(len(LINES), ALPHA))
+    if VARIANT == "gradient":
+        z = rng.uniform()
+        for ar in ("ida", "tram"):
+            mixture("mix%02d" % k, "grad_" + ar, ar, "test", props, z=z)
+        continue
     for ar in ARMS.values():
         mixture("mix%02d" % k, ar, ar, "test", shifted(props, ar))
 for k in range(N_REF):

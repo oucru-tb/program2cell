@@ -308,7 +308,8 @@ def unmix_effects(dhat, A, T, X=None, groups=None, level=0.9, n_boot=200, dhat_d
     """Cell-type-specific treatment effects (C, P) from reallocated activity dhat (N, C, P) and the leakage
     operator A from leakage_operator on the same fractions: (N, C, C, P) (diagonal: programs one at a time) or
     (N, C, P, C, P) (diagonal=False: all programs jointly, with cross-program leakage; recommended). T (N,) 0/1; X (N, q) covariates;
-    groups (N,) donor / pair ids (a donor-level shift shared by its types). pi, B, G: fractions and reference
+    groups (N,) donor / pair ids (a donor-level shift shared by its types). T may also be continuous (e.g. a
+    patient-level measure scaled to 0-1, palm_bulk.associate_unmix); the bootstrap then resamples patients. pi, B, G: fractions and reference
     for the nonlinear fit (recommended; linear without). Fraction uncertainty: matched dhat_draws (S, N, C, P),
     A_draws (S, N, C, C, P) and pi_draws (S, N, C), one draw per bootstrap replicate.
     separate: REML penalty groups (_fit_joint). pev=True (joint operator): se = max(bootstrap sd, prediction-error
@@ -342,14 +343,18 @@ def unmix_effects(dhat, A, T, X=None, groups=None, level=0.9, n_boot=200, dhat_d
     else:
         units = [np.array([i]) for i in range(N)]
     boot = []
+    binary = set(np.unique(T)) <= {0.0, 1.0}
     for _ in range(n_boot):
         if grp is not None:
             pick = rng.integers(len(units), size=len(units))
             idx = np.concatenate([units[i] for i in pick])
             gb = np.concatenate([np.full(len(units[i]), j) for j, i in enumerate(pick)]).astype(str)
-        else:
+        elif binary:
             i1, i0 = np.flatnonzero(T == 1), np.flatnonzero(T == 0)
             idx = np.concatenate([rng.choice(i1, len(i1)), rng.choice(i0, len(i0))])
+            gb = None
+        else:                                   # continuous T (a patient-level measure): resample patients
+            idx = rng.integers(0, N, N)
             gb = None
         if len(np.unique(T[idx])) < 2:
             continue

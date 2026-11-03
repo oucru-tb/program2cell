@@ -17,6 +17,7 @@ from .bayes import (fit, make_model, run_palm, run_palm_fast, PalmResult, estima
 from .provenance import provenance
 from .deconvolution import program_deconvolution, DeconvolutionResult
 from .contributions import contributions, contributions_table
+from .associate import associate, associate_unmix
 from . import causal
 from . import plots
 

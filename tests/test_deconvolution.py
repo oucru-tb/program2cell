@@ -139,3 +139,17 @@ def test_correct_platform_recovers_planted_gene_offsets():
     oracle = lc(Y / np.exp2(off)[None])
     gap = lambda M: np.abs((lc(M) - oracle).mean(0) - (lc(M) - oracle).mean())[expr].mean()
     assert gap(fixed) < gap(Y) / 3
+
+
+def test_associate_finds_planted_slope_and_controls_null():
+    rng = np.random.default_rng(5)
+    N, C, P = 60, 3, 2
+    z = rng.uniform(0, 1, N)
+    A = rng.normal(0, 0.1, (N, C, P))
+    A[:, 1, 0] += 0.5 * z                                            # one responding (type, program)
+    r = pb.associate(A, z, n_boot=200, n_perm=499)
+    assert r["calls"][1, 0] and r["lo"][1, 0] > 0.2
+    assert r["calls"].sum() <= 4                                       # 1 real + chance among 5 nulls
+    nulls = [pb.associate(rng.normal(0, 0.1, (N, C, P)), z, n_boot=50, n_perm=199, seed=s)["calls"].mean()
+             for s in range(10)]
+    assert np.mean(nulls) < 0.2
