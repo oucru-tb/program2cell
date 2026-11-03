@@ -1,0 +1,115 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1600 900" width="1600" height="900" font-family="Helvetica, Arial, sans-serif">
+  <defs>
+    <pattern id="hatchBlue" patternUnits="userSpaceOnUse" width="12" height="12" patternTransform="rotate(45)">
+      <rect width="12" height="12" fill="#dbeafe"/>
+      <line x1="0" y1="0" x2="0" y2="12" stroke="#2563eb" stroke-width="6"/>
+    </pattern>
+  </defs>
+
+  <rect width="1600" height="900" fill="#ffffff"/>
+
+  <!-- Title -->
+  <text x="40" y="58" font-size="34" font-weight="bold" fill="#2b2d42">Where does a bulk change come from? Splitting it into cell-type contributions</text>
+  <text x="40" y="92" font-size="19" fill="#5c6670">The same equation, read the other way: the change we see in blood is a sum of each cell type's part</text>
+
+  <!-- ================= Formula ================= -->
+  <rect x="40" y="170" width="250" height="100" rx="12" fill="#2b2d42"/>
+  <text x="165" y="210" font-size="21" font-weight="bold" fill="#ffffff" text-anchor="middle">Bulk program change</text>
+  <text x="165" y="240" font-size="17" fill="#d6d9de" text-anchor="middle">e.g. IFN-γ, TB vs healthy</text>
+
+  <text x="322" y="235" font-size="52" fill="#2b2d42" text-anchor="middle">=</text>
+  <text x="392" y="250" font-size="84" fill="#2b2d42" text-anchor="middle">Σ</text>
+  <text x="392" y="290" font-size="16" fill="#5c6670" text-anchor="middle">cell types</text>
+
+  <text x="448" y="250" font-size="90" fill="#9aa0a6" text-anchor="middle">(</text>
+
+  <!-- term 1: more cells -->
+  <rect x="475" y="180" width="240" height="80" rx="12" fill="#dbeafe" stroke="#2563eb" stroke-width="3"/>
+  <text x="595" y="216" font-size="24" font-weight="bold" fill="#2563eb" text-anchor="middle">change in</text>
+  <text x="595" y="244" font-size="24" font-weight="bold" fill="#2563eb" text-anchor="middle">fraction</text>
+  <text x="738" y="234" font-size="38" fill="#2b2d42" text-anchor="middle">×</text>
+  <text x="840" y="226" font-size="22" fill="#4b5563" text-anchor="middle">its average</text>
+  <text x="840" y="252" font-size="22" fill="#4b5563" text-anchor="middle">program level</text>
+
+  <text x="950" y="238" font-size="48" fill="#2b2d42" text-anchor="middle">+</text>
+
+  <!-- term 2: cells changed -->
+  <text x="1055" y="226" font-size="22" fill="#4b5563" text-anchor="middle">its average</text>
+  <text x="1055" y="252" font-size="22" fill="#4b5563" text-anchor="middle">fraction</text>
+  <text x="1158" y="234" font-size="38" fill="#2b2d42" text-anchor="middle">×</text>
+  <rect x="1185" y="180" width="280" height="80" rx="12" fill="#ffedd5" stroke="#ea580c" stroke-width="3"/>
+  <text x="1325" y="216" font-size="24" font-weight="bold" fill="#ea580c" text-anchor="middle">change in its</text>
+  <text x="1325" y="244" font-size="24" font-weight="bold" fill="#ea580c" text-anchor="middle">program level</text>
+
+  <text x="1492" y="250" font-size="90" fill="#9aa0a6" text-anchor="middle">)</text>
+
+  <!-- brackets -->
+  <path d="M475,288 L475,300 L905,300 L905,288" fill="none" stroke="#2563eb" stroke-width="3"/>
+  <text x="690" y="330" font-size="20" font-weight="bold" fill="#2563eb" text-anchor="middle">"MORE CELLS" part</text>
+  <text x="690" y="354" font-size="16" fill="#333" text-anchor="middle">there are more of them, each as before</text>
+  <path d="M1000,288 L1000,300 L1465,300 L1465,288" fill="none" stroke="#ea580c" stroke-width="3"/>
+  <text x="1232" y="330" font-size="20" font-weight="bold" fill="#ea580c" text-anchor="middle">"CELLS CHANGED" part</text>
+  <text x="1232" y="354" font-size="16" fill="#333" text-anchor="middle">each cell switched the program up or down</text>
+
+  <line x1="40" y1="392" x2="1560" y2="392" stroke="#e1e4e8" stroke-width="2"/>
+
+  <!-- ================= Lower left: stacked bar ================= -->
+  <text x="40" y="432" font-size="22" font-weight="bold" fill="#2b2d42">Example readout: IFN-γ program up in TB blood</text>
+  <text x="40" y="458" font-size="16" fill="#5c6670">Illustration only (not a result). The parts add up exactly to the bulk change</text>
+
+  <!-- axis frame -->
+  <text x="40" y="520" font-size="18" font-weight="bold" fill="#2b2d42">Bulk change</text>
+  <text x="40" y="542" font-size="15" fill="#5c6670">= 100%</text>
+
+  <!-- 100% bar: x 180..760 (580 px) -->
+  <!-- Monocytes 75%: 435 px = more cells 20% (116) + cells changed 55% (319) -->
+  <rect x="180" y="500" width="116" height="56" fill="url(#hatchBlue)" stroke="#ffffff" stroke-width="2"/>
+  <rect x="296" y="500" width="319" height="56" fill="#ea580c" stroke="#ffffff" stroke-width="2"/>
+  <!-- Neutrophils 25%: 145 px = more cells 15% (87) + cells changed 10% (58) -->
+  <rect x="615" y="500" width="87" height="56" fill="url(#hatchBlue)" stroke="#ffffff" stroke-width="2"/>
+  <rect x="702" y="500" width="58" height="56" fill="#ea580c" stroke="#ffffff" stroke-width="2"/>
+
+  <!-- group labels -->
+  <path d="M182,570 L182,580 L613,580 L613,570" fill="none" stroke="#e9a23b" stroke-width="3"/>
+  <text x="397" y="606" font-size="20" font-weight="bold" fill="#2b2d42" text-anchor="middle">Monocytes 75%</text>
+  <text x="397" y="630" font-size="15" fill="#5c6670" text-anchor="middle">20% more cells + 55% cells changed</text>
+  <path d="M617,570 L617,580 L758,580 L758,570" fill="none" stroke="#6c5b9e" stroke-width="3"/>
+  <text x="688" y="606" font-size="20" font-weight="bold" fill="#2b2d42" text-anchor="middle">Neutrophils 25%</text>
+  <text x="688" y="630" font-size="15" fill="#5c6670" text-anchor="middle">15% + 10%</text>
+
+  <text x="180" y="670" font-size="17" fill="#2b2d42">T cells, B cells, NK: ~0% (no share)</text>
+
+  <!-- legend -->
+  <rect x="180" y="700" width="36" height="24" fill="url(#hatchBlue)"/>
+  <text x="226" y="718" font-size="17" fill="#2563eb" font-weight="bold">more cells</text>
+  <rect x="360" y="700" width="36" height="24" fill="#ea580c"/>
+  <text x="406" y="718" font-size="17" fill="#ea580c" font-weight="bold">cells changed</text>
+
+  <!-- intervals note -->
+  <g stroke="#2b2d42" stroke-width="2.5">
+    <line x1="440" y1="764" x2="540" y2="764"/>
+    <line x1="440" y1="756" x2="440" y2="772"/><line x1="540" y1="756" x2="540" y2="772"/>
+  </g>
+  <circle cx="500" cy="764" r="6" fill="#2b2d42"/>
+  <text x="180" y="770" font-size="17" fill="#2b2d42">Every share has a 90% range:</text>
+  <text x="180" y="800" font-size="17" fill="#5c6670">e.g. monocytes 75% (60–88%)</text>
+
+  <!-- ================= Lower right: why it matters ================= -->
+  <text x="830" y="432" font-size="22" font-weight="bold" fill="#2b2d42">Two answers from one model</text>
+
+  <rect x="830" y="452" width="730" height="118" rx="12" fill="#f1f3f5"/>
+  <text x="855" y="488" font-size="20" font-weight="bold" fill="#2b2d42">1. Contribution: who carries the bulk change?</text>
+  <text x="855" y="518" font-size="17" fill="#333">Shares of the blood signal, adding up to 100% (this slide)</text>
+  <text x="855" y="545" font-size="15" fill="#5c6670">answers "75% monocytes, 25% neutrophils"</text>
+
+  <rect x="830" y="584" width="730" height="118" rx="12" fill="#fff7ed" stroke="#ea580c" stroke-width="2"/>
+  <text x="855" y="620" font-size="20" font-weight="bold" fill="#ea580c">2. Per-cell change: did the cells themselves switch?</text>
+  <text x="855" y="650" font-size="17" fill="#333">The orange part, per cell type (previous slide)</text>
+  <text x="855" y="677" font-size="15" fill="#5c6670">answers "monocytes switched IFN-γ on; neutrophils barely"</text>
+
+  <rect x="830" y="716" width="730" height="122" rx="12" fill="#eff6ff" stroke="#2563eb" stroke-width="2"/>
+  <text x="855" y="752" font-size="18" font-weight="bold" fill="#2b2d42">Why both: they can disagree</text>
+  <text x="855" y="780" font-size="17" fill="#333">An abundant cell type can carry most of the bulk change</text>
+  <text x="855" y="804" font-size="17" fill="#333">with only a small change in each cell, and a rare cell type</text>
+  <text x="855" y="828" font-size="17" fill="#333">can switch strongly yet barely move the blood signal.</text>
+</svg>
