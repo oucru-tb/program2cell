@@ -173,6 +173,25 @@ and TEN stay unflagged.
   bulk. Paired offsets learned on other patients probably miss each study's average whole-blood component, which
   the study's own offsets absorb.
 
+**Parse 10M PBMC cytokines** (real cytokine responses in blood; `fetch_parse.py`, `build_parse.py`; 12 donors,
+6 test donors per split, 7 broad PBMC types, reference from the other donors' PBS cells; splits 0–2):
+
+| Cytokine vs PBS | Unchanged flagged: InstaPrism + t-test / PALM | 90% coverage: InstaPrism / PALM | r with truth: InstaPrism / PALM |
+|---|---|---|---|
+| IFN-γ | 32% / 0% | 65% / 100% | 0.86 / 0.93 |
+| IFN-β | 13% / 0% | 69% / 100% | 0.87 / 0.93 |
+| GM-CSF | 22% / 0% | 63% / 100% | 0.81 / 0.87 |
+| IL-4 | 70% / 0% | 47% / 100% | 0.81 / 0.74 |
+| TNF-α (near-null at this timepoint) | 0% / 2% | 50% / 97% | −0.30 / 0.60 |
+
+- True per-cell program changes are small on this scale (≤ 0.16; e.g. IFN-γ: monocyte NF-κB +0.14, JAK-STAT
+  +0.04–0.07 in every type), although the raw genes respond strongly (monocyte CXCL9 +3.7 log2). PALM's estimates
+  track the truth but it makes almost no calls; this is the shared / small-effect regime.
+- With real donor-to-donor variation the t-test is less overconfident than on cell lines (CIBERSORT 5–71%,
+  reallocation 4–40% unchanged flagged), so this is the fairest comparison so far; the ordering holds.
+- IL-4 (cell-type-specific, small) is PALM's weakest cytokine: CD4 T TGF-β (+0.12) is partly spread onto CD8 T,
+  DC and NK when the design check keeps calibrated reallocation.
+
 **Tahoe plate 3** (9 lines, splits 0–2, PALM-lite):
 - **Adagrasib on plate 3 is at 0.05 µM** (every other plate-3 drug is at 5 µM), so its weak, misplaced MAPK
   responses (true −0.08 to −0.11 in the G12C lines; PALM and InstaPrism both spread the drop over all lines) are
@@ -800,6 +819,8 @@ Rows from before then have no `.npz` and keep their old metrics: the PBMC config
     cytokines) by HTTP range reads; datasets `parse_*`.
   - Tahoe: adagrasib found to be at 0.05 µM on plate 3; strong-dose set (`TAHOE_SET=x`); trametinib design-check
     instability; vehicle-vs-vehicle control.
+  - Parse results (5 cytokines × 3 splits). Disk filled during the run (`benchmarks/dev/work` scratch); truncated
+    outputs were found by loading every recent file, deleted and recomputed.
 - **2026-11-02**
   - Section 0 added: the known-answer attribution benchmark (design, datasets, calling rules, results,
     fairness review).
