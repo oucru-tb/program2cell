@@ -246,7 +246,7 @@ def run_palm(inputs, use_m=True, theta=None, num_warmup=200, num_samples=400, ch
              level=0.9, progress_bar=False, chain_method="auto", dispersion="fixed", reparam=False,
              init="svi", svi_steps=3000, check=True, dense_mass=False, max_tree_depth=10,
              activity="independent"):
-    """Fit the Bayesian model on prepared inputs (see palm_bulk.data.prepare_inputs).
+    """Fit the Bayesian model on prepared inputs (see program2cell.data.prepare_inputs).
     use_m=True fits a gene-wise platform scale (recommended for real bulk vs scRNA references).
     activity: 'independent' (default), 'shared' or 'shared_only'; see bayes.model.make_model.
     dispersion='fixed' (default) estimates one NB dispersion per gene from the bulk counts and keeps it

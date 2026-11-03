@@ -111,7 +111,7 @@ def fig_concept():
 
 # ---- backup: why correction matters, estimated vs true change ----------------------------------------------
 def fig_attenuation(dsets=("mcf_ida", "mcf_tram")):
-    from palm_bulk.core.realloc import reallocate
+    from program2cell.core.realloc import reallocate
     xs, raw_e, palm_e, leak = [], [], [], []
     for dsn in dsets:
         pb, inp, T, beta, truth, src, fsrc, cal, donors = cl._setup(dsn, SPLIT)

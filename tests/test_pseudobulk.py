@@ -1,9 +1,9 @@
 import numpy as np
 import pandas as pd
 import pytest
-import palm_bulk as pb
-from palm_bulk import sim
-from palm_bulk.core import PseudobulkTable, make_benchmark
+import program2cell as pb
+from program2cell import sim
+from program2cell.core import PseudobulkTable, make_benchmark
 
 
 @pytest.fixture(scope="module")

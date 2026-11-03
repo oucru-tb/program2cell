@@ -12,7 +12,7 @@ Planned for **after the method freeze** (see `experiment_cellgeometry.md` §7), 
 
 | # | Claim | Why it is new |
 |---|---|---|
-| C1 | From bulk RNA-seq alone, PALM-bulk estimates **per-sample, per-cell-type program activity** with calibrated uncertainty | Fraction methods stop at proportions; cell-type-specific DE methods (TOAST, TCA, CellDMC, bMIND, Unico) give gene-level effects without program structure or calibrated per-sample activity |
+| C1 | From bulk RNA-seq alone, program2cell estimates **per-sample, per-cell-type program activity** with calibrated uncertainty | Fraction methods stop at proportions; cell-type-specific DE methods (TOAST, TCA, CellDMC, bMIND, Unico) give gene-level effects without program structure or calibrated per-sample activity |
 | C2 | It **decomposes a bulk treatment effect into composition and intrinsic parts**, with uncertainty | The question "is this signature immune-cell shift or real activation?" cannot be answered by current tools |
 | C3 | Its intervals **cover** under realistic mismatch between reference and bulk | Competitors give no intervals, or SEs validated only by correlation |
 | C4 | It scales to atlas references and cohorts of 10⁴ samples | Full Bayesian deconvolution (BayesPrism's Gibbs sampler) is hours to days; its fast solver InstaPrism gives point estimates only |
@@ -82,7 +82,7 @@ model's own definitions.
   - (i) only composition changes (more monocytes, no stimulation);
   - (ii) only intrinsic activation changes (same composition, monocytes stimulated);
   - (iii) both, in the same or opposite directions (masking).
-- Show that the bulk DE / bulk-activity signal is identical across (i)–(iii), while PALM-bulk recovers
+- Show that the bulk DE / bulk-activity signal is identical across (i)–(iii), while program2cell recovers
   the true split with intervals.
 - **Wet-lab version (T5, optional but decisive):** with a collaborating lab, sort PBMC compartments,
   stimulate one compartment (e.g. LPS on monocytes, IFN on all), and physically mix at designed
@@ -145,7 +145,7 @@ one intrinsic cell-type program that predicts outcome independently of cell coun
 
 ### F9. Genetic validation (stretch)
 
-- OneK1K has genotypes and scRNA. Map QTLs for cell-type program *activity* from PALM-bulk estimates
+- OneK1K has genotypes and scRNA. Map QTLs for cell-type program *activity* from program2cell estimates
   on pseudobulk, and compare with QTLs mapped directly on the scRNA per cell type.
 - Concordance shows the per-type activity is biologically real, not a model artefact.
 

@@ -7,7 +7,7 @@ import subprocess
 import sys
 from importlib import metadata
 
-PACKAGES = ["palm-bulk", "numpy", "scipy", "pandas", "jax", "jaxlib", "numpyro", "anndata", "decoupler", "torch"]
+PACKAGES = ["program2cell", "numpy", "scipy", "pandas", "jax", "jaxlib", "numpyro", "anndata", "decoupler", "torch"]
 
 
 def _git(*args):

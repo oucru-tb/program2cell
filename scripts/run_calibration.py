@@ -5,7 +5,7 @@ For each replicate dataset, fits one configuration and records:
     treatment effects beta, and the intrinsic / composition / total program effects;
   * error of posterior medians (MAE);
   * sampler efficiency: effective sample size per 1000 gradient evaluations, wall time.
-Data come from palm_bulk.sim (not the model prior), so this checks calibration under a
+Data come from program2cell.sim (not the model prior), so this checks calibration under a
 realistic simulator rather than exact simulation-based calibration.
 
 Usage:
@@ -39,11 +39,11 @@ N, C, P, GN, WARMUP, SAMPLES, CHAINS = 24, 4, 3, 300, 250, 250, 2
 
 def run(name, reps, out):
     cfg = CONFIGS[name]
-    import palm_bulk as pb
+    import program2cell as pb
     pb.configure_compute("cpu", parallel_chains=1, precision=cfg.get("precision", "float32"))
     import numpy as np
     from numpyro.diagnostics import effective_sample_size
-    from palm_bulk import sim
+    from program2cell import sim
 
     def cover(draws, truth, level):
         lo, hi = np.quantile(draws, [(1 - level) / 2, (1 + level) / 2], axis=0)

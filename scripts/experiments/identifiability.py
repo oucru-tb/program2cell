@@ -36,7 +36,7 @@ Z = 1.645 + 0.842
 
 def design_calculator(pi, B, G, T, raw, groups=None, seed=0):
     """Per (type, program): MDE (C, P), self-share (C, P), condition number of A_bar."""
-    from palm_bulk.core import unmix as um
+    from program2cell.core import unmix as um
     T = np.asarray(T)
     A = um.leakage_operator(pi, B, G, diagonal=False)               # (N, C, P, C, P)
     N, C, P = A.shape[:3]
@@ -109,8 +109,8 @@ def _noise_sd(y, T, groups=None):
 def power(dsn, split=0, sizes=(3, 5, 10, 20, 50, 100, 200), spreads=(0.25, 0.5, 1.0, 2.0), reps=20):
     """MDE (C, P) against arm size and composition spread, unpaired (paired designs: also paired); and under
     fraction uncertainty (posterior draws) at the observed design."""
-    from palm_bulk.core import unmix as um
-    from palm_bulk.core.realloc import reallocate
+    from program2cell.core import unmix as um
+    from program2cell.core.realloc import reallocate
     pb, inp, T, beta, truth, src, fsrc, cal, donors = cl._setup(dsn, split)
     if "fraction_draws" not in src:
         return
@@ -164,7 +164,7 @@ def power(dsn, split=0, sizes=(3, 5, 10, 20, 50, 100, 200), spreads=(0.25, 0.5, 
 
 
 def run(datasets, splits):
-    from palm_bulk.core.realloc import reallocate
+    from program2cell.core.realloc import reallocate
     os.makedirs(OUT, exist_ok=True)
     for dsn in datasets:
         for split in splits:

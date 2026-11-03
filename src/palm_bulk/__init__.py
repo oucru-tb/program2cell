@@ -1,24 +1,31 @@
-"""palm-bulk: program attribution deconvolution for bulk RNA-seq (Bayesian, CPU or GPU).
+"""Deprecated alias: the package was renamed to program2cell (2026-11-03). `import palm_bulk` and
+`import palm_bulk.core.unmix` etc. return the program2cell modules themselves (not copies), so old scripts and
+notebooks keep working. Use `import program2cell`."""
+import importlib
+import importlib.abc
+import importlib.util
+import sys
+import warnings
 
-Layers: `core` (equations, data preparation, simulators, reallocation, calibration; shared with the fast
-model of Paper 2), `bayes` (NumPyro model and NUTS), `compare` (competing methods and scoring).
-`program_deconvolution` runs the frozen pipeline on fractions from PALM, PALM-lite or any method."""
-from .compute import configure_compute, compute_info
-from .core import (cell_profiles, mix_profiles, expected_fractions, expected_counts, attribution, shares,
-                   effect_decomposition, estimate_delta, bulk_delta)
-from .core import (Reference, Inputs, build_reference, from_anndata, load_programs, select_genes,
-                   prepare_inputs, diagnose_inputs)
-from .core import data, sim
-from .core import (reallocate, realloc_counts, em_fractions, CalibrationSet, Calibrator, build_calibration_set,
-                   calibration_from_table)
-from .core import platform_offsets, correct_platform
-from .bayes import (fit, make_model, run_palm, run_palm_fast, PalmResult, estimate_runtime, interval, coverage,
-                     mean_width)
-from .provenance import provenance
-from .deconvolution import program_deconvolution, DeconvolutionResult
-from .contributions import contributions, contributions_table
-from .associate import associate, associate_unmix
-from . import causal
-from . import plots
+import program2cell as _new
 
-__version__ = "0.1.0"
+_OLD, _NEW = "palm_bulk", "program2cell"
+
+
+class _Alias(importlib.abc.MetaPathFinder, importlib.abc.Loader):
+    def find_spec(self, name, path=None, target=None):
+        if name.startswith(_OLD + "."):
+            return importlib.util.spec_from_loader(name, self)
+        return None
+
+    def create_module(self, spec):
+        return importlib.import_module(_NEW + spec.name[len(_OLD):])
+
+    def exec_module(self, module):
+        pass
+
+
+if not any(isinstance(f, _Alias) for f in sys.meta_path):
+    sys.meta_path.insert(0, _Alias())
+warnings.warn("palm_bulk was renamed to program2cell; use `import program2cell`", DeprecationWarning, stacklevel=2)
+sys.modules[_OLD] = _new

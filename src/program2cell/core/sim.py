@@ -25,7 +25,7 @@ def make_reference(rng, C=4, P=3, Gn=300, genes_per_prog=30, contrast=1.0):
 
 def simulate_reference_cells(rng, B, n_per_type=400, n_donors=4, depth=3000, donor_sd=0.15):
     """Single cells drawn from B (with donor effects) -> (counts, cell_types, donors), used to
-    exercise the real-data path (palm_bulk.data.build_reference)."""
+    exercise the real-data path (program2cell.data.build_reference)."""
     C, Gn = B.shape
     per = n_per_type // n_donors
     counts, types, donors = [], [], []

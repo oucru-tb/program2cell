@@ -309,7 +309,7 @@ def unmix_effects(dhat, A, T, X=None, groups=None, level=0.9, n_boot=200, dhat_d
     operator A from leakage_operator on the same fractions: (N, C, C, P) (diagonal: programs one at a time) or
     (N, C, P, C, P) (diagonal=False: all programs jointly, with cross-program leakage; recommended). T (N,) 0/1; X (N, q) covariates;
     groups (N,) donor / pair ids (a donor-level shift shared by its types). T may also be continuous (e.g. a
-    patient-level measure scaled to 0-1, palm_bulk.associate_unmix); the bootstrap then resamples patients. pi, B, G: fractions and reference
+    patient-level measure scaled to 0-1, program2cell.associate_unmix); the bootstrap then resamples patients. pi, B, G: fractions and reference
     for the nonlinear fit (recommended; linear without). Fraction uncertainty: matched dhat_draws (S, N, C, P),
     A_draws (S, N, C, C, P) and pi_draws (S, N, C), one draw per bootstrap replicate.
     separate: REML penalty groups (_fit_joint). pev=True (joint operator): se = max(bootstrap sd, prediction-error

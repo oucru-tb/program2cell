@@ -80,14 +80,14 @@ def main():
 
 
 def run(odir, a):
-    import palm_bulk as pb
-    from palm_bulk.core import PseudobulkTable, make_benchmark
-    from palm_bulk.core.pseudobulk import _csr
-    from palm_bulk.core.scores import estimate_delta
-    from palm_bulk.compare.base import MethodResult
-    from palm_bulk.compare.activity import activity_from_expression
-    from palm_bulk.compare.methods import nnls_fractions
-    from palm_bulk.bayes.diagnostics import interval
+    import program2cell as pb
+    from program2cell.core import PseudobulkTable, make_benchmark
+    from program2cell.core.pseudobulk import _csr
+    from program2cell.core.scores import estimate_delta
+    from program2cell.compare.base import MethodResult
+    from program2cell.compare.activity import activity_from_expression
+    from program2cell.compare.methods import nnls_fractions
+    from program2cell.bayes.diagnostics import interval
 
     ds = db.DATASETS[a.dataset]
     table = db._table(ds)

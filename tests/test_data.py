@@ -1,8 +1,8 @@
 import numpy as np
 import pandas as pd
 import pytest
-import palm_bulk as pb
-from palm_bulk import sim
+import program2cell as pb
+from program2cell import sim
 
 
 @pytest.fixture(scope="module")
@@ -134,7 +134,7 @@ def test_covariates_with_missing_values_rejected():
 
 
 def test_fisher_design_matrix_matches_finite_differences():
-    from palm_bulk.core.data import design_matrix
+    from program2cell.core.data import design_matrix
     rng = np.random.default_rng(2)
     C, P, Gn = 3, 2, 60
     B = rng.dirichlet(np.ones(Gn), C)
@@ -159,7 +159,7 @@ def test_fisher_design_matrix_matches_finite_differences():
 
 
 def test_fisher_selection_properties():
-    from palm_bulk.core.data import select_genes_fisher
+    from program2cell.core.data import select_genes_fisher
     rng = np.random.default_rng(3)
     C, P, Gn = 4, 3, 800
     B, G = sim.make_reference(rng, C=C, P=P, Gn=Gn, genes_per_prog=40)
@@ -182,7 +182,7 @@ def test_fisher_selection_properties():
 
 
 def test_fisher_gains_non_increasing():
-    from palm_bulk.core import data as dmod
+    from program2cell.core import data as dmod
     rng = np.random.default_rng(4)
     B, G = sim.make_reference(rng, C=3, P=2, Gn=300, genes_per_prog=30)
     _, info = dmod.select_genes_fisher(B, G, max_genes=60, min_gain=0)

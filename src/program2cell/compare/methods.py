@@ -12,9 +12,9 @@
   blade           BLADE (Python, run in its own environment)                     -> programs
   toast, tca      cell-type-specific differential expression (R) -> program effects only
 
-Programs from per-type expression: palm_bulk.compare.activity (`activity="delta"` for the model's
+Programs from per-type expression: program2cell.compare.activity (`activity="delta"` for the model's
 scale, `"ulm"` for decoupler). R, Docker and other-environment methods exchange files in
-data.method_dir(name); their scripts live in palm_bulk/compare/R and palm_bulk/compare/external.
+data.method_dir(name); their scripts live in program2cell/compare/R and program2cell/compare/external.
 """
 import glob
 import os
@@ -111,7 +111,7 @@ def _write_sc_mtx(data, d, cells, genes_mask=None):
 
 # ---- PALM ---------------------------------------------------------------------------
 def palm(data, fast=False, **run_kw):
-    """PALM-bulk on data.inputs (keyword arguments go to run_palm, or to run_palm_fast if fast=True)."""
+    """program2cell on data.inputs (keyword arguments go to run_palm, or to run_palm_fast if fast=True)."""
     from ..bayes.pipeline import run_palm
     from ..bayes.twostage import run_palm_fast
     from ..bayes.diagnostics import interval

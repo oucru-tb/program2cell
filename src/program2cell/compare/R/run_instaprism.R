@@ -1,5 +1,5 @@
 # InstaPrism (fast BayesPrism, fixed-point instead of Gibbs) on files written by
-# palm_bulk.compare.methods.instaprism.
+# program2cell.compare.methods.instaprism.
 # Usage: Rscript run_instaprism.R WORKDIR N_CORES
 # In WORKDIR: sc_counts.mtx (genes x cells), sc_genes.txt, sc_labels.txt (one label per cell),
 #             bulk_counts.csv (genes x samples, first column gene).

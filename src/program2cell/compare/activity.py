@@ -1,7 +1,7 @@
 """Turn other methods' outputs into program activity and treatment effects comparable with PALM's.
 
 Two routes:
-  * 'delta' (default): palm_bulk.estimate_delta on each per-sample per-cell-type profile, i.e. the
+  * 'delta' (default): program2cell.estimate_delta on each per-sample per-cell-type profile, i.e. the
     model's own definition. Values are comparable with the truth and with PALM.
   * 'ulm': decoupler's univariate linear model on log-CPM of each profile, the usual
     "deconvolve, then PROGENy" pipeline. A different scale: compare by rank.
@@ -29,7 +29,7 @@ def activity_from_expression(type_expr, inputs, how="delta", programs=None, scal
         try:
             import decoupler as dc
         except ImportError as e:
-            raise ImportError("activity='ulm' needs decoupler: pip install 'palm-bulk[progeny]'") from e
+            raise ImportError("activity='ulm' needs decoupler: pip install 'program2cell[progeny]'") from e
         W = programs if programs is not None else pd.DataFrame(Gm, index=inputs.programs, columns=genes)
         W = W.reindex(index=inputs.programs, columns=genes).fillna(0.0)
         net = W.stack().rename("weight").reset_index()

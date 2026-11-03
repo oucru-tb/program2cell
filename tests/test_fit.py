@@ -1,8 +1,8 @@
 import pytest
 import numpy as np
 import pandas as pd
-import palm_bulk as pb
-from palm_bulk import sim
+import program2cell as pb
+from program2cell import sim
 
 pytestmark = pytest.mark.slow       # every test here runs NUTS
 
@@ -65,8 +65,8 @@ def test_attribution_batching_matches_single_batch():
 
 
 PARALLEL_SCRIPT = """
-import numpy as np, palm_bulk as pb
-from palm_bulk import sim
+import numpy as np, program2cell as pb
+from program2cell import sim
 info = pb.configure_compute("cpu", parallel_chains=2)
 assert info["n_devices"] == 2, info
 rng = np.random.default_rng(5)
@@ -163,7 +163,7 @@ def test_shared_activity_fit():
 
 
 def test_fast_stage2_gaussian():
-    from palm_bulk.bayes.twostage import fit_fast
+    from program2cell.bayes.twostage import fit_fast
     rng = np.random.default_rng(13)
     B, G = sim.make_reference(rng, C=3, P=2, Gn=120, genes_per_prog=15)
     s = sim.simulate_causal(rng, B, G, N=24)

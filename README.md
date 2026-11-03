@@ -1,10 +1,12 @@
-# palm-bulk – program activity in cell types from bulk RNA-seq
+# program2cell – program activity in cell types from bulk RNA-seq
 
-palm-bulk estimates, from bulk RNA-seq and a single-cell reference, how active known gene programs
+program2cell estimates, from bulk RNA-seq and a single-cell reference, how active known gene programs
 (e.g. [PROGENy][] pathways) are inside each cell type, together with cell-type fractions.
 For treated vs control samples it splits a program's change into the part that comes from cells responding
 and the part that comes from the cell mix changing.
-It is a Bayesian model fitted with NUTS in [NumPyro][], so every estimate comes with a credible interval.
+Its core model is **PALM**, a Bayesian model of each sample's cell mix fitted with NUTS in [NumPyro][]
+(or its fast approximation, PALM-lite). Per-cell-type changes come from a calibrated estimator that undoes
+spillover between cell types, so every estimate comes with an interval checked against a known answer.
 
 This is research code. It has been checked on simulated data; benchmarks on real pseudo-bulk data are under way.
 
@@ -21,7 +23,7 @@ Python 3.10 or newer. For an NVIDIA GPU add `pip install "jax[cuda12]"`.
 ## Usage
 
 ```python
-import palm_bulk as pb
+import program2cell as pb
 
 pb.configure_compute("cpu", precision="float64")
 ref = pb.from_anndata(adata, "cell_type", "donor_id")           # raw counts
@@ -35,7 +37,7 @@ res.effect_totals()
 ```
 
 See the [user guide][] for inputs, options and known limits, [the method in plain words][method] for how it
-works, and `notebooks/palm_bulk_real_data.ipynb` for a full example.
+works, and `notebooks/program2cell_real_data.ipynb` for a full example.
 
 ### Program activity and treatment effects per cell type
 
@@ -83,7 +85,7 @@ Always:
 
 ## Benchmarks
 
-`scripts/run_compare.py` compares palm-bulk with InstaPrism, BLADE, TOAST, TCA and simple two-step
+`scripts/run_compare.py` compares program2cell with InstaPrism, BLADE, TOAST, TCA and simple two-step
 baselines on simulated or pseudo-bulk data with known truth. `hpc/` has scripts to set up the
 environments and run the benchmark on a cluster.
 

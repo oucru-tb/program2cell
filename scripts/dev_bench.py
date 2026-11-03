@@ -8,7 +8,7 @@ method freeze). Truth always comes from the held-out half of the counts (truth_s
   python scripts/dev_bench.py run --dataset pbmc --splits 0-9 --configs night
   python scripts/dev_bench.py summary --dataset pbmc --ref "naive|model"
 
-Two truths: delta from palm_bulk.estimate_delta on each cell type's held-out counts (the model's
+Two truths: delta from program2cell.estimate_delta on each cell type's held-out counts (the model's
 estimand, all metrics), and a model-free check, decoupler ULM scores on the same counts (rank metrics
 only, prefixed ulm_), so a method cannot win just by sharing the first truth's estimator.
 
@@ -117,12 +117,12 @@ def _types(ds):
 
 
 def _table(ds):
-    from palm_bulk.core import PseudobulkTable
+    from program2cell.core import PseudobulkTable
     return PseudobulkTable.from_h5ad(ds["path"], {}, _types(ds))
 
 
 def _benchmark(table, ds, split):
-    from palm_bulk.core import make_benchmark
+    from program2cell.core import make_benchmark
     return make_benchmark(table, min_cells=20, seed=split, truth_split=True, contrast=ds["contrast"], n_test=ds["n_test"],
                           ref_filter=ds.get("ref_filter"), all_test_specimens=ds.get("all_test_specimens", False))
 HELDOUT_FROM = 10
@@ -185,7 +185,7 @@ def _slug(s):
 
 
 def _score(res, truth, truth_ulm):
-    from palm_bulk import compare
+    from program2cell import compare
     s = compare.score(res, truth)
     su = compare.score(res, truth_ulm)
     s.update({"ulm_" + k: su.get(k) for k in ACT + ["act_leakage", "act_prog_leakage", "act_coupling"]})
@@ -199,8 +199,8 @@ def _design(T):
 
 def _palm_results(name, A, design):
     """[(row, MethodResult)] of a PALM fit from its saved arrays (thinned draws: pi, delta, beta, ...)."""
-    from palm_bulk.compare.base import MethodResult
-    from palm_bulk.bayes.diagnostics import interval
+    from program2cell.compare.base import MethodResult
+    from program2cell.bayes.diagnostics import interval
     pi_med, ivf, delta = np.median(A["pi"], 0), interval(A["pi"]), A["delta"]
     med, iv = np.median(delta, 0), dict(fractions=ivf, activity=interval(delta))
     prd, prn = A["realloc_draws"], A["realloc_alloc"]
@@ -236,7 +236,7 @@ def _save_rows_npz(path, results):
 
 
 def _rows_from_npz(name, z, design):
-    from palm_bulk.compare.base import MethodResult
+    from program2cell.compare.base import MethodResult
     if "delta" in z.files and "beta" in z.files:                      # a PALM fit's draws
         return _palm_results(name, {k: z[k] for k in z.files}, design)
     rows = sorted({k.split("__")[0] for k in z.files})
@@ -268,16 +268,16 @@ def rescore(args):
 
 
 def run(args):
-    import palm_bulk as pb
+    import program2cell as pb
     pb.configure_compute("cpu", parallel_chains=2, precision="float64")
-    from palm_bulk.core import PseudobulkTable, make_benchmark
-    from palm_bulk.core.scores import estimate_delta
-    from palm_bulk import compare
-    from palm_bulk.compare.base import MethodResult
-    from palm_bulk.compare.activity import activity_from_expression
-    from palm_bulk.compare.methods import naive_two_step, reallocation
-    from palm_bulk.bayes.twostage import run_palm_fast
-    from palm_bulk.bayes.diagnostics import interval
+    from program2cell.core import PseudobulkTable, make_benchmark
+    from program2cell.core.scores import estimate_delta
+    from program2cell import compare
+    from program2cell.compare.base import MethodResult
+    from program2cell.compare.activity import activity_from_expression
+    from program2cell.compare.methods import naive_two_step, reallocation
+    from program2cell.bayes.twostage import run_palm_fast
+    from program2cell.bayes.diagnostics import interval
     from scipy.special import softmax
 
     splits = _splits(args.splits)

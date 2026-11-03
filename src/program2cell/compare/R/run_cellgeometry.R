@@ -1,4 +1,4 @@
-# cellGeometry (Lau et al., Nat Commun 2026) on files written by palm_bulk.compare.methods.cellgeometry.
+# cellGeometry (Lau et al., Nat Commun 2026) on files written by program2cell.compare.methods.cellgeometry.
 # Usage: Rscript run_cellgeometry.R WORKDIR ARITH_MEAN(0/1) USE_FILTER(0/1) NPASS NSUBCLASS
 # In WORKDIR: sc_counts.mtx (genes x cells), sc_genes.txt, sc_labels.txt (one label per cell),
 #             bulk_counts.csv (genes x samples, first column gene).

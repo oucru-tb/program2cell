@@ -12,9 +12,9 @@ Usage: python run_gene_budget.py [reps] [out.json] [max_genes ...] [--methods=gr
 import sys, time, json
 import numpy as np
 import pandas as pd
-import palm_bulk as pb
-from palm_bulk import sim
-from palm_bulk.core import cell_profiles
+import program2cell as pb
+from program2cell import sim
+from program2cell.core import cell_profiles
 
 OPTS = [a for a in sys.argv[1:] if a.startswith("--")]
 POS = [a for a in sys.argv[1:] if not a.startswith("--")]

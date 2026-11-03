@@ -16,7 +16,7 @@ echo "== $(date) setup: $STEPS (conda base $CONDA_BASE, repo $REPO)"
 
 env_exists() { conda env list | awk '{print $1}' | grep -qx "$1"; }
 
-# ---- main env: palm_bulk + JAX + decoupler ---------------------------------------------------------
+# ---- main env: program2cell + JAX + decoupler ---------------------------------------------------------
 if [[ " $STEPS " == *" palm "* ]]; then
   env_exists "$PALM_ENV" || $MAMBA create -y -n "$PALM_ENV" -c conda-forge python=3.12 pip h5py
   set +u; conda activate "$PALM_ENV"; set -u

@@ -1,4 +1,4 @@
-"""Contributions (palm_bulk.contributions) against the answer key.
+"""Contributions (program2cell.contributions) against the answer key.
 
 Truth, from the held-out half of each test specimen's cells: per sample and cell type, the program signal
 s_ncp = sum_g G_pg x_ncg (x = that type's truth-half counts normalised over the modelled genes) and the true read
@@ -19,9 +19,9 @@ sys.path.insert(0, os.path.join(ROOT, "scripts", "experiments"))
 sys.path.insert(0, os.path.join(ROOT, "src"))
 import causal_loop as cl
 import practice_vs_palm as pv
-import palm_bulk as pb
-from palm_bulk.contributions import contributions
-from palm_bulk.core.equations import effect_decomposition  # noqa: F401  (same formula, kept for reference)
+import program2cell as pb
+from program2cell.contributions import contributions
+from program2cell.core.equations import effect_decomposition  # noqa: F401  (same formula, kept for reference)
 
 OUT = os.path.join(ROOT, "benchmarks", "dev", "contributions.json")
 

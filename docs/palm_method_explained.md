@@ -1,4 +1,4 @@
-# PALM-bulk, explained simply
+# program2cell, explained simply
 
 *What the method does, how it works, and what has been built and checked so far (status 2026-10-19).
 Written in the Feynman style: plain words first, then the precise version, then where the simple story

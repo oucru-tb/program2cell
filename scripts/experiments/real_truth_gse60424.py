@@ -54,9 +54,9 @@ def load():
 
 
 def build(counts, meta, contrast):
-    import palm_bulk as pb
-    from palm_bulk.core.data import Reference
-    from palm_bulk.core.calibrate import build_calibration_set
+    import program2cell as pb
+    from program2cell.core.data import Reference
+    from program2cell.core.calibrate import build_calibration_set
     import dev_bench as db
     a, b = CONTRASTS[contrast]
     test = meta[meta.diseasestatus.isin([a, b])].donorid.unique()
@@ -89,7 +89,7 @@ def truth(S, inp, T, level=0.9):
     """Per-donor activity of the sorted cells and the per-type difference of arm means with a Welch t
     interval (a bootstrap over 3-4 donors per arm is far too narrow)."""
     from scipy import stats
-    from palm_bulk.core.scores import estimate_delta
+    from program2cell.core.scores import estimate_delta
     d = estimate_delta(S, np.maximum(inp.B, 1e-8), inp.Gmat)      # (N, C, P)
     a, b = d[T == 1], d[T == 0]
     beta = a.mean(0) - b.mean(0)
@@ -103,8 +103,8 @@ def instaprism_activity(inp, R, ref_donors, bulk_samples, Y_full, counts):
     """InstaPrism with the reference donors' sorted samples as reference 'cells'; per-type expression ->
     activity (estimate_delta), and its fractions."""
     import scipy.io, scipy.sparse, subprocess
-    from palm_bulk.compare.methods import safe_names
-    from palm_bulk.core.scores import estimate_delta
+    from program2cell.compare.methods import safe_names
+    from program2cell.core.scores import estimate_delta
     d = os.path.join(OUT, "work", "instaprism_" + "_".join(map(str, bulk_samples[:2])))
     os.makedirs(d, exist_ok=True)
     fwd, back = safe_names(list(TYPES), "ct")
@@ -118,7 +118,7 @@ def instaprism_activity(inp, R, ref_donors, bulk_samples, Y_full, counts):
     P = "C:/Users/duy.pham/AppData/Local/miniforge3/envs/palm-r"
     env = dict(os.environ, PATH=os.pathsep.join([P + "/Lib/R/bin/x64", P, P + "/Library/mingw-w64/bin",
                                                  P + "/Library/bin", os.environ["PATH"]]))
-    subprocess.run([rs, os.path.join(ROOT, "src", "palm_bulk", "compare", "R", "run_instaprism.R"), d, "4"],
+    subprocess.run([rs, os.path.join(ROOT, "src", "program2cell", "compare", "R", "run_instaprism.R"), d, "4"],
                    check=True, env=env, capture_output=True)
     theta = pd.read_csv(os.path.join(d, "theta.csv"), index_col=0).rename(columns=back)
     Z = np.stack([pd.read_csv(os.path.join(d, "Z_%s.csv" % fwd[t]), index_col=0)
@@ -137,10 +137,10 @@ def score(eff, lo, hi, calls, beta, tlo, thi):
 
 
 def run(contrasts):
-    import palm_bulk as pb
+    import program2cell as pb
     import practice_vs_palm as pv
-    from palm_bulk.core.realloc import reallocate
-    from palm_bulk.compare.methods import nnls_fractions
+    from program2cell.core.realloc import reallocate
+    from program2cell.compare.methods import nnls_fractions
     os.makedirs(OUT, exist_ok=True)
     counts, meta = load()
     for con in contrasts:
@@ -156,7 +156,7 @@ def run(contrasts):
             lo, hi = r.effects_interval
             if name == "PALM":                                    # design calculator on this design
                 import identifiability as idf
-                from palm_bulk.core.realloc import reallocate as _re
+                from program2cell.core.realloc import reallocate as _re
                 dc = idf.design_calculator(r.fractions, inp.B, inp.Gmat, T, _re(inp.Y, r.fractions, inp.B, inp.Gmat))
                 res["mde"] = dc["mde_full"].tolist()
                 res["truth_detectable"] = int((np.abs(beta) >= dc["mde_full"]).sum())

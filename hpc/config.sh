@@ -3,7 +3,7 @@
 
 # ---- conda ------------------------------------------------------------------------------------
 CONDA_BASE="${CONDA_BASE:-$(conda info --base 2>/dev/null)}"   # e.g. /nfs/team205/<you>/miniforge3
-PALM_ENV=palm            # main env: palm_bulk, JAX, decoupler (PALM, naive, reallocation, scoring)
+PALM_ENV=palm            # main env: program2cell, JAX, decoupler (PALM, naive, reallocation, scoring)
 R_ENV=palm-r             # R 4.4 + InstaPrism, TOAST, TCA
 BLADE_ENV=palm-blade     # Python 3.8 + BLADE_Deconvolution
 USE_GPU=0                # 1: install CUDA JAX in the main env and run PALM on a GPU

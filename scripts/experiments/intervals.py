@@ -1,4 +1,4 @@
-"""Effect-interval choice on real data with the packaged pipeline (palm_bulk.program_deconvolution).
+"""Effect-interval choice on real data with the packaged pipeline (program2cell.program_deconvolution).
 
 For each dataset x prior x split: PALM posterior fractions (fitted once with PROGENy-7, moved to the prior's
 genes) and PALM-lite, each through program_deconvolution with every effect interval type; scored against
@@ -19,9 +19,9 @@ KINDS = ("normal", "strat", "lk", "lka")
 
 
 def run(datasets, priors, splits):
-    import palm_bulk as pb
-    from palm_bulk.core import PseudobulkTable
-    from palm_bulk.compare.base import MethodResult
+    import program2cell as pb
+    from program2cell.core import PseudobulkTable
+    from program2cell.compare.base import MethodResult
     os.makedirs(OUT, exist_ok=True)
     for dsn in datasets:
         ds = db.DATASETS[dsn]

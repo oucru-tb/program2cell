@@ -13,12 +13,12 @@ from scipy.special import softmax
 ROOT = "C:/Users/duy.pham/Documents/dev/program2cell"
 sys.path.insert(0, os.path.join(ROOT, "scripts"))
 import dev_bench as db
-import palm_bulk as pb
-from palm_bulk.core import PseudobulkTable, make_benchmark
-from palm_bulk.core.scores import estimate_delta
-from palm_bulk.compare.activity import activity_from_expression
-from palm_bulk.compare.base import MethodResult
-from palm_bulk import compare
+import program2cell as pb
+from program2cell.core import PseudobulkTable, make_benchmark
+from program2cell.core.scores import estimate_delta
+from program2cell.compare.activity import activity_from_expression
+from program2cell.compare.base import MethodResult
+from program2cell import compare
 
 ds_name, config = sys.argv[1], sys.argv[2]
 splits = range(10)

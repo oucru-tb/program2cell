@@ -43,7 +43,7 @@ echo "== $(date) host $(hostname), threads $THREADS, steps: $STEPS"
 echo "   R: ${PALM_RSCRIPT:-missing}   BLADE: ${PALM_BLADE_PYTHON:-missing}"
 
 set +u; conda activate "$PALM_ENV"; set -u
-python -c "import palm_bulk, sys; print('   palm_bulk', palm_bulk.__version__, 'python', sys.version.split()[0])"
+python -c "import program2cell, sys; print('   program2cell', program2cell.__version__, 'python', sys.version.split()[0])"
 
 # ---- 1. pseudo-bulk tables + cell-level reference ----------------------------------------------
 if [[ " $STEPS " == *" build "* ]]; then

@@ -1,6 +1,6 @@
 """Head-to-head comparison of PALM with competing methods on a simulated study with exact truth.
 
-Runs every requested method through palm_bulk.compare, scores fractions, per-cell-type program
+Runs every requested method through program2cell.compare, scores fractions, per-cell-type program
 activity and treatment effects, and saves the scores with provenance. Methods whose software is
 missing (R packages, Docker, BLADE environment) are skipped and listed. The same pipeline will
 run on real PBMC pseudo-bulk once its truth tables exist.
@@ -53,15 +53,15 @@ method_kw = json.loads(args.method_kw)
 
 import numpy as np
 import pandas as pd
-import palm_bulk as pb
+import program2cell as pb
 print("compute:", pb.configure_compute(args.device, parallel_chains=args.chains if args.device == "cpu" else 1,
                                          precision=args.precision), flush=True)
-from palm_bulk import compare, sim
+from program2cell import compare, sim
 
 methods = args.methods.split(",")
 HAS_DECOUPLER = importlib.util.find_spec("decoupler") is not None
 if not HAS_DECOUPLER:
-    print("decoupler not installed: skipping the '+ulm' variants (pip install 'palm-bulk[progeny]')")
+    print("decoupler not installed: skipping the '+ulm' variants (pip install 'program2cell[progeny]')")
 
 
 def simulated(r):
@@ -99,7 +99,7 @@ def reference_cells(path, test_donors, cell_types, genes):
 def pseudobulk(r):
     """Real data: reference rows of the reference donors play the role of single cells for the
     competitors (one profile per donor and cell type)."""
-    from palm_bulk.core import PseudobulkTable, make_benchmark
+    from program2cell.core import PseudobulkTable, make_benchmark
     global TABLE
     if TABLE is None:
         TABLE = PseudobulkTable.from_h5ad(args.pseudobulk, json.loads(args.label_map), args.keep_types.split(","))
