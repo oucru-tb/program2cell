@@ -9,7 +9,8 @@ would run it:
 Two call rules: 'p10' (unadjusted p < 0.1, i.e. the 90% interval excludes 0, PALM's own rule) and 'bh10'
 (Benjamini-Hochberg q < 0.1 over all type x program pairs, the usual practice).
 C2: PALM's module with its default (causal) settings on the same competitor's fractions.
-PALM itself: the auto_m rows of causal_loop (PALM posterior fractions).
+PALM itself: the causal_loop rows of estimator PALM_EST (environment variable, default auto_m: the v1 freeze;
+the PALM module on competitor fractions then uses that estimator's settings too).
 
 Scores (causal_loop.score): coverage of the 90% interval (where one exists), r with the true effect, calls on
 truly null pairs (fpr_null), responder AUROC and truth-based TPR on the known program.
@@ -28,6 +29,7 @@ import causal_loop as cl
 OUT = os.path.join(ROOT, "benchmarks", "dev", "practice")
 DEV = os.path.join(ROOT, "benchmarks", "dev")
 # dev_bench rows with per-sample activity (file stem -> row prefix in the npz)
+PALM_EST = os.environ.get("PALM_EST", "auto_m")
 ACTIVITY = {"naive": "model", "reallocation": "model", "cibersort": "model", "cellgeometry": "model",
             "cellgeometry_cells": "model", "instaprism": "model", "instaprism_cells": "model", "blade": "model"}
 CSDE = ("toast", "tca")
@@ -139,7 +141,8 @@ def run(datasets, splits, only=None):
                     t0 = time.time()
                     pi = np.clip(z["model__fractions"], 1e-6, None)
                     pi = pi / pi.sum(1, keepdims=True)
-                    r = pb.program_deconvolution(inp, cal, fractions=pi, seed=split)
+                    kw = {k: v for k, v in cl.ESTIMATORS[PALM_EST].items() if k != "paired"}
+                    r = pb.program_deconvolution(inp, cal, fractions=pi, seed=split, **kw)
                     lo, hi = r.effects_interval
                     s = cl.score(r.effects, lo, hi, r.calls, beta, ct, pg, known)
                     s.update(dataset=dsn, split=split, method=m, kind="palm_module", rule="palm",
@@ -152,7 +155,7 @@ def run(datasets, splits, only=None):
 
 def _palm_rows():
     rows = []
-    for f in glob.glob(os.path.join(cl.OUT, "*__auto_m.json")):
+    for f in glob.glob(os.path.join(cl.OUT, "*__%s.json" % PALM_EST)):
         s = json.load(open(f))
         a = s.pop("arrays")
         s.update(cl.score(*(np.asarray(a[k], float) for k in ("effects", "lo", "hi")), np.asarray(a["calls"], bool),
@@ -167,7 +170,7 @@ def summary(heldout=False):
     from palm_bulk.compare import known_answer as ka
     rows = [r for f in sorted(glob.glob(os.path.join(OUT, "*.json"))) for r in json.load(open(f))] + _palm_rows()
     df = pd.DataFrame(rows)
-    df = df[(df.split >= cl.db.HELDOUT_FROM) == heldout]
+    df = cl._split_set(df, heldout)
     df = df[df.split.isin(sorted(set(df[df.kind != "palm"].split)))]
     cols = ["cov", "r_t", "rmse", "calls", "fpr_null", "auroc", "tpr_t"]
     t = df.groupby(["dataset", "kind", "method", "rule"])[cols].mean()
@@ -175,7 +178,7 @@ def summary(heldout=False):
     pd.set_option("display.width", 250)
     print(t.round(3).to_string())
     # paired over (dataset, split): PALM minus each alternative, on fpr_null and tpr_t
-    print("\n== PALM (auto_m) minus alternative, paired over dataset x split [95% bootstrap CI]")
+    print("\n== PALM (%s) minus alternative, paired over dataset x split [95%% bootstrap CI]" % PALM_EST)
     palm = df[df.kind == "palm"].set_index(["dataset", "split"])
     out = {}
     for (kind, m, rule), sub in df[df.kind != "palm"].groupby(["kind", "method", "rule"]):
@@ -194,4 +197,4 @@ if __name__ == "__main__":
     if sys.argv[1] == "run":
         run(sys.argv[2].split(","), cl.db._splits(sys.argv[3]), sys.argv[4].split(",") if len(sys.argv) > 4 else None)
     else:
-        summary(heldout=len(sys.argv) > 2 and sys.argv[2] == "heldout")
+        summary(heldout={"heldout": True, "heldout2": "v2"}.get(sys.argv[2], False) if len(sys.argv) > 2 else False)

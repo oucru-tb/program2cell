@@ -65,6 +65,14 @@ ESTIMATORS = {"diff": dict(estimator="diff"),
               "auto_obs": dict(estimator="auto", unmix_kw=dict(pev=True, misfit=True, plant="observed")),
               # 2026-10-30: calibrated programs widened by the absolute leakage error per type (sim_widen="abs")
               "auto_abs": dict(estimator="auto", sim_widen="abs", unmix_kw=dict(pev=True, misfit=True)),
+              # 2026-11-03: design check planted with the shared-response model's common effect + unmixed deviations
+              "auto_sh": dict(estimator="auto", sim_widen="abs", unmix_kw=dict(pev=True, misfit=True, plant="shared")),
+              # 2026-11-03: route = the narrower of the two simulation-calibrated intervals (per program / per pair)
+              "auto_w": dict(estimator="auto", sim_widen="abs", unmix_kw=dict(pev=True, misfit=True, choose="width")),
+              "auto_wp": dict(estimator="auto", sim_widen="abs", unmix_kw=dict(pev=True, misfit=True, choose="width",
+                                                                              per_pair=True)),
+              # 2026-11-03: + per-type guard (unmixed effect outside the calibrated interval -> calibrated)
+              "auto_wg": dict(estimator="auto", sim_widen="abs", unmix_kw=dict(pev=True, misfit=True, choose="width_guard")),
               "direct": dict(estimator="direct", direct_kw=dict(n_boot=40)),
               "direct_nb": dict(estimator="direct", direct_kw=dict(n_boot=40, weights="nb")),
               "direct_pair": dict(estimator="direct", paired=True, direct_kw=dict(n_boot=40))}
@@ -150,6 +158,13 @@ def run(datasets, splits, names):
                       flush=True)
 
 
+def _split_set(df, heldout):
+    """Development splits (< 10), held-out v1 (10-19; heldout=True) or held-out v2 (>= 20; heldout="v2")."""
+    if heldout == "v2":
+        return df[df.split >= 20]
+    return df[(df.split >= db.HELDOUT_FROM) & (df.split < 20)] if heldout else df[df.split < db.HELDOUT_FROM]
+
+
 def summary(heldout=False):
     """Development splits (< db.HELDOUT_FROM) or, with heldout=True, the held-out splits only."""
     rows = []
@@ -161,8 +176,8 @@ def summary(heldout=False):
                            np.asarray(a["beta"], float), a["cell_types"], a["programs"], KNOWN.get(s["dataset"])))
         rows.append(s)
     df = pd.DataFrame(rows)
-    df = df[(df.split >= db.HELDOUT_FROM) == heldout]
-    print("== %s splits: %s" % ("held-out" if heldout else "development", sorted(df.split.unique())))
+    df = _split_set(df, heldout)
+    print("== %s splits: %s" % ({True: "held-out v1", "v2": "held-out v2"}.get(heldout, "development"), sorted(df.split.unique())))
     cols = [c for c in ("cov", "r", "r_t", "rmse", "width", "calls", "fpr_null", "auroc", "tpr", "tpr_t", "fpr", "cov_known")
             if c in df]
     t = df.groupby(["dataset", "estimator"], sort=False)[cols].mean()
@@ -181,7 +196,7 @@ def summary(heldout=False):
 
 if __name__ == "__main__":
     if sys.argv[1] == "summary":
-        summary(heldout=len(sys.argv) > 2 and sys.argv[2] == "heldout")
+        summary(heldout={"heldout": True, "heldout2": "v2"}.get(sys.argv[2], False) if len(sys.argv) > 2 else False)
     else:
         names = sys.argv[4].split(",") if len(sys.argv) > 4 else list(ESTIMATORS)
         run(sys.argv[2].split(","), db._splits(sys.argv[3]), names)

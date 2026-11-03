@@ -97,6 +97,16 @@ Against a two-step baseline (NNLS fractions, then reference program scores), the
 
 * **A missing cell type gives confidently wrong answers.** Its signal is absorbed by the cell types that are present, errors grow about 4x, and the intervals do not widen (0% coverage above). The built-in compatibility check (`diagnose_inputs`, an NNLS fit of each bulk profile on the reference) is only a weak detector: median R^2 was 0.83 with a missing type vs 0.91 without, and the ranges overlapped across replicates. Do not rely on it alone. Make sure the reference covers the tissue. A posterior predictive check is the next planned addition.
 * Platform bias matters: keep `use_m=True` for real data.
+* **Real bulk with a single-cell reference** (e.g. sequenced PBMC bulk with an atlas reference): the two platforms
+  differ by a per-gene factor that costs most of the attribution if left in. On COMBAT, where the same samples
+  have both real bulk and single-cell data, per-gene offsets explained 89% of the gap, and correcting them
+  restored most of the accuracy: sepsis r 0.12 → 0.52; severe COVID r 0.21 → 0.64; single-cell bulk 0.58 / 0.60.
+  Before `prepare_inputs`, run `bulk = pb.correct_platform(bulk, ref)`. It estimates one offset per gene from
+  the study bulk itself, so no paired samples are needed. It also cannot absorb a treatment effect, because
+  the offset is shared by every sample. It does **not** fix the average composition: an offset on a type's
+  marker genes and a different mean fraction of that type fit the bulk equally well. So read fractions from it
+  as relative between samples (COMBAT fraction r 0.25–0.40). If you have a few paired bulk + single-cell
+  samples, pass their median log2 ratio as `offsets=`; measured blood counts can also anchor the composition.
 * The causal reading of treatment effects needs randomised or ignorable treatment, a control-state reference, and a correct program dictionary. Cell-to-cell causal drivers (which cell type induces a response in another) are not identifiable from bulk data.
 * Programs whose genes are expressed alike across cell types give wide attribution intervals by design.
 * Not validated: real data, PROGENy/Hallmark programs, large cohorts. Run time grows with samples x genes x cell types x programs, not with reference cells. For 500 samples x 10 cell types x 14 programs x 1500 genes expect about 1-2 days per chain on a 12-core CPU in float64; use a data-centre GPU for hundreds of samples, and check `estimate_runtime` first.

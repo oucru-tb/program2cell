@@ -4,7 +4,8 @@ TP53-wild-type lines; trametinib (MEK inhibitor) switches MAPK off in every line
 
 Cell types = 6 cancer cell lines (24 h, 'normal' quality cells): 3 p53 responders and 3 non-responders, chosen by
 the measured induction of CDKN1A + MDM2 under idasanutlin (LNCaP 4.6, RCC10RGB 3.3, SNU1079 2.8 log2 FC vs
-0.5-0.7 for COLO680N, BICR31, TEN).
+0.5-0.7 for COLO680N, BICR31, TEN). Genetics agree (Cellosaurus, checked 2026-11-03): COLO 680N TP53 p.R248W, BICR 31
+p.V173_R174insG, TEN p.R342* (all homozygous); no TP53 mutation listed for LNCaP clone FGC, RCC10RGB, SNU-1079.
 
 Each line's cells per arm (control, idasanutlin, trametinib) are split 50/50 into a reference pool and a test
 pool (disjoint cells):

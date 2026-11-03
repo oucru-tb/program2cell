@@ -114,3 +114,28 @@ def test_calibrator_rejects_unknown_interval():
     c = pb.Calibrator.from_set(cal, n_boot=5)
     with pytest.raises(ValueError):
         c.effects(np.zeros((4, 3, 2)), np.array([0, 0, 1, 1]), interval="wide")
+
+
+def test_correct_platform_recovers_planted_gene_offsets():
+    import pandas as pd
+    rng = np.random.default_rng(3)
+    B, _ = sim.make_reference(rng, C=3, P=2, Gn=300, genes_per_prog=40)
+    pi = rng.dirichlet(np.full(3, 4.0), 30)
+    off = rng.normal(0, 1.0, 300)                                     # log2 platform factor per gene
+    mu = (pi @ B) * np.exp2(off)[None]
+    Y = np.stack([rng.multinomial(int(2e6), m / m.sum()) for m in mu]).astype(float)
+    genes = ["g%d" % g for g in range(300)]
+    bulk = pd.DataFrame(Y.T, index=genes)
+    ref = types.SimpleNamespace(genes=genes, B=B)
+    est = pb.platform_offsets(bulk, ref, min_cpm=0)
+    expr = Y.mean(0) / Y.sum(1).mean() * 1e6 > 50
+    d = est.values - off
+    assert np.corrcoef(est.values[expr], off[expr])[0, 1] > 0.95    # up to a common shift
+    assert np.std(d[expr]) < 0.25
+    # the corrected bulk is on the reference's gene scale (the mean composition is not identifiable from the
+    # study alone, so the check is per gene, against the bulk divided by the true offsets)
+    fixed = pb.correct_platform(bulk, ref, min_cpm=0).values.T
+    lc = lambda M: np.log2(M / M.sum(1, keepdims=True) * 1e6 + 1)
+    oracle = lc(Y / np.exp2(off)[None])
+    gap = lambda M: np.abs((lc(M) - oracle).mean(0) - (lc(M) - oracle).mean())[expr].mean()
+    assert gap(fixed) < gap(Y) / 3

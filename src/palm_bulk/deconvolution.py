@@ -100,7 +100,13 @@ def program_deconvolution(inputs, calibration, fractions=None, fraction_draws=No
     cohorts with that response (choice of engine, widening of calibrated programs); per_pair=True ('auto'):
     choose the engine per (type, program) instead of per program (a type keeping little of its own shift is
     better left calibrated even where unmixing wins for the program). plant="observed": the design check plants
-    this study's shared effect plus type deviations of its observed spread (core.unmix.design_check).
+    this study's shared effect plus type deviations of its observed spread (core.unmix.design_check);
+    plant="shared": the shared-response model's common effect plus deviations of the unmixed effects' spread.
+    choose ('auto'): "rmse" (default) unmixes a program where its simulated RMSE is lower than rescaled
+    reallocation's; "width" / "width_guard": where its interval (bootstrap, misfit- and simulation-widened) is narrower than the
+    calibrated one after sim_widen, i.e. the route with more power at its simulation-calibrated coverage (for a
+    response shared by all types the RMSEs nearly tie and the RMSE choice flips between splits); "width_guard"
+    keeps the calibrated result for a type whose unmixed effect lies outside its calibrated interval.
     estimator 'direct' (core.direct): maximum likelihood of the treatment effects on the bulk counts given the
     fractions (no reallocation), cluster-bootstrap intervals; direct_kw go to direct_effects (e.g. lam).
     """
@@ -176,7 +182,7 @@ def program_deconvolution(inputs, calibration, fractions=None, fraction_draws=No
 
 def _unmix_effects(out, inputs, calibration, fractions, fraction_draws, raw, raw_draws, T, X, groups, level, seed,
                    n_sim, mode, eff_cal, iv_cal, sim_widen=True, pev=False, separate=False, misfit=False,
-                   per_pair=False, plant="prior", shared=False, margin=0.1):
+                   per_pair=False, plant="prior", shared=False, margin=0.1, choose="rmse"):
     """Effects by unmixing (core.unmix) for every program ('unmix') or where the design check favours it
     ('auto'); the others keep the calibrated effects. Intervals: unmixed, bootstrap half-width widened to
     max(t, simulated studentised error quantile) standard errors; calibrated, the calibrated interval widened
@@ -194,18 +200,16 @@ def _unmix_effects(out, inputs, calibration, fractions, fraction_draws, raw, raw
         Ad = np.stack([um.leakage_operator(z, B, G, diagonal=False) for z in zd])
     r = um.unmix_effects(raw, A, T, X, groups, level=level, dhat_draws=dd, A_draws=Ad, pi=fractions, B=B, G=G,
                          pi_draws=zd, seed=seed, pev=pev, separate=separate,
-                         misfit_tau="auto" if misfit else None, Y=inputs.Y, shared_fit=shared)
+                         misfit_tau="auto" if misfit else None, Y=inputs.Y,
+                         shared_fit=shared or plant == "shared")
     chk = um.design_check(calibration, fractions, T, X, groups, n_sim=n_sim, level=level, seed=seed,
-                          effect_hint=eff_cal, offprog_sd=r["tau"] if misfit else 0.0, plant=plant)
+                          effect_hint=r["effects"] if plant == "shared" else eff_cal,
+                          offprog_sd=r["tau"] if misfit else 0.0, plant=plant,
+                          shared_hint=r.get("common") if plant == "shared" else None)
     q = tdist.ppf(0.5 + level / 2, max(r["n_units"] - 1, 1))
     q = q if misfit else max(chk["z_q"], q)
     lo_u, hi_u = r["effects"] - q * r["se"], r["effects"] + q * r["se"]
     C, P = r["effects"].shape
-    if mode == "unmix":
-        use = np.ones((C, P), bool)
-    else:                                       # per program, or per (type, program) with per_pair
-        use = chk["use_unmix_cp"] if per_pair else np.broadcast_to(chk["use_unmix"][None], (C, P))
-    eff = np.where(use, r["effects"], eff_cal)
     # calibrated programs: widen to the simulated studentised error of rescaled reallocation (at least)
     h = (iv_cal[1] - iv_cal[0]) / 2
     if sim_widen:
@@ -215,6 +219,18 @@ def _unmix_effects(out, inputs, calibration, fractions, fraction_draws, raw, raw
             q_t = tdist.ppf(0.5 + level / 2, max(r["n_units"] - 1, 1))
             h_sim = np.sqrt(chk["q_abs_realloc_cp"] ** 2 + (q_t * se_r) ** 2)
         h = h_sim if sim_widen == "replace" else np.maximum(h, h_sim)
+    if mode == "unmix":
+        use = np.ones((C, P), bool)
+    elif choose in ("width", "width_guard"):    # the narrower of the two simulation-calibrated intervals
+        hu = (hi_u - lo_u) / 2
+        use = hu < h if per_pair else np.broadcast_to((hu.mean(0) < h.mean(0))[None], (C, P))
+        if choose == "width_guard":         # a type whose unmixed effect falls outside its (valid, wide)
+            # calibrated interval keeps the calibrated result: unmixing has failed for it (e.g. Kang NK NF-kB
+            # unmixed -1.34 [-1.96, -0.73], truth +0.15, calibrated [-0.49, 0.72])
+            use = use & (np.abs(r["effects"] - eff_cal) <= h)
+    else:                                   # simulated RMSE, per program, or per (type, program) with per_pair
+        use = chk["use_unmix_cp"] if per_pair else np.broadcast_to(chk["use_unmix"][None], (C, P))
+    eff = np.where(use, r["effects"], eff_cal)
     iv = (np.where(use, lo_u, eff_cal - h), np.where(use, hi_u, eff_cal + h))
     out.info["unmix"] = dict(programs=[p for p, u in zip(inputs.programs, use.any(0)) if u], pairs=use.tolist(),
                              rmse_unmix=chk["rmse_unmix"].tolist(), rmse_realloc=chk["rmse_realloc"].tolist(),

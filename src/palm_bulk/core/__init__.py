@@ -9,5 +9,6 @@ from .calibrate import (CalibrationSet, Calibrator, build_calibration_set, calib
 from .unmix import leakage_operator, unmix_effects, design_check, simulate_cohort
 from .data import (Reference, Inputs, build_reference, from_anndata, load_programs, select_genes,
                    encode_covariates, prepare_inputs, diagnose_inputs)
+from .platform import platform_offsets, correct_platform
 from .pseudobulk import PseudobulkTable, PseudobulkBenchmark, make_benchmark
 from . import sim

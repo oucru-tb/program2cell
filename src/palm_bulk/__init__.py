@@ -11,6 +11,7 @@ from .core import (Reference, Inputs, build_reference, from_anndata, load_progra
 from .core import data, sim
 from .core import (reallocate, realloc_counts, em_fractions, CalibrationSet, Calibrator, build_calibration_set,
                    calibration_from_table)
+from .core import platform_offsets, correct_platform
 from .bayes import (fit, make_model, run_palm, run_palm_fast, PalmResult, estimate_runtime, interval, coverage,
                      mean_width)
 from .provenance import provenance

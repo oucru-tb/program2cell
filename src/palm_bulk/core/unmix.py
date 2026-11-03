@@ -563,7 +563,7 @@ def contrast_se(dhat, T, rng, n_boot=100, groups=None):
 
 def design_check(cal, pi, T, X=None, groups=None, n_sim=10, scale=0.6, level=0.9, n_boot=20, nonlinear=True,
                  seed=0, estimator="diff", joint=True, effect_hint=None, offprog_sd=0.0, plant="prior",
-                 kinds=(0.2, 0.3, 0.5)):
+                 kinds=(0.2, 0.3, 0.5), shared_hint=None):
     """Simulated error of the unmixing estimator vs reallocation (the effect of reallocated activity, rescaled
     per program by a slope fitted on the other cohorts, as calibration does) under this study's design: per program RMSE over cohorts and planted
     effects (simulate_cohort), and the level-quantile of the unmixing errors studentised by their bootstrap
@@ -578,13 +578,19 @@ def design_check(cal, pi, T, X=None, groups=None, n_sim=10, scale=0.6, level=0.9
     "observed" (needs effect_hint) plants the study's own shared effect (the mean of the hint over types) plus
     type deviations drawn like the prior's (none / every type / a random subset, probabilities `kinds`) of size
     clip(2 max_c |hint_c - mean|, 0.05, 1): the leakage check then matches how type-specific this study's
-    response looks, instead of assuming large type-specific responses wherever the effects are large."""
+    response looks, instead of assuming large type-specific responses wherever the effects are large.
+    "shared" (needs shared_hint (P,), the shared-response model's common effect, and effect_hint (C, P), the
+    unmixed effects): as "observed" with that common effect as the shared part and type deviations of size
+    clip(2 max_c |hint_c - shared_hint|, 0.05, 1): the unmixed (shrunk) effects separate the types better than the
+    calibrated ones, which reallocation smears towards the mean, so a shared response is planted as shared (its
+    leakage is then small: one shift leaking into the other types is the same shift) and a type-specific one as
+    type-specific."""
     from ..causal import estimator_weights
     rng = np.random.default_rng(seed + 11)
     beta_fn = None
-    if plant == "observed":
+    if plant in ("observed", "shared"):
         hint = np.asarray(effect_hint, float)
-        shared = hint.mean(0)
+        shared = hint.mean(0) if shared_hint is None else np.asarray(shared_hint, float)
         dev_scale = np.clip(2 * np.abs(hint - shared[None]).max(0), 0.05, 1.0)
 
         def beta_fn(r):

@@ -13,6 +13,9 @@ default) then runs on three bulks for the same specimens and the same truth:
 The real bulk is whole blood, the single-cell reference PBMC: neutrophils and red-cell RNA are in the bulk only,
 a missing-cell-type gap on top of the platform gap.
 Scores as causal_loop.score (known=None). One json per (contrast, split, bulk) in benchmarks/dev/combat_real/.
+Comparator (2026-11-03): InstaPrism on the same bulk and reference rows, its per-type expression scored with the
+programs, then the usual Welch t-test per type x program (practice_vs_palm.practice_test; calls BH q < 0.1 and
+p < 0.1): one json per (contrast, split, bulk) with suffix __instaprism.
 Usage: python combat_real.py run SPLITS [CONTRAST]   (CONTRAST: sepsis (default) | severe)
        python combat_real.py summary
 """
@@ -25,6 +28,8 @@ import causal_loop as cl
 D = os.path.join(ROOT, "data", "combat")
 OUT = os.path.join(ROOT, "benchmarks", "dev", "combat_real")
 TYPES = ["B", "CD14 Mono", "CD16 Mono", "CD4 T", "CD8 T", "DC", "NK"]
+# PALM effects: causal_loop estimator PALM_EST (environment; default auto_abs, the setting of the 2026-11-02 runs)
+EST = cl.ESTIMATORS[os.environ.get("PALM_EST", "auto_abs")]
 CONTRASTS = {"sepsis": (["Sepsis"], ["HV"], 20),
              "severe": (["COVID_SEV", "COVID_CRIT"], ["HV", "COVID_HCW_MILD", "COVID_MILD"], 40)}
 
@@ -46,27 +51,9 @@ def _offsets(bulk, sc_table, specs, genes):
 
 
 def _self_offsets(Y, ref, iters=4, min_cpm=10):
-    """Per-gene log2 offsets estimated from the study bulk alone (no paired data): alternate PALM-lite fractions
-    on the offset-adjusted reference and b_g += median over samples of log2(observed / predicted CPM), on genes
-    expressed in the bulk. One offset per gene for all samples, so a treatment difference is not absorbed
-    (it moves the median only through the treated share of samples)."""
-    from palm_bulk.core.realloc import em_fractions
-    ri = {g: i for i, g in enumerate(ref.genes)}
-    genes = [g for g in Y.index if g in ri]
-    Bm = ref.B[:, [ri[g] for g in genes]] + 1e-9
-    V = Y.loc[genes].values.T.astype(float)                                  # N x G
-    cpm = V / V.sum(1, keepdims=True) * 1e6
-    expr = cpm.mean(0) > min_cpm
-    b = np.zeros(len(genes))
-    for _ in range(iters):
-        Bb = Bm * np.exp2(b)[None]
-        Bb = Bb / Bb.sum(1, keepdims=True)
-        pi = em_fractions(V[:, expr], Bb[:, expr])
-        q = pi @ Bb
-        q = q / q.sum(1, keepdims=True) * 1e6
-        step = np.median(np.log2(cpm + 1) - np.log2(q + 1), 0)
-        b = np.where(expr, b + step, b)
-    return pd.Series(b, index=genes)
+    """Per-gene log2 offsets estimated from the study bulk alone (palm_bulk.platform_offsets)."""
+    from palm_bulk import platform_offsets
+    return platform_offsets(Y, ref, iters=iters, min_cpm=min_cpm)
 
 
 def run(splits, contrast="sepsis"):
@@ -97,11 +84,11 @@ def run(splits, contrast="sepsis"):
         real = bulk_all.loc[genes, specs]
         corr = (real.T / np.exp2(off.clip(-8, 8)).values).T
         corr = corr / corr.sum(0) * real.sum(0)                                   # keep each sample's depth
-        so = _self_offsets(real, b.reference)
-        self_c = (real.loc[so.index].T / np.exp2(so.clip(-8, 8)).values).T
-        self_c = self_c / self_c.sum(0) * real.loc[so.index].sum(0)
-        bulks = {"sc": b.bulk.loc[genes], "real": real, "real_offset": corr.round(), "real_selfoffset": self_c.round()}
+        self_c = pb.correct_platform(real, b.reference)
+        bulks = {"sc": b.bulk.loc[genes], "real": real, "real_offset": corr.round(), "real_selfoffset": self_c}
         for name, Y in bulks.items():
+            if COMPARATOR:
+                _instaprism(b, Y, prog, contrast, split, name, table, test_donors)
             f = os.path.join(OUT, "%s__s%d__%s.json" % (contrast, split, name))
             if os.path.exists(f):
                 continue
@@ -110,8 +97,7 @@ def run(splits, contrast="sepsis"):
             T = np.asarray(inp.T)
             beta = pb.core.contrast(T)(b.truth(inp)["delta"])
             cal = pb.calibration_from_table(table, test_donors, inp.cell_types, inp.genes, inp.Gmat, seed=split)
-            r = pb.program_deconvolution(inp, cal, engine="lite", treatment=T, seed=split, estimator="auto",
-                                         sim_widen="abs", unmix_kw=dict(pev=True, misfit=True))
+            r = pb.program_deconvolution(inp, cal, engine="lite", treatment=T, seed=split, **EST)
             lo, hi = r.effects_interval
             s = cl.score(r.effects, lo, hi, r.calls, beta, list(inp.cell_types), list(inp.programs), None)
             tr = b.truth(inp)
@@ -127,10 +113,58 @@ def run(splits, contrast="sepsis"):
                 s["frac_r"], s["seconds"]), flush=True)
 
 
+COMPARATOR = os.environ.get("COMBAT_COMPARATOR", "1") == "1"
+
+
+def _instaprism(b, Y, prog, contrast, split, name, table, test_donors):
+    """InstaPrism + Welch t-test on bulk Y (same specimens, genes, truth as PALM's row)."""
+    import palm_bulk as pb
+    from palm_bulk import compare
+    import practice_vs_palm as pvp
+    f = os.path.join(OUT, "%s__s%d__%s__instaprism.json" % (contrast, split, name))
+    if os.path.exists(f):
+        return
+    t0 = time.time()
+    inp = pb.prepare_inputs(Y, b.reference, prog, treatment=b.treatment, max_genes=1000)
+    T = np.asarray(inp.T)
+    beta = pb.core.contrast(T)(b.truth(inp)["delta"])
+    rr = b.reference_rows
+    wd = os.path.join(ROOT, "benchmarks", "dev", "work", "combat_" + contrast, "s%d_%s" % (split, name))
+    data = compare.CompareData(bulk=Y, sc_counts=rr["counts"], sc_genes=b.reference.genes, sc_cell_types=rr["cell_types"],
+                               sc_donors=rr["donors"], inputs=inp, programs=prog, treatment=b.treatment, workdir=wd)
+    res, err = compare.run_method("instaprism", data, n_cores=4, max_cells_per_type=1000)
+    import shutil
+    shutil.rmtree(wd, ignore_errors=True)
+    if res is None:
+        print("  instaprism FAILED %s s%d %s: %s" % (contrast, split, name, err), flush=True)
+        return
+    donors = np.asarray(Y.columns).astype(str)              # one specimen per test person: Welch t-test
+    eff, lo, hi, pv = pvp.practice_test(np.asarray(res.activity), T, donors)
+    rows = []
+    for rule, calls in (("p10", pv < 0.1), ("bh10", pvp.bh(pv) < 0.1)):
+        sc = cl.score(eff, lo, hi, np.nan_to_num(calls, nan=False).astype(bool), beta, list(inp.cell_types),
+                      list(inp.programs), None)
+        sc.update(contrast=contrast, split=split, bulk=name, method="instaprism_ttest", rule=rule,
+                  seconds=time.time() - t0)
+        rows.append(sc)
+    json.dump(rows, open(f, "w"), default=float)
+    print("[%s] combat %s s%d %-15s InstaPrism + t-test (BH): cov %.2f r %.2f fpr_null %.3f calls %d" % (
+        time.strftime("%H:%M"), contrast, split, name, rows[1]["cov"], rows[1]["r"], rows[1]["fpr_null"],
+        rows[1]["calls"]), flush=True)
+
+
 def summary():
-    rows = [json.load(open(f)) for f in sorted(glob.glob(os.path.join(OUT, "*.json")))]
-    df = pd.DataFrame([{k: v for k, v in r.items() if k != "arrays"} for r in rows])
-    print(df.groupby(["contrast", "bulk"])[["cov", "r", "rmse", "fpr_null", "calls", "frac_r"]].mean().round(3))
+    rows = []
+    for f in sorted(glob.glob(os.path.join(OUT, "*.json"))):
+        r = json.load(open(f))
+        for x in (r if isinstance(r, list) else [dict(r, method="palm", rule="palm")]):
+            rows.append({k: v for k, v in x.items() if k != "arrays"})
+    df = pd.DataFrame(rows)
+    df["set"] = np.where(df.split >= 20, "held-out v2", np.where(df.split >= 10, "held-out v1", "development"))
+    key = ["set", "contrast", "bulk", "method", "rule"]
+    t = df.groupby(key)[[c for c in ("cov", "r", "rmse", "fpr_null", "calls", "frac_r") if c in df]].mean()
+    t.insert(0, "n", df.groupby(key).size())
+    print(t.round(3).to_string())
 
 
 if __name__ == "__main__":
