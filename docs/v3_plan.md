@@ -46,6 +46,25 @@ first**: it targets the weakest held-out regime (broad responses).
    - **Next (`pool="partial"`):** empirical-Bayes partial pooling (no test; weight τ²/(τ²+s²)), interval
      from the upper confidence bound of τ² (Q-profile). Screen on Kang, Zhang, McFarland idasanutlin,
      Tahoe gemcitabine and RMC-6236, splits 20–24.
+   - **Metric check against the biology (2026-11-04, splits 20–29):**
+     - Encorafenib known answer (BRAF-V600 lines LOX-IMVI, HT-29, RKO) is not supported by the measured truth:
+       MAPK −0.02 / −0.14 / −0.06, while KRAS-G12C NCI-H2030 is −0.10. Unlike dabrafenib, it was never checked
+       against target genes. Its true-effect share and AUROC are not evidence either way until relabelled.
+     - Gemcitabine p53: truth +0.08 to +0.10 in the labelled TP53-wild-type lines and +0.08 in LOX-IMVI
+       (labelled non-responder; TP53 status to verify). Every response is in the 0.05–0.1 grey zone, so the
+       target is out of reach for any interval method at this effect size.
+     - Zhang: max |mean truth| 0.02; only 2 of 10 splits have any pair ≥ 0.1, so its r (a held-out "miss") is
+       noise. Zhang is a null / specificity dataset; its v3 false calls (0.09) are the real signal there.
+     - Parse IFN-β "pass" is on coverage and r only: JAK-STAT truth is +0.07 to +0.13 in every type, and PALM
+       calls 2% of the pairs ≥ 0.1. Parse TNF-α: truth ≤ 0.08 (3 splits with any pair ≥ 0.1).
+     - The same pair can count as a true effect and a false call: label-based responders with null truth
+       (McFarland trametinib LNCaP MAPK −0.04; encorafenib LOX-IMVI).
+     - Overall r over all type × program pairs is dominated by the largest program and hides cell-type
+       specificity: within-program, across-type r falls with all-or-nothing pooling (Tahoe trametinib
+       0.55 → 0.32, RMC-6236 0.28 → −0.20) while overall r rises.
+     - To add as readouts: true effects called defined by the measured truth (|β| ≥ 0.1, right sign);
+       wrong-sign calls; within-program across-type r. Fix the encorafenib and gemcitabine labels from
+       target genes and TP53/BRAF status before using them.
 3. Candidate 12 on COMBAT (globin / platelet masking): fraction r and effect r on real bulk.
 4. Candidate 5 (gene-level unmixing) if 9 does not recover Kang's power.
 5. Blocked until data: 1 (granulocyte truth), 6 and 7 (blood counts), 13 (ordered TB axis needs the cohort).
