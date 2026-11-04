@@ -12,8 +12,14 @@ is written after the held-out v2 report, matching each candidate to where held-o
 - A candidate that needs data we do not have is reported as blocked; missing data is not simulated in its
   place.
 
-Sources: our own list (2026-11-03) and an external critique (`PALM_biological_critique.md`, 2026-11-04;
-points checked against the code, the three that were wrong are listed at the end).
+Sources: our own list (2026-11-03), an external critique (`PALM_biological_critique.md`, 2026-11-04; points
+checked against the code) and a statistics literature scan (`v3_cs_stats_scan.md`, 2026-11-04; arXiv IDs
+given below are from that scan and **not yet verified**: check each before citing). What was not adopted, and
+why, is listed at the end.
+
+**Expected gain.** Most items make the method more defensible, not more accurate. The ones that can change
+results are 5, 6 (with blood counts), 8, 9 and 10; of the method changes, **test 9 (MASH-style sharing)
+first**: it targets the weakest held-out regime (broad responses).
 
 ## A. Validation before any whole-blood TB claim
 
@@ -29,7 +35,16 @@ points checked against the code, the three that were wrong are listed at the end
    only; held-out v2 report where the truth allows it.*
 4. **Coverage by route** (unmixed / calibrated; guard fired / silent). Choosing the narrower interval can hide
    a branch with poor coverage. *Held-out v2: program-level route is recorded, the per-type guard is not;
-   record both in v3.*
+   record both in v3.* Formal counterpart: group-conditional (Mondrian) conformal coverage.
+4b. **Coverage against the conditioning of the unmixing.** With little variation in the cell mix, intervals
+   could be narrow *and* wrong, not only wide (ill-conditioned orthogonal scores, arXiv:2512.07083). Report
+   coverage against the condition number of each study's unmixing design, including the McFarland "tight"
+   variant. *Reporting only.*
+4c. **False coverage rate among called boxes.** End-to-end coverage already includes the routing choice on
+   average; for the paper, control or report the false coverage rate of the *called* cell type × program
+   boxes (selective inference, arXiv:2203.12572).
+4d. **Design limit as a pre-registered readout.** `identifiability.py` computes it analytically from π, B, G
+   and n before any effect is estimated; report it up front for every study.
 
 ## B. Model and estimator changes
 
@@ -37,6 +52,9 @@ points checked against the code, the three that were wrong are listed at the end
    program's genes.
 6. **Blood counts as a second likelihood on π** (CBC differential counts; available in most TB cohorts).
    Anchors the cell mix, identifies RNA content, and turns "more cells" into cells per µL.
+   - Model for the reference scale: one scale per cell type plus one per sample (two-step linear mixing
+     under variability, arXiv:2502.17212). The per-sample scale is not identifiable from bulk alone: only
+     with blood counts.
    - **RNA content:** currently mean UMIs per cell in the atlas (capture efficiency mixed in, worst for
      neutrophils), a point value with no uncertainty, and fixed across disease status: a state-driven change
      in RNA output can only appear as "more cells". Give it a prior and propagate it.
@@ -49,9 +67,15 @@ points checked against the code, the three that were wrong are listed at the end
    (β_cp = s_p + d_cp, d shrunk to 0) instead of falling back to a program-level change. The unmixing already
    shrinks towards a shared value (REML); this makes the deviation the reported quantity.
    `plant="shared"` (v2 development) failed and is not the route.
+   - **Preferred form: multi-condition empirical Bayes (MASH-style; arXiv:2406.08784)** with cell types as
+     the conditions: the pattern of sharing across types is learned instead of imposed, which generalises
+     s_p + d_cp. **First method change to test.**
 10. **Attenuation as a function of effect size:** calibrate on stimulated donors (Kang, Parse) or on spiked
     effects at TB-like size, instead of one slope from between-donor variation near zero. The design check
     already plants study-sized effects and held-out coverage held on large effects; this tests it directly.
+    - Tool: SIMEX: estimate attenuation as a curve over injected effect / error size and extrapolate
+      (nonparametric and count variants: arXiv:2111.02863, arXiv:2409.14256). Expected gain: small, at large
+      effects.
 11. **Cell-type-specific program footprints** (G_pcg = G_pg + u_pcg, u shrunk hard). Cheap first step: report,
     per program, how consistent its footprint is across cell types in the atlas, and down-weight
     inconsistent programs.
@@ -66,8 +90,32 @@ points checked against the code, the three that were wrong are listed at the end
 
 15. **Stage A two-step fit for rare types:** compare against full NUTS on a few samples across the abundance
     range; report the interval-width ratio for the rarest types.
+    - Proper version: simulation-based calibration of PALM-lite (posterior SBC, conditioned on data like the
+      study's; arXiv:2502.03279), with rare-type π and the reported β̂ as test quantities, not global
+      parameters (arXiv:2211.02383). If intervals are too narrow, recalibrate (arXiv:2603.20068). Too slow
+      with full NUTS.
 16. **Differentiation vs activation states:** write the partition policy (naive / memory / effector) and
     report at two granularities (lineage and fine type; supported via lineage groups).
+
+## Framing for the paper (no method change)
+
+- PALM is a **modular (cut) Bayesian pipeline**: the Bayesian model for the cell mix, a calibrated estimator
+  downstream (JRSS-B 2025, arXiv:2211.03274). Semi-modular inference (AISTATS 2020, arXiv:2003.06804) is a
+  family between full Bayes and full cut; an optional research direction, not a v3 item.
+- Long-term option: a Neyman-orthogonal estimator for β with (π, B) as nuisance, which would make β
+  first-order insensitive to fraction error. Research-level; not v3.
+
+## Not adopted from the statistics scan
+
+- **Checking the "sufficiently scattered condition"** (ranked first in the scan): it governs recovery of
+  *unknown* simplex factors in matrix factorisation. Our unmixing is a regression with a *known* leakage
+  operator, so identifiability is the rank and conditioning of that design, already computed analytically
+  (item 4d).
+- **"Carrying draws does not remove first-stage bias"** as a v3 fix: the calibration and the design check run
+  on estimated fractions (the fraction step is rerun), so fraction error is inside the measured coverage. The
+  orthogonal-moment route is kept as a long-term option above.
+- **Covariate-shift conformal methods** (weighted, sketched): they formalise the calibration-donor vs study
+  shift (critique 3.1); low priority, and the scan itself notes they degrade when overlap is poor.
 
 ## Not adopted from the critique (checked against the code)
 
