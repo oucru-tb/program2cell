@@ -52,6 +52,16 @@ first**: it targets the weakest held-out regime (broad responses).
      But power on truth |β| ≥ 0.1 is a little lower (Kang 0.22 → 0.17, McFarland 0.50 → 0.43), and
      within-program r across types still falls (McFarland 0.36 → 0.24, RMC-6236 0.21 → −0.02). Not yet a v3
      candidate: the shrinkage weight still pulls responding lines towards the mean.
+   - **Headroom check (2026-11-04, splits 20–24; `scripts/experiments/gls_headroom.py`):** design limit
+     (`identifiability.py` mde_full) median 0.04–0.05 on McFarland and Tahoe (97–100% of |β| ≥ 0.1 and 64–89% of
+     type deviations ≥ 0.05 resolvable), 0.19 on Kang (49%). A plain GLS unmixing with every sample's own leakage
+     operator ranks types within a program well (r ≈ 0.7) but overstates sizes 1.3–5× (type-specific). With a
+     per-(type, program) scale learned on simulated cohorts (`gls_calibrated`):
+     Tahoe RMC-6236 within-program r 0.21 → 0.61, true effects called 0.69 → 0.73, r 0.73 → 0.78; gemcitabine
+     r 0.55 → 0.62; encorafenib r 0.39 → 0.47, called 0.27 → 0.40; false calls ≤ 0.07, coverage 0.87–0.91. But
+     Tahoe trametinib worse (called 0.81 → 0.59, within-program r 0.63 → 0.33) and on McFarland its intervals
+     are far too narrow (coverage 0.59–0.63, false calls 0.41): the simulation misses an error source there.
+     Next: find that source (fraction error of PALM-lite on paired mixtures?) and route by the design limit.
    - **Metric check against the biology (2026-11-04, splits 20–29):**
      - Encorafenib known answer (BRAF-V600 lines LOX-IMVI, HT-29, RKO) is not supported by the measured truth:
        MAPK −0.02 / −0.14 / −0.06, while KRAS-G12C NCI-H2030 is −0.10. Unlike dabrafenib, it was never checked

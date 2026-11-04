@@ -172,9 +172,11 @@ def run(datasets, splits):
             if os.path.exists(f):
                 continue
             pb, inp, T, beta, truth, src, fsrc, cal, donors = cl._setup(dsn, split)
-            pi = np.median(src["fraction_draws"], 0) if "fraction_draws" in src else None
-            if pi is None:
-                continue
+            if "fraction_draws" in src:
+                pi = np.median(src["fraction_draws"], 0)
+            else:                                   # PALM-lite datasets (Tahoe, Parse): its EM fractions
+                from program2cell.core.realloc import em_fractions
+                pi = em_fractions(np.asarray(inp.Y, float), np.asarray(inp.B, float))
             raw = reallocate(inp.Y, pi, inp.B, inp.Gmat)
             paired = dsn in ("kang", "zhang")
             d = design_calculator(pi, inp.B, inp.Gmat, T, raw, groups=donors if paired else None, seed=split)
