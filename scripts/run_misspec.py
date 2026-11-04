@@ -8,8 +8,8 @@ Usage: python scripts/run_misspec.py [reps] [N]
 """
 import sys, json, time
 import numpy as np
-import palm_bulk as pb
-from palm_bulk import sim
+import program2cell as pb
+from program2cell import sim
 
 REPS = int(sys.argv[1]) if len(sys.argv) > 1 else 3
 N = int(sys.argv[2]) if len(sys.argv) > 2 else 24

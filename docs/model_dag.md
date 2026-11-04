@@ -1,4 +1,4 @@
-# PALM-bulk as a DAG (method freeze v2, 2026-11-03)
+# program2cell as a DAG (method freeze v2, 2026-11-03)
 
 PALM is a pipeline of four stages around one generative model, plus an optional platform correction before it
 and readouts after it. This file shows each part as a graph, with the defaults of the frozen method
@@ -169,7 +169,7 @@ Plate view:
 | Cell-type fractions | π_ic (stage A draws) |
 | Per-sample per-type activity ± 90% | calibrated δ̂ (stage C) |
 | Per-cell treatment effect β_cp ± 90%, call | stage D |
-| Contributions: each type's share of the bulk change, split into "more cells" ½(π₁−π₀)(s₀+s₁) and "cells changed" ½(π₀+π₁)(s₁−s₀) | π (stage A) and β (stage D), `palm_bulk.contributions` |
+| Contributions: each type's share of the bulk change, split into "more cells" ½(π₁−π₀)(s₀+s₁) and "cells changed" ½(π₀+π₁)(s₁−s₀) | π (stage A) and β (stage D), `program2cell.contributions` |
 | Shared vs type-specific response, program-level net change | shared-response fit inside stage D (`unmix_kw=dict(shared=True)`) |
 | Robustness to unmeasured confounding | effects and intervals, `causal.robustness_value` |
 | Design limit: smallest per-type change this design can resolve | π, B, G, n (`scripts/experiments/identifiability.py`) |

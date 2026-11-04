@@ -3,8 +3,8 @@ import textwrap
 import numpy as np
 import pandas as pd
 import pytest
-import palm_bulk as pb
-from palm_bulk import compare, sim
+import program2cell as pb
+from program2cell import compare, sim
 
 
 @pytest.fixture(scope="module")
@@ -46,7 +46,7 @@ def test_python_baselines_and_scoring(study):
 
 
 def test_ulm_activity(study):
-    pytest.importorskip("decoupler")                      # optional extra: palm-bulk[progeny]
+    pytest.importorskip("decoupler")                      # optional extra: program2cell[progeny]
     _, data, truth = study
     ulm = compare.reallocation(data, activity="ulm")
     assert ulm.activity.shape == truth["delta"].shape and np.isfinite(ulm.activity).any()
@@ -107,7 +107,7 @@ def test_unavailable_methods_reported(study, monkeypatch):
     _, data, _ = study
     for var in ("PALM_RSCRIPT", "PALM_BLADE_PYTHON", "CIBERSORTX_USER", "CIBERSORTX_TOKEN"):
         monkeypatch.delenv(var, raising=False)                  # never launch the real tools here
-    monkeypatch.setattr("palm_bulk.compare.methods.find_rscript", lambda: None)
+    monkeypatch.setattr("program2cell.compare.methods.find_rscript", lambda: None)
     for name in ["instaprism", "toast", "cibersortx", "blade"]:
         res, err = compare.run_method(name, data)
         assert res is None and err.startswith("unavailable"), name
@@ -153,7 +153,7 @@ def test_r_wrappers_file_handoff(study, tmp_path):
 
 
 def test_blade_prior_uses_donor_pseudobulk(study):
-    from palm_bulk.compare.methods import _blade_prior
+    from program2cell.compare.methods import _blade_prior
     st, data, _ = study
     data2 = compare.CompareData(**{**data.__dict__, "sc_donors": st["sc_donors"]})
     mean, sd = _blade_prior(data2)
@@ -171,7 +171,7 @@ def test_blade_prior_uses_donor_pseudobulk(study):
 def test_cellgeometry(study):
     """Runs only where R with cellGeometry is set up (PALM_RSCRIPT); skipped otherwise."""
     import subprocess
-    from palm_bulk.compare.base import find_rscript, _env_for
+    from program2cell.compare.base import find_rscript, _env_for
     rs = find_rscript()
     if not rs or subprocess.run([rs, "-e", "library(cellGeometry)"], env=_env_for(rs), capture_output=True,
                                 timeout=120).returncode != 0:

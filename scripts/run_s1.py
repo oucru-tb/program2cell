@@ -13,8 +13,8 @@ import jax
 import numpyro
 import numpyro.distributions as dist
 from numpyro.infer import MCMC, NUTS, init_to_median
-from palm_bulk import attribution, shares, interval, coverage, cell_profiles, provenance
-from palm_bulk.core.sim import make_reference, simulate
+from program2cell import attribution, shares, interval, coverage, cell_profiles, provenance
+from program2cell.core.sim import make_reference, simulate
 
 REPS = int(sys.argv[1]) if len(sys.argv) > 1 else 4
 N = int(sys.argv[2]) if len(sys.argv) > 2 else 8

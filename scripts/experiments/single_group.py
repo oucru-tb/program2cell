@@ -1,7 +1,7 @@
 """Single-group cohorts (e.g. TB patients only): docs/benchmarking.md 0.8. Development splits 0-9.
 
 No comparison group: PALM runs without treatment and gives each patient's calibrated per-cell-type activity
-with a 90% interval; palm_bulk.associate then relates it to a patient-level measure z. Datasets:
+with a 90% interval; program2cell.associate then relates it to a patient-level measure z. Datasets:
   mcf_grad_ida / mcf_grad_tram  McFarland gradient mixtures (build_mcfarland.py MIX_VARIANT=gradient): each
                  "patient" has z ~ U(0, 1), the share of drug-treated cells in every line; 30 of 40 patients per
                  split; reference and calibration from the reference mixtures (control cells)
@@ -12,7 +12,7 @@ with a 90% interval; palm_bulk.associate then relates it to a patient-level meas
                  (offsets estimated on the COVID test bulk + the healthy volunteers' bulk, applied to the COVID
                  samples), real_paired (offsets from paired samples of non-test people)
 Methods: palm (calibrated activity, PALM-lite fractions, intervals; association by correlating it with z),
-palm_unmix (palm_bulk.associate_unmix: unmixing with z as a continuous treatment; association metrics only, plus
+palm_unmix (program2cell.associate_unmix: unmixing with z as a continuous treatment; association metrics only, plus
 cov_change = coverage of its change interval for the true change over the z range), instaprism (per-type expression scored with
 estimate_delta), reallocation (NNLS fractions), naive (one bulk shift copied to every type).
 Scores (truth = each test sample's held-out per-type activity):
@@ -45,7 +45,7 @@ METHODS = ["palm", "palm_unmix", "instaprism", "reallocation", "naive"]
 
 
 def _score(est, truth, z, lo=None, hi=None, seed=0):
-    import palm_bulk as pb
+    import program2cell as pb
     N, C, P = truth.shape
     s = {}
     if lo is not None:
@@ -68,7 +68,7 @@ def _score(est, truth, z, lo=None, hi=None, seed=0):
     rng = np.random.default_rng(seed + 1)
     s["perm_fpr"] = float(pb.associate(est, rng.permutation(z), n_boot=20, n_perm=499, seed=seed)["calls"].mean())
     if pos.any() and nul.any():
-        from palm_bulk.compare import known_answer as ka
+        from program2cell.compare import known_answer as ka
         sc = np.abs(dest)[pos | nul]
         s["auroc"] = float(ka._auroc(sc, pos[pos | nul]))
     s["slope_r"] = float(np.corrcoef(dest.ravel(), dtrue.ravel())[0, 1])
@@ -77,8 +77,8 @@ def _score(est, truth, z, lo=None, hi=None, seed=0):
 
 
 def _score_unmix(inp, pi, truth, z, seed=0):
-    import palm_bulk as pb
-    from palm_bulk.compare import known_answer as ka
+    import program2cell as pb
+    from program2cell.compare import known_answer as ka
     a = pb.associate_unmix(inp, pi, z, seed=seed)
     t = pb.associate(truth, z, n_boot=20, n_perm=19, seed=seed)
     dtrue, dest = t["slope"] * np.ptp(z), a["change"]
@@ -96,8 +96,8 @@ def _score_unmix(inp, pi, truth, z, seed=0):
 
 def _compare(b, Y, prog, inp, workdir):
     """Competitor activity (N, C, P) on bulk Y: instaprism, reallocation, naive."""
-    from palm_bulk import compare
-    from palm_bulk.compare import methods as cm
+    from program2cell import compare
+    from program2cell.compare import methods as cm
     rr = b.reference_rows
     data = compare.CompareData(bulk=Y, sc_counts=rr["counts"], sc_genes=b.reference.genes, sc_cell_types=rr["cell_types"],
                                sc_donors=rr["donors"], inputs=inp, programs=prog, treatment=None, workdir=workdir)
@@ -114,7 +114,7 @@ def _compare(b, Y, prog, inp, workdir):
 
 
 def _run_one(dsn, split, bulk_name, b, Y, table, prog, z, test_donors, cal_kw):
-    import palm_bulk as pb
+    import program2cell as pb
     todo = [m for m in METHODS if not os.path.exists(os.path.join(OUT, "%s__s%d__%s__%s.json" % (dsn, split, bulk_name, m)))]
     if not todo:
         return
@@ -157,8 +157,8 @@ def _run_one(dsn, split, bulk_name, b, Y, table, prog, z, test_donors, cal_kw):
 
 
 def run_mcf(dsn, splits):
-    import palm_bulk as pb
-    from palm_bulk.core import PseudobulkTable, make_benchmark
+    import program2cell as pb
+    from program2cell.core import PseudobulkTable, make_benchmark
     table = PseudobulkTable.from_h5ad(MCF, {}, db.MCF_LINES)
     prog = db._programs(pb, "progeny7")
     label = "grad_" + dsn.split("_")[-1]
@@ -172,9 +172,9 @@ def run_mcf(dsn, splits):
 
 
 def run_combat(splits):
-    import palm_bulk as pb
+    import program2cell as pb
     import anndata as ad
-    from palm_bulk.core import PseudobulkTable, make_benchmark
+    from program2cell.core import PseudobulkTable, make_benchmark
     import combat_real as cr
     bk = ad.read_h5ad(os.path.join(COMBAT, "combat_bulk.h5ad"))
     bk = bk[bk.obs["paired"].values & ~bk.obs_names.duplicated()]

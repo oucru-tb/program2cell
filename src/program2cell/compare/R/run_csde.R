@@ -1,5 +1,5 @@
 # Cell-type-specific differential expression with TOAST or TCA, on files written by
-# palm_bulk.compare.methods.toast / .tca.
+# program2cell.compare.methods.toast / .tca.
 # Usage: Rscript run_csde.R WORKDIR toast|tca
 # In WORKDIR: bulk_cpm.csv (genes x samples), fractions.csv (samples x cell types), design.csv (sample, T).
 # Writes:     logfc.csv (genes x cell types): natural-log fold change, treated vs control, per cell type.

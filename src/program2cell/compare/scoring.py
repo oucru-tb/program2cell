@@ -5,7 +5,7 @@ Truth dict (arrays aligned to data.inputs: samples, cell_types, programs):
   delta  (N, C, P) per-sample per-cell-type program activity (model scale)
   beta   (C, P)    treatment shift of activity (optional)
 Simulations give these exactly; for real pseudo-bulk they come from the pooled cells
-(per-type pseudo-bulk -> palm_bulk.estimate_delta).
+(per-type pseudo-bulk -> program2cell.estimate_delta).
 
 Metrics are chosen so methods on another scale ('score') are still comparable by rank:
   fractions:  rmse, pearson (pooled), per-cell-type correlation across samples

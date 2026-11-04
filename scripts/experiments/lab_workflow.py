@@ -28,7 +28,7 @@ def gene_sets(inp):
 def lab_scores(dsn, split, inp, method="instaprism"):
     """(N, C, P) GSVA scores from the per-type expression of InstaPrism (or another method with Z files)."""
     import decoupler as dc
-    from palm_bulk.compare.methods import safe_names
+    from program2cell.compare.methods import safe_names
     d = os.path.join(cl.ROOT, "benchmarks", "dev", "work", dsn, "s%d" % split, method)
     fwd, _ = safe_names(inp.cell_types, "ct")
     net = gene_sets(inp)

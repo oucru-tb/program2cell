@@ -10,8 +10,8 @@ from scipy.optimize import nnls
 import matplotlib
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt
-from palm_bulk import fit, interval, coverage, provenance
-from palm_bulk.core.sim import make_reference, simulate_causal
+from program2cell import fit, interval, coverage, provenance
+from program2cell.core.sim import make_reference, simulate_causal
 
 REPS = int(sys.argv[1]) if len(sys.argv) > 1 else 4
 N = int(sys.argv[2]) if len(sys.argv) > 2 else 24

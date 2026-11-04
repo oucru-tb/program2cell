@@ -2,7 +2,7 @@
 
 Every method receives one `CompareData` and returns one `MethodResult` aligned to PALM's prepared
 inputs (`data.inputs`: modelled genes, cell types, programs, samples, all in that order), so all
-methods are scored the same way (palm_bulk.compare.scoring).
+methods are scored the same way (program2cell.compare.scoring).
 """
 from dataclasses import dataclass, field
 import os
@@ -20,7 +20,7 @@ class CompareData:
     bulk: genes x samples raw counts (all genes, not only the modelled ones).
     sc_counts: cells x genes raw counts of the single-cell reference (dense or scipy sparse);
         sc_genes, sc_cell_types (per cell), sc_donors (per cell, optional) describe it.
-    inputs: palm_bulk prepare_inputs(...) output built from the same bulk and reference; defines
+    inputs: program2cell prepare_inputs(...) output built from the same bulk and reference; defines
         the modelled genes, the baseline B and the program matrix used for scoring.
     programs: programs x genes weights (as given to prepare_inputs), for decoupler scoring.
     treatment: 0/1 per sample (aligned with bulk columns) or None.

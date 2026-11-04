@@ -1,4 +1,4 @@
-# How PALM-bulk is benchmarked
+# How program2cell is benchmarked
 
 A living document: what we compare, against what truth, with which metrics, and why. Update the
 **Changelog** and **Current results** sections whenever the protocol or the numbers change.
@@ -18,7 +18,7 @@ Last updated: 2026-11-02.
 ### 0.1 The question and the claims under test
 The question has two layers, together called attribution:
 1. **Contribution:** when a gene program changes in bulk, which cell types does the change come from, and how
-   much is more cells (more reads) versus cells that changed? Readout: `palm_bulk.contributions`; check:
+   much is more cells (more reads) versus cells that changed? Readout: `program2cell.contributions`; check:
    `contributions_eval.py`.
 2. **Per-cell change:** for each cell type c and program p, did p change *inside* c, by how much, and can the
    data tell?
@@ -167,7 +167,7 @@ and TEN stay unflagged.
 - Raw real bulk loses most of the signal: the main sepsis change (CD14 monocytes TNF-α +0.27, NF-κB −0.26) is
   estimated at +0.03 to +0.09 and −0.03 to −0.06. Methods validated only on assembled bulk are over-optimistic.
 - Study-estimated offsets restore single-cell-level accuracy. They are now in the package as
-  `palm_bulk.correct_platform` (PALM-lite fractions and a per-gene median log ratio, alternated four times; no
+  `program2cell.correct_platform` (PALM-lite fractions and a per-gene median log ratio, alternated four times; no
   paired data). They cost proportion accuracy (read fractions vs truth r 0.25–0.40, against 0.58–0.92). An
   offset on a type's markers and a different mean fraction fit the bulk equally well, so the study's mean
   composition is not identifiable from the bulk alone. Read proportions from the uncorrected fit, or anchor
@@ -306,7 +306,7 @@ per-cell-type activity δ_icp with 90% ranges, and the user compares patients ag
   (type, program) a regression of δ_icp on Z:
   - the patient-level intervals propagated by resampling the fraction draws;
   - p-values by permutation of Z.
-  - This association step is new code (`palm_bulk.associate`, to write), opt-in, chosen on development
+  - This association step is new code (`program2cell.associate`, to write), opt-in, chosen on development
     splits.
 - **Lab workflow:** InstaPrism → per-type GSVA → Spearman with Z → BH (`lab_workflow.py`, extended to a
   continuous Z).
@@ -322,7 +322,7 @@ single-cell pseudobulk (ceiling).
 held-out on fresh splits after the association step is frozen.
 
 **Scripts to write:** `single_group.py run|summary` (rows in `benchmarks/dev/single_group/`), the gradient
-mixture variant, `palm_bulk.associate`.
+mixture variant, `program2cell.associate`.
 
 **Compute:**
 - McFarland gradient with PALM-lite fractions: about 5 min per split.
@@ -346,7 +346,7 @@ python scripts/experiments/real_truth_gse60424.py                         # real
 
 ## 1. What the benchmark has to show
 
-PALM-bulk claims three things from bulk RNA-seq plus a single-cell reference:
+program2cell claims three things from bulk RNA-seq plus a single-cell reference:
 
 1. **Composition**: read fractions π per sample and cell type, with honest intervals.
 2. **Gene program deconvolution**: activity δ of known programs (PROGENy pathways) *per sample and per
@@ -723,9 +723,9 @@ program analysis that the plug-in workflow follows.
 So the user's recollection is right: BayesPrism's program analysis is NMF factors (or user programs) in
 the malignant compartment, then correlated with fractions estimated from the same bulk.
 
-**How PALM-bulk differs, and how to show it:**
+**How program2cell differs, and how to show it:**
 
-| | BayesPrism | PALM-bulk | How the benchmark shows it |
+| | BayesPrism | program2cell | How the benchmark shows it |
 |---|---|---|---|
 | Which cell types have programs | Malignant only | Every cell type | `act_spearman_specific`, across-types ρ, localisation accuracy. |
 | What a program is | NMF factors, data-specific and unlabelled (or a user prior) | Fixed, named programs (PROGENy), the same across studies | Interpretability and comparability; not a metric. |
@@ -907,7 +907,7 @@ Rows from before then have no `.npz` and keep their old metrics: the PBMC config
     - `sim_widen="abs"` is the default;
     - older `causal_loop` estimators are pinned to their v1 settings;
     - the development comparison is in `benchmarks/dev/route_rule_2026-11-03.txt`.
-  - `palm_bulk.correct_platform` / `platform_offsets`: study-estimated per-gene platform offsets for real bulk.
+  - `program2cell.correct_platform` / `platform_offsets`: study-estimated per-gene platform offsets for real bulk.
     Tested; the limit on mean composition is documented.
   - COMBAT: InstaPrism + t-test on the same real bulks (table in 0.6).
   - Held-out v2 (`heldout_v2_chain.sh`, splits 20–29) started 12:18.

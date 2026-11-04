@@ -547,7 +547,7 @@ shared or shared? and the common interval is clear of ±margin (0.1). Splits 0�
 This is how PALM reports a response that every cell type shares (interferon) when the types can't be
 resolved one by one.
 
-**Contributions readout (`palm_bulk.contributions`, added 2026-11-02).** It answers the question users start
+**Contributions readout (`program2cell.contributions`, added 2026-11-02).** It answers the question users start
 from: a program changed in bulk; where does the change come from? It splits each program's bulk change
 exactly into per-cell-type parts (the Shapley form of `core.equations.effect_decomposition`):
 - **cells changed:** ½(π₀+π₁)(s₁−s₀);
@@ -925,19 +925,19 @@ vs IFN-β stimulated, raw counts. Built by `scripts/experiments/build_kang.py` i
 
 | Part | Where | Status |
 |---|---|---|
-| Full PALM fit | `palm_bulk.bayes.twostage.run_palm_fast` | Done |
-| Gene selection (Fisher) | `palm_bulk.core.data.select_genes` | Done |
-| `estimate_delta` | `palm_bulk.core.scores` | Done; line-search fix 2026-10-28 |
-| Posterior reallocation | `palm_bulk.reallocate`, `realloc_counts` (`core/realloc.py`) | Done; accepts draw axes; fraction floor 1e-4 |
-| PALM-lite EM | `palm_bulk.em_fractions` (`core/realloc.py`) | Done; SQUAREM-accelerated, under 1 s per split |
-| Calibration set | `palm_bulk.build_calibration_set`, `calibration_from_table` (`core/calibrate.py`) | Done; folds by donor, `ref_filter`, `all_specimens` |
-| Calibration map, intervals | `palm_bulk.Calibrator` | Done; activity: conformal; effects: `normal`, `conf`, `strat`, `lk`, `lk+`, `lka` |
-| Module API | `palm_bulk.program_deconvolution` → `DeconvolutionResult` (`deconvolution.py`) | Done |
+| Full PALM fit | `program2cell.bayes.twostage.run_palm_fast` | Done |
+| Gene selection (Fisher) | `program2cell.core.data.select_genes` | Done |
+| `estimate_delta` | `program2cell.core.scores` | Done; line-search fix 2026-10-28 |
+| Posterior reallocation | `program2cell.reallocate`, `realloc_counts` (`core/realloc.py`) | Done; accepts draw axes; fraction floor 1e-4 |
+| PALM-lite EM | `program2cell.em_fractions` (`core/realloc.py`) | Done; SQUAREM-accelerated, under 1 s per split |
+| Calibration set | `program2cell.build_calibration_set`, `calibration_from_table` (`core/calibrate.py`) | Done; folds by donor, `ref_filter`, `all_specimens` |
+| Calibration map, intervals | `program2cell.Calibrator` | Done; activity: conformal; effects: `normal`, `conf`, `strat`, `lk`, `lk+`, `lka` |
+| Module API | `program2cell.program_deconvolution` → `DeconvolutionResult` (`deconvolution.py`) | Done |
 | Tests | `tests/test_deconvolution.py` (7 tests, simulated studies) | Pass; quick suite 55/55 |
 
 **Using the module:**
 
-    import palm_bulk as pb
+    import program2cell as pb
     inp = pb.prepare_inputs(bulk, reference, programs, treatment=T)
     cal = pb.calibration_from_table(table, bulk_donors, inp.cell_types, inp.genes, inp.Gmat)
     res = pb.program_deconvolution(inp, cal, engine="palm")             # or engine="lite"

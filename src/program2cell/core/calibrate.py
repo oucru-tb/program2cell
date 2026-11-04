@@ -325,7 +325,7 @@ class Calibrator:
         """Treatment effects (C, P) of calibrated activity, with an interval (lo, hi) of type `interval` (see
         module doc) and the parts of its variance. The effect estimator is any estimator linear in the
         outcome, beta = sum_n w_n activity_n: by default the difference of means of T (contrast_weights);
-        pass `weights` (N,) for covariate adjustment, paired designs, IPW or AIPW (palm_bulk.causal)."""
+        pass `weights` (N,) for covariate adjustment, paired designs, IPW or AIPW (program2cell.causal)."""
         if interval not in self.INTERVALS:
             raise ValueError("interval must be one of %s" % (self.INTERVALS,))
         w = contrast_weights(T) if weights is None else np.asarray(weights, float)

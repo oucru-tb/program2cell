@@ -2,8 +2,8 @@
 import types
 import numpy as np
 import pytest
-import palm_bulk as pb
-from palm_bulk import sim
+import program2cell as pb
+from program2cell import sim
 
 
 def _study(seed=0, C=3, P=2, Gn=240, n_ref_donors=40, n_bulk=40, effect=(0, 0, 1.0), sd=0.4, depth=4e5):

@@ -1,4 +1,4 @@
-# palm-bulk user guide
+# program2cell user guide
 
 Bayesian deconvolution of bulk RNA-seq that infers, jointly and with uncertainty:
 
@@ -7,12 +7,12 @@ Bayesian deconvolution of bulk RNA-seq that infers, jointly and with uncertainty
 3. **attribution**: what share of each program's signal each cell type carries,
 4. for treated vs control cohorts, **intrinsic vs composition-driven treatment effects**.
 
-NumPyro/NUTS on JAX. Runs on CPU; an NVIDIA GPU is optional (`pip install "palm-bulk[gpu]"`, Linux/WSL2) and recommended for hundreds of samples. Status: research prototype, validated on simulations only. Not yet benchmarked on real data.
+NumPyro/NUTS on JAX. Runs on CPU; an NVIDIA GPU is optional (`pip install "program2cell[gpu]"`, Linux/WSL2) and recommended for hundreds of samples. Status: research prototype, validated on simulations only. Not yet benchmarked on real data.
 
 ## Install
 
 ```bash
-git clone <your-repo-url> palm-bulk && cd palm-bulk
+git clone <your-repo-url> program2cell && cd program2cell
 pip install -e .                    # core
 pip install -e ".[sc]"              # + anndata for .h5ad references
 pip install -e ".[progeny]"         # + decoupler for PROGENy programs
@@ -25,7 +25,7 @@ Python 3.10 or newer.
 
 ## Quick start (notebook)
 
-`notebooks/palm_bulk_real_data.ipynb` is a full tutorial: data loading, gene selection, a run-time estimate before fitting, the fit, every output, a recovery check against a hidden truth, and the benchmarks. With `USE_DEMO = True` it writes a realistic synthetic dataset in the formats below (5 immune cell types, 4 programs, 24 samples with a treatment and a confounded batch; about 10 minutes on a laptop CPU). Put your files in `data/`, set `USE_DEMO = False`, and edit the config cell.
+`notebooks/program2cell_real_data.ipynb` is a full tutorial: data loading, gene selection, a run-time estimate before fitting, the fit, every output, a recovery check against a hidden truth, and the benchmarks. With `USE_DEMO = True` it writes a realistic synthetic dataset in the formats below (5 immune cell types, 4 programs, 24 samples with a treatment and a confounded batch; about 10 minutes on a laptop CPU). Put your files in `data/`, set `USE_DEMO = False`, and edit the config cell.
 
 | Input | Format |
 |---|---|
@@ -37,7 +37,7 @@ Python 3.10 or newer.
 ## Quick start (Python)
 
 ```python
-import palm_bulk as pb
+import program2cell as pb
 pb.configure_compute("auto", precision="float64")              # first, before any fit: device "cpu" | "gpu" | "auto"
 ref  = pb.from_anndata(adata, "cell_type", "donor")             # donor-aware baseline + HVG scores
 prog = pb.load_programs("programs.csv")                         # programs x genes
@@ -78,7 +78,7 @@ All outputs list cell types and programs in **alphabetical order** (`res.inputs.
 
 ## Model in one paragraph
 
-Each sample is a mixture of cell-type profiles. A cell type's profile is its reference baseline `B_cg` multiplied by `exp(sum_p delta_cp G_pg)`, where `delta` is how strongly program `p` is active in that cell type relative to its reference state and `G` is the program dictionary. Counts are negative binomial with a dispersion per gene, estimated once from the bulk counts (`dispersion="fixed"`, default) or sampled (`dispersion="gene"`, slower, wider effect intervals). With a treatment `T`, `T` shifts composition (`gamma`) and activity (`beta`) with sparse priors, and the bulk program change is split exactly (Shapley average) into intrinsic and composition parts per cell type. Covariates shift both composition and activity. A gene-wise platform scale `m_g` absorbs scRNA-vs-bulk bias. The modelled genes are those that add the most Fisher information about fractions and program shifts given their noise (greedy D-optimal design, `select_genes`; it also decides how many genes are worth modelling, up to `max_genes`). `gene_selection="groups"` uses the older rule: a union of top program genes, cell-type markers, highly variable genes and stable anchor genes in fixed shares. See `src/palm_bulk/core/equations.py` (forward model) and `src/palm_bulk/bayes/model.py` (priors).
+Each sample is a mixture of cell-type profiles. A cell type's profile is its reference baseline `B_cg` multiplied by `exp(sum_p delta_cp G_pg)`, where `delta` is how strongly program `p` is active in that cell type relative to its reference state and `G` is the program dictionary. Counts are negative binomial with a dispersion per gene, estimated once from the bulk counts (`dispersion="fixed"`, default) or sampled (`dispersion="gene"`, slower, wider effect intervals). With a treatment `T`, `T` shifts composition (`gamma`) and activity (`beta`) with sparse priors, and the bulk program change is split exactly (Shapley average) into intrinsic and composition parts per cell type. Covariates shift both composition and activity. A gene-wise platform scale `m_g` absorbs scRNA-vs-bulk bias. The modelled genes are those that add the most Fisher information about fractions and program shifts given their noise (greedy D-optimal design, `select_genes`; it also decides how many genes are worth modelling, up to `max_genes`). `gene_selection="groups"` uses the older rule: a union of top program genes, cell-type markers, highly variable genes and stable anchor genes in fixed shares. See `src/program2cell/core/equations.py` (forward model) and `src/program2cell/bayes/model.py` (priors).
 
 ## What the simulations show
 
@@ -120,10 +120,10 @@ Against a two-step baseline (NNLS fractions, then reference program scores), the
 
 ## Comparing with other methods
 
-`palm_bulk.compare` runs PALM and competing methods on the same inputs and scores them against truth
+`program2cell.compare` runs PALM and competing methods on the same inputs and scores them against truth
 (`scripts/run_compare.py` on a simulated study; real pseudo-bulk next). Methods that output per-sample
 per-cell-type expression get program activity on the model's own scale (`pb.estimate_delta`), or with
-decoupler's ULM (`activity="ulm"`, the usual "deconvolve, then PROGENy" route; needs `pip install "palm-bulk[progeny]"`).
+decoupler's ULM (`activity="ulm"`, the usual "deconvolve, then PROGENy" route; needs `pip install "program2cell[progeny]"`).
 
 | Method | Runs via | Needs |
 |---|---|---|
@@ -158,7 +158,7 @@ InstaPrism, TOAST and TCA have been run through these wrappers; CIBERSORTx has n
 ## Layout
 
 ```
-src/palm_bulk/
+src/program2cell/
   core/        shared by both papers: equations.py (forward model; numpy, JAX or torch arrays),
                scores.py (estimate_delta: program activity of any observed profile on the model's scale),
                data.py (reference building, gene selection, covariates), sim.py (simulators, demo data)
@@ -167,7 +167,7 @@ src/palm_bulk/
   compare/     competing methods with one input/output format, and scoring against truth:
                methods.py, activity.py, scoring.py; R/ (InstaPrism, TOAST, TCA), external/ (BLADE)
   compute.py   CPU/GPU, precision, parallel chains;  plots.py;  provenance.py  commit + versions saved with results
-notebooks/     palm_bulk_real_data.ipynb (executed demo)
+notebooks/     program2cell_real_data.ipynb (executed demo)
 scripts/       run_calibration.py, run_gene_budget.py, run_compare.py, collect_benchmarks.py;
                run_s1.py, run_causal.py, run_misspec.py (earlier studies)
 benchmarks/    saved results with provenance (palm_benchmarks.json is read by the tutorial)

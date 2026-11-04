@@ -58,7 +58,7 @@ def targets(t):
 
 
 def main():
-    from palm_bulk.compare import known_answer as ka
+    from program2cell.compare import known_answer as ka
     pd.set_option("display.width", 250); pd.set_option("display.max_rows", 500)
     P, C = palm_rows(), comparator_rows()
     print("Held-out v2 report (method-freeze-v2, splits >= %d, PALM estimator %s)\n" % (FIRST, EST))

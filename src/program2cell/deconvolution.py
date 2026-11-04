@@ -67,7 +67,7 @@ def program_deconvolution(inputs, calibration, fractions=None, fraction_draws=No
                           sim_widen="abs", unmix_kw=None, **fit_kw):
     """Per-sample per-cell-type program activity and treatment effects from bulk counts and fractions.
 
-    inputs: prepared inputs (palm_bulk.prepare_inputs): Y, B, Gmat, cell_types, programs, T.
+    inputs: prepared inputs (program2cell.prepare_inputs): Y, B, Gmat, cell_types, programs, T.
     calibration: a CalibrationSet on the same genes, cell types and programs
         (core.calibrate.calibration_from_table or build_calibration_set; reference donors only).
     Fractions, one of:
@@ -78,7 +78,7 @@ def program_deconvolution(inputs, calibration, fractions=None, fraction_draws=No
         engine="lite"           PALM-lite (multinomial EM)
     frac_fn(Y, B) -> pi: the method itself, if it can be rerun; then its error is calibrated directly.
     treatment: (N,) 0/1; default inputs.T. effect_interval: one of Calibrator.INTERVALS.
-    Causal options (palm_bulk.causal): estimator 'diff' (randomised), 'ols' (covariates and/or groups, e.g.
+    Causal options (program2cell.causal): estimator 'diff' (randomised), 'ols' (covariates and/or groups, e.g.
     donor ids for paired samples), 'ipw' or 'aipw' (doubly robust); covariates (N, k); groups (N,).
     decompose=True also splits each bulk program effect into intrinsic and composition parts per cell type.
     estimator 'unmix' (core.unmix): cell-type-specific effects from how the bulk effect varies with the fractions

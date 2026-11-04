@@ -25,11 +25,11 @@ KNOWN = {"mcf_ida": dict(program=("p53", "P53_PATHWAY"), types=["LNCAPCLONEFGC",
 
 
 def run(datasets, priors, splits):
-    import palm_bulk as pb
-    from palm_bulk import causal
-    from palm_bulk.core import PseudobulkTable
-    from palm_bulk.compare.base import MethodResult
-    from palm_bulk.compare import known_answer as ka
+    import program2cell as pb
+    from program2cell import causal
+    from program2cell.core import PseudobulkTable
+    from program2cell.compare.base import MethodResult
+    from program2cell.compare import known_answer as ka
     os.makedirs(OUT, exist_ok=True)
     for dsn in datasets:
         ds = db.DATASETS[dsn]

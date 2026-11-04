@@ -51,15 +51,15 @@ def _offsets(bulk, sc_table, specs, genes):
 
 
 def _self_offsets(Y, ref, iters=4, min_cpm=10):
-    """Per-gene log2 offsets estimated from the study bulk alone (palm_bulk.platform_offsets)."""
-    from palm_bulk import platform_offsets
+    """Per-gene log2 offsets estimated from the study bulk alone (program2cell.platform_offsets)."""
+    from program2cell import platform_offsets
     return platform_offsets(Y, ref, iters=iters, min_cpm=min_cpm)
 
 
 def run(splits, contrast="sepsis"):
-    import palm_bulk as pb
+    import program2cell as pb
     import anndata as ad
-    from palm_bulk.core import PseudobulkTable, make_benchmark
+    from program2cell.core import PseudobulkTable, make_benchmark
     os.makedirs(OUT, exist_ok=True)
     treated, control, n_test = CONTRASTS[contrast]
     bk = ad.read_h5ad(os.path.join(D, "combat_bulk.h5ad"))
@@ -118,8 +118,8 @@ COMPARATOR = os.environ.get("COMBAT_COMPARATOR", "1") == "1"
 
 def _instaprism(b, Y, prog, contrast, split, name, table, test_donors):
     """InstaPrism + Welch t-test on bulk Y (same specimens, genes, truth as PALM's row)."""
-    import palm_bulk as pb
-    from palm_bulk import compare
+    import program2cell as pb
+    from program2cell import compare
     import practice_vs_palm as pvp
     f = os.path.join(OUT, "%s__s%d__%s__instaprism.json" % (contrast, split, name))
     if os.path.exists(f):

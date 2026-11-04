@@ -1,10 +1,10 @@
-# PALM-bulk research plan: two papers
+# program2cell research plan: two papers
 
 *Status as of 2026-10-29. Owner: Duy Pham.*
 
 ## 1. Summary
 
-PALM-bulk estimates, from bulk RNA-seq and a single-cell reference, four things per sample, with calibrated uncertainty:
+program2cell estimates, from bulk RNA-seq and a single-cell reference, four things per sample, with calibrated uncertainty:
 
 1. cell-type fractions;
 2. activity of known gene programs (PROGENy, MSigDB Hallmark, CollecTRI) **inside each cell type**;
@@ -15,7 +15,7 @@ Strategy: **two papers sharing one core library.**
 
 | | Paper 1 | Paper 2 |
 |---|---|---|
-| What | The Bayesian method (PALM-bulk) | A fast model trained on real data (BulkFormer-based), plus a public atlas and a large-scale finding |
+| What | The Bayesian method (program2cell) | A fast model trained on real data (BulkFormer-based), plus a public atlas and a large-scale finding |
 | Role | Defines and validates the quantities; gold standard | Makes them available for every public bulk sample in milliseconds |
 | Status | Nearly done (Phase 0) | New project (Phases 1–4) |
 | Target | Genome Biology / Nature Communications | Nature Methods / Nature Biotechnology (Genome Biology fallback) |
@@ -35,7 +35,7 @@ One code base, three layers:
 | **Bayesian inference** | NUTS sampler, VI warm start, calibration harness | Paper 1; gold standard for Paper 2 |
 | **Fast inference** | BulkFormer encoder + probabilistic output head, training loops | Paper 2 |
 
-Done (2026-10-19): `palm_bulk.core` (equations on numpy/JAX/torch, `estimate_delta`, data prep, simulators), `palm_bulk.bayes` (model, NUTS, diagnostics), `palm_bulk.compare` (competitors, scoring). The fast-inference layer will be `palm_bulk.fast`; it can call the core forward model on torch tensors directly (parity-tested against JAX and numpy).
+Done (2026-10-19): `program2cell.core` (equations on numpy/JAX/torch, `estimate_delta`, data prep, simulators), `program2cell.bayes` (model, NUTS, diagnostics), `program2cell.compare` (competitors, scoring). The fast-inference layer will be `program2cell.fast`; it can call the core forward model on torch tensors directly (parity-tested against JAX and numpy).
 
 ---
 
@@ -81,7 +81,7 @@ Annotation level: up to ~20 cell types → full model. More than 20 → two stag
 | 4 | **E2:** PBMC pseudo-bulk benchmark with cross-fitting (held-out donors) | exact truth; level-1 vs level-2; runtime scaling |
 | 5 | **E3:** known stimulation response (e.g. IFN-β-stimulated PBMC, Kang et al. 2018) | intrinsic vs composition split and attribution |
 | 6 | **E4:** paired tissue bulk + scRNA-seq (in-house) | real bulk; compare relative patterns across samples |
-| 7 | Competitor comparison | InstaPrism (BayesPrism's model) → PROGENy (strongest), CIBERSORTx high-res → PROGENy, BLADE → PROGENy, TOAST/TCA csDE → enrichment, naive two-step. Harness in `palm_bulk.compare` + `scripts/run_compare.py` (2026-10-19); R/Docker/BLADE wrappers still to be run against the real tools |
+| 7 | Competitor comparison | InstaPrism (BayesPrism's model) → PROGENy (strongest), CIBERSORTx high-res → PROGENy, BLADE → PROGENy, TOAST/TCA csDE → enrichment, naive two-step. Harness in `program2cell.compare` + `scripts/run_compare.py` (2026-10-19); R/Docker/BLADE wrappers still to be run against the real tools |
 | 8 | Modest application on the in-house unpaired cohort | optional; group-level validation |
 | 9 | Write and submit | |
 
@@ -385,7 +385,7 @@ Not suitable: Papalexi, Frangieh, Norman, Replogle (knockouts within one line, n
 **New metric for the dose datasets:** dose response. In responder types, the effect rises with dose (Spearman
 with dose); in non-responder types it stays flat. To add to `compare.known_answer`.
 
-**Causal module (`palm_bulk.causal`, wired into `program_deconvolution`):**
+**Causal module (`program2cell.causal`, wired into `program_deconvolution`):**
 
 | Piece | What | Assumption for a causal reading |
 |---|---|---|

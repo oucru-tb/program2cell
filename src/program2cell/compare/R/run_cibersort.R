@@ -1,5 +1,5 @@
 # CIBERSORT (Newman et al. 2015; R script v1.02, CIBERSORT.R next to this file) on files written by
-# palm_bulk.compare.methods.cibersort.
+# program2cell.compare.methods.cibersort.
 # Usage: Rscript run_cibersort.R WORKDIR CIBERSORT_R QN(0/1)
 # In WORKDIR: signature.txt (genes x cell types, tab separated, first column gene),
 #             mixture.txt (genes x samples, same format; CPM).

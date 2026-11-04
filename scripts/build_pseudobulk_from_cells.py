@@ -1,6 +1,6 @@
 """Build a donor x cell-type pseudo-bulk table (and a cell subsample) from a single-cell h5ad, e.g. OneK1K
 from CELLxGENE. The output has the same format as scripts/build_pbmc_pseudobulk.py, so
-palm_bulk.core.PseudobulkTable / make_benchmark and scripts/run_compare.py --pseudobulk read it directly.
+program2cell.core.PseudobulkTable / make_benchmark and scripts/run_compare.py --pseudobulk read it directly.
 
 Usage:
   python scripts/build_pseudobulk_from_cells.py onek1k.h5ad onek1k_50k [--n-cells 50000 | --n-donors N | --all]

@@ -1,4 +1,4 @@
-"""NumPyro model: priors and likelihood around the core forward model (palm_bulk.core.equations).
+"""NumPyro model: priors and likelihood around the core forward model (program2cell.core.equations).
 
 Unified model (T may be all zeros for a purely descriptive analysis):
     eta_i     = a + gamma * T_i + s_eta * eps_i,   pi_i = softmax(eta_i)       composition

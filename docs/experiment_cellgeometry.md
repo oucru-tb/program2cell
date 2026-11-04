@@ -1,7 +1,7 @@
-# Experimental design: PALM-bulk vs cellGeometry (Lau et al., Nat Commun 2026)
+# Experimental design: program2cell vs cellGeometry (Lau et al., Nat Commun 2026)
 
 Goal: a benchmark that matches cellGeometry's own design point for point, so a reviewer cannot say we
-avoided their ground, and extends it where PALM-bulk does more (calibrated uncertainty, program
+avoided their ground, and extends it where program2cell does more (calibrated uncertainty, program
 activity, treatment effects).
 
 ## 1. What cellGeometry is
@@ -48,7 +48,7 @@ activity, treatment effects).
 2. **SE is judged by correlation, not coverage.** An SE can be well ranked and still badly scaled.
    We report 90% interval coverage per cell type and per sample, plus their ρ and CCC for parity.
 3. **Fractions only.** Their own real-blood analysis flags interferon genes (IFIT2, IFIT3, OAS2) as
-   residual "outliers" and removes them. In PALM-bulk that signal is *modelled*: it is the JAK-STAT
+   residual "outliers" and removes them. In program2cell that signal is *modelled*: it is the JAK-STAT
    program activity δ, per cell type. Their residuals are our estimand. This is the clearest
    difference in scope (E7, E8).
 4. **Missing cell types are only tested as zero counts.** Types absent from the *reference* (their
@@ -65,7 +65,7 @@ activity, treatment effects).
   - Our fair fast competitor is the **stage-1 mode alone** (per-sample Fisher scoring, seconds).
   - We present speed as a two-tier result: stage-1 point fractions (compete on speed), then
     palm_fast posterior (adds calibration and activity at minutes).
-- **Very fine resolution (180 subclasses).** PALM-bulk is tested at 4–5 broad types.
+- **Very fine resolution (180 subclasses).** program2cell is tested at 4–5 broad types.
   - With C = 180 and P = 7, the per-sample latent dimension is 1,440, which is too large for the
     current dense summaries.
   - Plan: fractions at subclass level, and program activity at lineage level (the `groups` option
@@ -108,7 +108,7 @@ Common settings for all experiments:
 
 - Their four noise types at their SD grids.
 - Shift noise is a per-gene platform effect, the case the gene scale m_g was built for. Run
-  PALM-bulk with and without `use_m`, and with `sigma_m` fixed vs auto.
+  program2cell with and without `use_m`, and with `sigma_m` fixed vs auto.
 - **Success:** RMSE rises no faster than cellGeometry's under log and shift noise, and m_g reduces
   the shift-noise penalty. This would also settle the open m_g question for real bulk.
 
@@ -136,7 +136,7 @@ Common settings for all experiments:
 
 ### E6. Program activity and effects (outside their scope)
 
-- Simulated program shifts (`palm_bulk.sim`) and real pseudobulk contrasts (COVID PBMC; OneK1K
+- Simulated program shifts (`program2cell.sim`) and real pseudobulk contrasts (COVID PBMC; OneK1K
   sex/age).
 - Metrics:
   - activity ρ across samples and across cell types;
@@ -146,7 +146,7 @@ Common settings for all experiments:
   fractions, then a per-type expression proxy, then programs. This gives cellGeometry a fair route
   to activity.
 
-### E7. Real bulk validation (the gap PALM-bulk has today)
+### E7. Real bulk validation (the gap program2cell has today)
 
 - PEAC whole blood (E-MTAB-6141, n = 67 with Coulter counts):
   - reference CellTypist, merged with Tabula Sapiens neutrophils and basophils, as they did;
@@ -161,7 +161,7 @@ Common settings for all experiments:
 ### E8. "Their residuals are our signal"
 
 - On PEAC blood, run cellGeometry multi-pass and list the genes it removes.
-- Show that PALM-bulk's JAK-STAT (interferon) activity per cell type:
+- Show that program2cell's JAK-STAT (interferon) activity per cell type:
   - explains those genes' residuals;
   - varies across patients;
   - associates with clinical variables where available (e.g. disease activity or treatment response
@@ -196,7 +196,7 @@ development uses simulated and pseudobulk data (COVID PBMC, OneK1K), in this ord
 3. Prior comparison for β (horseshoe vs hierarchical Normal vs Student-t).
 4. E3 shift noise and E4 missing types on pseudobulk: settle m_g and the outlier-gene pass. These
    count as development, not benchmarking.
-5. One sanity check on real bulk before freezing: ~20 PEAC blood samples vs Coulter, PALM-bulk only
+5. One sanity check on real bulk before freezing: ~20 PEAC blood samples vs Coulter, program2cell only
    (checks m_g and the outlier pass under a real platform shift).
 6. Freeze the method, then run E1–E8 below.
 
@@ -226,6 +226,6 @@ development uses simulated and pseudobulk data (COVID PBMC, OneK1K), in this ord
 
 ## 9. What we claim, if the results hold
 
-PALM-bulk matches the best fast deconvolution on fractions. It is more honest under reference
+program2cell matches the best fast deconvolution on fractions. It is more honest under reference
 mismatch, because its intervals cover. And it recovers what fraction-only methods throw away:
 per-cell-type program activity and treatment effects, with calibrated uncertainty.

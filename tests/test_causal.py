@@ -1,8 +1,8 @@
-"""Causal effect estimators, mediation decomposition and sensitivity (palm_bulk.causal)."""
+"""Causal effect estimators, mediation decomposition and sensitivity (program2cell.causal)."""
 import numpy as np
 import pytest
-import palm_bulk as pb
-from palm_bulk import causal, sim
+import program2cell as pb
+from program2cell import causal, sim
 
 
 def _confounded(n=3000, seed=0, effect=1.0, nonlinear=False):
@@ -98,7 +98,7 @@ def test_program_deconvolution_with_covariates_and_decomposition():
 
 
 def test_known_answer_metrics_and_comparison_stats():
-    from palm_bulk.compare import known_answer as ka
+    from program2cell.compare import known_answer as ka
     resp = np.zeros((4, 3), bool); resp[[0, 1], 2] = True             # program 2 responds in types 0 and 1
     eff = np.zeros((4, 3)); eff[[0, 1], 2] = [1.0, 0.8]; eff[2, 2] = 0.3
     calls = np.abs(eff) > 0.2

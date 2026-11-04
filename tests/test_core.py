@@ -1,8 +1,8 @@
 import pytest
 import numpy as np
 import jax.numpy as jnp
-import palm_bulk as pb
-from palm_bulk import sim
+import program2cell as pb
+from program2cell import sim
 
 
 def _ref(seed=0, C=3, P=2, G=120):
@@ -48,7 +48,7 @@ def test_attribution_shares_sum_to_one():
 
 def test_mix_profiles_sparse_matches_dense():
     import jax.numpy as jnp
-    from palm_bulk.core import mix_profiles
+    from program2cell.core import mix_profiles
     rng = np.random.default_rng(0)
     N, C, P, Gn, S = 5, 3, 2, 40, 12
     B = rng.dirichlet(np.ones(Gn), C)
@@ -73,7 +73,7 @@ def _random_problem(seed=0, N=4, C=3, P=2, Gn=40, S=12):
 def test_equations_same_on_numpy_jax_torch():
     # One forward model for the sampler (JAX), truth tables (numpy) and Paper 2 training (torch)
     torch = pytest.importorskip("torch")
-    from palm_bulk.core import expected_counts
+    from program2cell.core import expected_counts
     p = _random_problem()
     calls = {
         "profiles": lambda B, G, pi, d, m, L: pb.cell_profiles(B, G, d),
@@ -97,7 +97,7 @@ def test_equations_same_on_numpy_jax_torch():
 
 def test_forward_model_differentiable_in_torch():
     torch = pytest.importorskip("torch")
-    from palm_bulk.core import expected_counts
+    from program2cell.core import expected_counts
     p = _random_problem()
     d = torch.tensor(p["delta"], requires_grad=True)
     pi = torch.tensor(p["pi"], requires_grad=True)
@@ -154,7 +154,7 @@ def test_bulk_delta_shared_shift():
 
 
 def test_convergence_flags_disagreeing_chains():
-    from palm_bulk.bayes import convergence, convergence_problems
+    from program2cell.bayes import convergence, convergence_problems
     rng = np.random.default_rng(0)
     good = rng.normal(size=(2, 500, 3))
     stuck = good.copy(); stuck[1] += 3.0                                  # chain 2 in another mode
@@ -167,7 +167,7 @@ def test_convergence_flags_disagreeing_chains():
 
 
 def test_convergence_ignores_invalid_ess(monkeypatch):
-    import palm_bulk.bayes.diagnostics as dg
+    import program2cell.bayes.diagnostics as dg
     monkeypatch.setattr(dg, "effective_sample_size", lambda x: np.array([-9952.0, 300.0, 500.0]))
     conv = dg.convergence(dict(x=np.random.default_rng(0).normal(size=(2, 100, 3))))
     assert conv["x"]["ess_min"] == 300 and conv["x"]["n_ess_invalid"] == 1
@@ -178,7 +178,7 @@ def test_negbin_log_prob_matches_numpyro():
     import jax
     import jax.numpy as jnp
     import numpyro.distributions as dist
-    from palm_bulk.bayes.model import _NegBin2
+    from program2cell.bayes.model import _NegBin2
     rng = np.random.default_rng(3)
     mu = jnp.array(rng.gamma(2.0, 20.0, (6, 50)))
     th = jnp.array(rng.gamma(2.0, 10.0, 50))
@@ -192,7 +192,7 @@ def test_negbin_log_prob_matches_numpyro():
 
 def test_mass_blocks_dense_globals():
     import jax.numpy as jnp
-    from palm_bulk.bayes.fit import _mass_blocks
+    from program2cell.bayes.fit import _mass_blocks
     inv = {("a",): jnp.array([1.0, 2.0]), ("sigma_d",): jnp.array([3.0]), ("zres",): jnp.ones(5)}
     out, dense = _mass_blocks(inv)
     assert dense == [("a", "sigma_d")]
@@ -204,7 +204,7 @@ def test_activity_models_trace():
     import jax
     import jax.numpy as jnp
     from numpyro import handlers
-    from palm_bulk.bayes.model import make_model
+    from program2cell.bayes.model import make_model
     rng = np.random.default_rng(5)
     N, C, P, Gn = 5, 3, 2, 30
     B = jnp.array(rng.dirichlet(np.ones(Gn), C))
@@ -224,7 +224,7 @@ def test_activity_models_trace():
 def test_gauss_marginal_matches_closed_form():
     # log integral of exp(-x'Lam x/2 + h'x) N(x; mu, S): compare with the textbook form (S invertible)
     import jax.numpy as jnp
-    from palm_bulk.bayes.twostage import _gauss_marginal
+    from program2cell.bayes.twostage import _gauss_marginal
     rng = np.random.default_rng(7)
     D = 4
     A = rng.normal(size=(D, D)); S = A @ A.T + 0.5 * np.eye(D)
@@ -244,7 +244,7 @@ def test_gauss_marginal_matches_closed_form():
 def test_latent_draws_match_gaussian_conditional(activity):
     # perturb-and-solve draws have the exact conditional mean and covariance (S may be singular)
     import jax.numpy as jnp
-    from palm_bulk.bayes.twostage import _draw_latents, _prior_moments
+    from program2cell.bayes.twostage import _draw_latents, _prior_moments
     rng = np.random.default_rng(1)
     C, P, N, n = 2, 2, 2, 40000
     D = C + C * P
@@ -269,7 +269,7 @@ def test_sandwich_matches_model_when_model_is_right():
     # Poisson data from the model itself: robust and model-based variances agree (inflation ~ 1)
     import jax
     import jax.numpy as jnp
-    from palm_bulk.bayes.twostage import sample_summaries, gene_blocks
+    from program2cell.bayes.twostage import sample_summaries, gene_blocks
     rng = np.random.default_rng(4)
     C, P, Gn, N = 3, 2, 400, 6
     B = rng.dirichlet(np.full(Gn, 0.5), C)
@@ -288,7 +288,7 @@ def test_sandwich_matches_model_when_model_is_right():
 def test_fixed_eta_summaries():
     """fix_eta holds the fractions at eta0, gives no information about eta and still finds delta."""
     import jax.numpy as jnp
-    from palm_bulk.bayes.twostage import sample_summaries, _two_step_summaries
+    from program2cell.bayes.twostage import sample_summaries, _two_step_summaries
     rng = np.random.default_rng(3)
     B, G = sim.make_reference(rng, C=3, P=2, Gn=150, genes_per_prog=20)
     s = sim.simulate_causal(rng, B, G, N=6)

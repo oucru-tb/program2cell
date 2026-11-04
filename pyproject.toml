@@ -3,7 +3,7 @@ requires = ["setuptools>=68"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "palm-bulk"
+name = "program2cell"
 version = "0.1.0"
 description = "Bayesian joint inference of cell fractions, per-cell-type program activity and program attribution from bulk RNA-seq (CPU)"
 readme = "README.md"
@@ -30,7 +30,7 @@ dev = ["pytest>=7", "nbformat>=5", "nbconvert>=7", "ipykernel>=6", "anndata>=0.1
 where = ["src"]
 
 [tool.setuptools.package-data]
-palm_bulk = ["compare/R/*.R", "compare/external/*.py"]
+program2cell = ["compare/R/*.R", "compare/external/*.py"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

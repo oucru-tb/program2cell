@@ -20,7 +20,7 @@ def configure_compute(device="cpu", parallel_chains=1, precision="float32"):
     """Select the JAX device and allow chains to run in parallel.
 
     device: 'cpu', 'gpu', or 'auto' (GPU if JAX can see one, else CPU). A GPU needs a CUDA build
-        of JAX (Linux/WSL: pip install "palm-bulk[gpu]").
+        of JAX (Linux/WSL: pip install "program2cell[gpu]").
     parallel_chains: on CPU, split the machine into this many XLA devices so up to this many
         chains run at once (`chain_method="parallel"`). Set it to the number of chains. Each chain
         then gets a share of the CPU threads, so the speed-up is real but below linear.
@@ -49,7 +49,7 @@ def configure_compute(device="cpu", parallel_chains=1, precision="float32"):
             has_gpu = False
         if device == "gpu" and not has_gpu:
             raise RuntimeError("no GPU visible to JAX. Install a CUDA build of JAX "
-                               "(pip install 'palm-bulk[gpu]') or use device='cpu'.")
+                               "(pip install 'program2cell[gpu]') or use device='cpu'.")
         device = "gpu" if has_gpu else "cpu"
     numpyro.set_platform(device)
     return compute_info()

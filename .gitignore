@@ -17,8 +17,8 @@ benchmarks/**/*.partial.json
 benchmarks/dev/**/*.npz
 benchmarks/dev/work/
 
-# CIBERSORT source is licensed by Stanford (no redistribution): download it to src/palm_bulk/compare/R/
-src/palm_bulk/compare/R/CIBERSORT.R
+# CIBERSORT source is licensed by Stanford (no redistribution): download it to src/program2cell/compare/R/
+src/program2cell/compare/R/CIBERSORT.R
 
 # intermediate files of real-data runs
 benchmarks/real/*/work/

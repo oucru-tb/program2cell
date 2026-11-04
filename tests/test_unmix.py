@@ -1,8 +1,8 @@
 import numpy as np
 from scipy.special import softmax
 
-from palm_bulk.core.realloc import reallocate
-from palm_bulk.core.unmix import leakage_operator, forward, unmix, unmix_effects
+from program2cell.core.realloc import reallocate
+from program2cell.core.unmix import leakage_operator, forward, unmix, unmix_effects
 
 
 def _world(seed=0, C=3, G=400, P=2, N=60):
@@ -82,8 +82,8 @@ def test_unmix_shared_effect_is_shrunk_to_shared():
 
 
 def test_design_check_and_simulated_cohort():
-    from palm_bulk.core.calibrate import build_calibration_set
-    from palm_bulk.core.unmix import design_check, simulate_cohort
+    from program2cell.core.calibrate import build_calibration_set
+    from program2cell.core.unmix import design_check, simulate_cohort
     rng, B, W, pi, T = _world(seed=4, N=30)
     C, G = B.shape
     counts = np.stack([np.stack([rng.multinomial(20000, b) for b in B]) for _ in range(12)]).astype(float)
@@ -108,7 +108,7 @@ def test_unmix_effects_with_groups_and_covariates_runs():
 
 
 def test_direct_engine_gradient_and_localisation():
-    from palm_bulk.core import direct as dr
+    from program2cell.core import direct as dr
     rng, B, W, pi, T = _world(seed=1)
     N, C, P = len(pi), B.shape[0], W.shape[0]
     beta = np.zeros((C, P))
@@ -130,7 +130,7 @@ def test_direct_engine_gradient_and_localisation():
 
 
 def test_unmix_penalty_groups_pev_and_misfit():
-    from palm_bulk.core.unmix import offprogram_tau, misfit_sd
+    from program2cell.core.unmix import offprogram_tau, misfit_sd
     rng, B, W, pi, T = _world(seed=1)
     N, C, P = len(pi), B.shape[0], W.shape[0]
     beta = np.zeros((C, P))
@@ -160,7 +160,7 @@ def test_unmix_penalty_groups_pev_and_misfit():
 
 
 def test_direct_quasi_likelihood_and_gene_offsets():
-    from palm_bulk.core import direct as dr
+    from program2cell.core import direct as dr
     rng, B, W, pi, T = _world(seed=1, G=60)
     N, C, P = len(pi), B.shape[0], W.shape[0]
     delta = rng.normal(0, 0.05, (N, C, P))

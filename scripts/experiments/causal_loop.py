@@ -88,7 +88,7 @@ for _n, _kw in ESTIMATORS.items():
 
 
 def _setup(dsn, split):
-    import palm_bulk as pb
+    import program2cell as pb
     ds = db.DATASETS[dsn]
     table = db._table(ds)
     prog = db._programs(pb, "progeny7")
@@ -112,7 +112,7 @@ def _setup(dsn, split):
 
 
 def score(effects, lo, hi, calls, beta, cell_types, programs, known):
-    from palm_bulk.compare import known_answer as ka
+    from program2cell.compare import known_answer as ka
     s = dict(cov=float(((beta >= lo) & (beta <= hi)).mean()),
              r=float(np.corrcoef(effects.ravel(), beta.ravel())[0, 1]),
              rmse=float(np.sqrt(((effects - beta) ** 2).mean())), width=float((hi - lo).mean()),

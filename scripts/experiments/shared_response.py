@@ -21,7 +21,7 @@ OUT = os.path.join(ROOT, "benchmarks", "dev", "shared_response")
 
 
 def true_common(fractions, B, G, T, beta):
-    from palm_bulk.core import unmix as um
+    from program2cell.core import unmix as um
     A = um.leakage_operator(fractions, B, G, diagonal=False)
     work = np.asarray(T, float)[:, None, None] * np.einsum("ncqkp,kp->ncq", A, beta)
     return um._fit_joint(work, A, T, None, None, shared_only=True)[1]
