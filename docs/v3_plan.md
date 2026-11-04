@@ -46,6 +46,12 @@ first**: it targets the weakest held-out regime (broad responses).
    - **Next (`pool="partial"`):** empirical-Bayes partial pooling (no test; weight τ²/(τ²+s²)), interval
      from the upper confidence bound of τ² (Q-profile). Screen on Kang, Zhang, McFarland idasanutlin,
      Tahoe gemcitabine and RMC-6236, splits 20–24.
+   - **Partial pooling, splits 20–24 (v2 / all-or-nothing / partial):** false calls back to v2 level or below
+     (Zhang 0.00 / 0.11 / 0.00; McFarland 0.04 / 0.09 / 0.03; gemcitabine 0.05 / 0.11 / 0.01), and the r gains
+     kept (Kang 0.90 / 0.95 / 0.96; gemcitabine 0.54 / 0.64 / 0.65; RMC-6236 0.73 / 0.84 / 0.83), coverage ≥ 0.95.
+     But power on truth |β| ≥ 0.1 is a little lower (Kang 0.22 → 0.17, McFarland 0.50 → 0.43), and
+     within-program r across types still falls (McFarland 0.36 → 0.24, RMC-6236 0.21 → −0.02). Not yet a v3
+     candidate: the shrinkage weight still pulls responding lines towards the mean.
    - **Metric check against the biology (2026-11-04, splits 20–29):**
      - Encorafenib known answer (BRAF-V600 lines LOX-IMVI, HT-29, RKO) is not supported by the measured truth:
        MAPK −0.02 / −0.14 / −0.06, while KRAS-G12C NCI-H2030 is −0.10. Unlike dabrafenib, it was never checked
