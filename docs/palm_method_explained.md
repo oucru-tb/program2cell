@@ -188,8 +188,9 @@ Without a comparison group there is no disease effect. The question becomes: doe
 follow a clinical measure `z` (bacterial load, severity, cavitation) across patients?
 - Correlating each patient's per-type activity with `z` inherits spillover: in the first McFarland gradient
   test, 63% of unchanged pairs were called.
-- `associate_unmix` puts `z` into the unmixing instead of the 0/1 group, which cut that to 21%. The target
-  is ≤ 10%, so this path is **not yet validated**; a 10-split benchmark is queued (benchmarking.md §0.8).
+- `associate_unmix` puts `z` into the unmixing instead of the 0/1 group. Over 10 development splits this
+  cut false calls to 16–17% (McFarland gradient) and 12–24% (COMBAT, COVID only, severity as `z`). The target
+  is ≤ 10%, so this path is **not yet validated** (benchmarking.md §0.8; fix planned as v3 item 14).
 
 ---
 

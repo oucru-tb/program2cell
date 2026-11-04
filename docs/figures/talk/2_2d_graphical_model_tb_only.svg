@@ -90,8 +90,8 @@
 <rect x="995" y="700" width="565" height="150" rx="12" fill="#fff7ed" stroke="#ea580c" stroke-width="2"/>
 <text x="1013" y="730" font-size="17" fill="#c2410c" font-weight="bold" text-anchor="start">Not yet validated (benchmarking.md 0.8)</text>
 <text x="1013" y="757" font-size="14.5" fill="#333" font-weight="normal" text-anchor="start">• correlating each patient's activity with z: spillover gives false</text>
-<text x="1027" y="777" font-size="14.5" fill="#333" font-weight="normal" text-anchor="start">associations in non-responding cell types (63% in the first test)</text>
-<text x="1013" y="803" font-size="14.5" fill="#333" font-weight="normal" text-anchor="start">• unmixing along z cuts this to 21% (target ≤ 10%); 10-split run queued</text>
+<text x="1027" y="777" font-size="14.5" fill="#333" font-weight="normal" text-anchor="start">associations in non-responding cell types (62-73%, McFarland, 10 splits)</text>
+<text x="1013" y="803" font-size="14.5" fill="#333" font-weight="normal" text-anchor="start">• unmixing along z: 16-17% McFarland, 12-24% COMBAT (target ≤ 10%)</text>
 <text x="1013" y="829" font-size="14.5" fill="#333" font-weight="normal" text-anchor="start">• z is not part of the model: it enters only in step 3</text>
 <text x="40" y="728" font-size="15" fill="#2b2d42" font-weight="bold" text-anchor="start">Legend</text>
 <circle cx="50" cy="750" r="10" fill="#dbeafe" stroke="#2563eb" stroke-width="2"/>

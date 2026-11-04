@@ -191,8 +191,8 @@ def slide(tb_only):
                  % (X0, W, ORANGE))
         s.append(text(X0 + 18, 730, "Not yet validated (benchmarking.md 0.8)", 17, "#c2410c", "bold"))
         s.append(text(X0 + 18, 757, "• correlating each patient's activity with z: spillover gives false", 14.5, "#333"))
-        s.append(text(X0 + 32, 777, "associations in non-responding cell types (63% in the first test)", 14.5, "#333"))
-        s.append(text(X0 + 18, 803, "• unmixing along z cuts this to 21% (target ≤ 10%); 10-split run queued", 14.5, "#333"))
+        s.append(text(X0 + 32, 777, "associations in non-responding cell types (62-73%, McFarland, 10 splits)", 14.5, "#333"))
+        s.append(text(X0 + 18, 803, "• unmixing along z: 16-17% McFarland, 12-24% COMBAT (target ≤ 10%)", 14.5, "#333"))
         s.append(text(X0 + 18, 829, "• z is not part of the model: it enters only in step 3", 14.5, "#333"))
     else:
         pass

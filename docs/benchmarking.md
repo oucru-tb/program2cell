@@ -268,8 +268,33 @@ design limit predicts, and the unmix/calibrate choice varies between splits.
 
 ### 0.8 Planned: single-group cohorts (e.g. TB patients only, no comparison group)
 
-**Status:** planned 2026-11-03, not run. Freeze v2 covers two-group effects only. Everything here is new
-evidence: develop on splits 0–9, then report on fresh held-out splits, as for v2.
+**Status:** development run done 2026-11-04 (splits 0–9; `scripts/experiments/single_group.py`, summary
+`benchmarks/dev/single_group_summary.txt`). Freeze v2 covers two-group effects only. **No path passes yet.**
+
+**Development results (10 splits; "false calls" = pairs with no true association called at α = 0.1):**
+
+| | McFarland gradient idasanutlin / trametinib | COMBAT COVID-only, severity (raw real bulk; other bulk arms in range) |
+|---|---|---|
+| S3 false calls: activity correlated with Z (`associate`) | 0.62 / 0.73 | 0.39 (0.38–0.81) |
+| S3 false calls: unmixing along Z (`associate_unmix`) | **0.16 / 0.17** | **0.24** (0.12–0.24) |
+| S3 false calls: InstaPrism + correlation | 0.68 / 0.64 | 0.68 (0.26–0.90) |
+| S3 Z permuted (pure null), unmixing | 0.06 / 0.13 | 0.07 (0.07–0.13) |
+| Power, unmixing | 0.66 / 0.94 | 0.06 (0.06–0.25) |
+| Coverage of the change interval, unmixing (target 0.85) | 0.80 / 0.82 | 0.85 (0.78–0.85) |
+| S1 per-patient activity coverage (target 0.85) | 0.52 / 0.64 | 0.38 (0.67–0.72 with platform offsets; 0.93 single-cell bulk) |
+| S2 patient ranking (Spearman), PALM vs InstaPrism | 0.89 vs 0.90 / 0.93 vs 0.93 | 0.22 vs 0.21 (0.69 vs 0.65 single-cell bulk) |
+
+Reading:
+- Unmixing along Z is the best path (false calls 4× lower than correlation) but misses the ≤ 0.1 target
+  (0.12–0.24), and its intervals cover slightly under target.
+- The permutation null is near nominal, so the excess false calls come from real associations in other
+  cell types leaking into unchanged ones, not from the test itself. On COMBAT the truth is itself estimated
+  (single-cell per-type activity), so part of its excess may be truth noise.
+- Per-patient activity intervals (S1) are too narrow without T; ranking (S2) equals InstaPrism's.
+- Next: v3 item 14 (calibrate along Z); the single-group path stays "not validated" in the explainer and
+  the slides.
+
+Everything here is new evidence: develop on splits 0–9, then report on fresh held-out splits, as for v2.
 
 **The use case.** Bulk from one disease group only. PALM is run without T. It gives each patient's fractions and
 per-cell-type activity δ_icp with 90% ranges, and the user compares patients against a clinical measure Z

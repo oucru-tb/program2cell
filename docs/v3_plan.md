@@ -124,8 +124,9 @@ first**: it targets the weakest held-out regime (broad responses).
     an erythroid/platelet component; report the masked read share per sample.
 13. **Ordered disease axis:** uninfected / latent / incipient / active / on treatment, through the continuous
     path, instead of a binary D. Most "healthy" controls are IGRA-positive.
-14. **Single-group path** (unmixing along z: 21% false calls against ≤ 10%): calibrate along z; use the queued
-    single-group run.
+14. **Single-group path** (unmixing along z, 10 development splits: false calls 0.16–0.17 McFarland gradient,
+    0.12–0.24 COMBAT COVID-only, against ≤ 0.1; permutation null near nominal, so the excess is leakage between
+    types; per-patient activity intervals too narrow without T): calibrate along z (benchmarking.md §0.8).
 
 ## C. Smaller checks
 
