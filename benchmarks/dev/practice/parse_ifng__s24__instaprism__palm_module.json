@@ -1,0 +1,1 @@
+[{"cov": 1.0, "r": 0.9209251297924399, "rmse": 0.016245560875644095, "width": 0.36598920519293915, "r_t": 0.9209251297924399, "calls": 0, "fpr_null": 0.0, "dataset": "parse_ifng", "split": 24, "method": "instaprism", "kind": "palm_module", "rule": "palm", "seconds": 288.11210918426514}]

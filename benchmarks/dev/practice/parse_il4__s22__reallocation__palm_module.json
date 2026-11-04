@@ -1,0 +1,1 @@
+[{"cov": 1.0, "r": 0.6164048064891193, "rmse": 0.044042509720145506, "width": 0.6779373930275782, "r_t": 0.6164048064891193, "calls": 0, "fpr_null": 0.0, "dataset": "parse_il4", "split": 22, "method": "reallocation", "kind": "palm_module", "rule": "palm", "seconds": 180.45012497901917}]

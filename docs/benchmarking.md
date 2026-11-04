@@ -892,6 +892,15 @@ Rows from before then have no `.npz` and keep their old metrics: the PBMC config
 
 ## Changelog
 
+- **2026-11-04**
+  - **Held-out v2 finished** (11:49; all four lanes, one pass). Results: docs/heldout_v2_results.md.
+    Coverage and false calls met the targets on all 13 datasets and COMBAT; all five targets on 5 of 13; r and
+    power missed on Kang, Zhang, Parse GM-CSF / IL-4 and the Tahoe drugs. cellGeometry failed on Kang in 8 of 10
+    splits (R error, as in development).
+  - `heldout_v2_report.py` sections 5a–5c: results by family, route and response regime (reporting only).
+  - Raw held-out outputs zipped with a checksum (`benchmarks/heldout_v2_raw_2026-11-04.zip`, copy in OneDrive).
+  - v3 candidate list: docs/v3_plan.md.
+
 - **2026-11-03**
   - **Method freeze v2** (tag `method-freeze-v2`; method_spec "Method freeze v2" and 4.8):
     - `auto` now routes by the narrower simulation-calibrated interval, with a per-type guard;

@@ -49,6 +49,15 @@ interval allowance that v1 had as an option. Evidence: section 4.8.
     (`practice_vs_palm.py summary heldout2`);
   - `causal_loop.py summary heldout2` and `combat_real.py summary`;
   - nothing is rerun or retuned after the results are seen.
+- **Result (run 2026-11-03/04, once): docs/heldout_v2_results.md.**
+  - Coverage (0.93–1.00) and false calls on unchanged pairs (≤ 0.08) met the targets on all 13 datasets and
+    on COMBAT real bulk (false calls 0.000–0.006).
+  - All five targets met on 5 of 13 (McFarland idasanutlin and trametinib; Parse IFN-β, IFN-γ, TNF-α). Missed:
+    r ≥ 0.9 on 8 (Kang 0.82, Zhang 0.85, Parse GM-CSF 0.85 and IL-4 0.69, Tahoe 0.42–0.81); true effects called
+    on Kang (0.40) and Tahoe RMC-6236 / encorafenib / gemcitabine (0.78 / 0.40 / 0.00).
+  - Against deconvolution + t-test: coverage +0.55, false calls −0.50, true effects called −0.33, r not
+    different (paired CIs over 130 dataset × splits).
+  - No change follows under v2; changes are v3 (docs/v3_plan.md) with new held-out splits 30–39.
 
 ## Method freeze v1 (2026-10-29; git tag `method-freeze-v1`)
 

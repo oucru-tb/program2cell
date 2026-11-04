@@ -1,0 +1,205 @@
+Held-out v2 report (method-freeze-v2, splits >= 20, PALM estimator auto_v2)
+
+== 1. PALM per dataset (mean over splits; targets: cov >= 0.85, r >= 0.9, auroc >= 0.95, tpr_t >= 0.9, fpr_null <= 0.1)
+              n    cov    r_t   rmse  width  calls  fpr_null  auroc  tpr_t                                 verdict
+dataset                                                                                                           
+kang         10  0.996  0.817  0.125  0.750    3.4     0.000    NaN  0.400              fail: r_t 0.82, tpr_t 0.40
+mcf_ida      10  0.962  0.924  0.059  0.247    6.6     0.049  1.000  0.950                                    PASS
+mcf_tram     10  0.962  0.916  0.040  0.188   12.8     0.076    NaN  1.000                                    PASS
+parse_gmcsf  10  1.000  0.845  0.024  0.298    0.4     0.000    NaN    NaN                          fail: r_t 0.85
+parse_ifnb   10  1.000  0.903  0.029  0.453    1.1     0.003    NaN    NaN                                    PASS
+parse_ifng   10  1.000  0.906  0.019  0.364    0.4     0.000    NaN    NaN                                    PASS
+parse_il4    10  1.000  0.691  0.038  0.408    0.1     0.000    NaN    NaN                          fail: r_t 0.69
+parse_tnf    10  0.998  0.936  0.014  0.174    0.0     0.000    NaN    NaN                                    PASS
+tahoe_enc    10  0.949  0.423  0.047  0.201    4.0     0.024  0.700  0.400  fail: r_t 0.42, auroc 0.70, tpr_t 0.40
+tahoe_gem    10  0.930  0.540  0.035  0.143    3.3     0.049  0.833  0.000  fail: r_t 0.54, auroc 0.83, tpr_t 0.00
+tahoe_rmc    10  0.978  0.723  0.066  0.299    7.9     0.011    NaN  0.778              fail: r_t 0.72, tpr_t 0.78
+tahoe_tram   10  0.986  0.812  0.064  0.317   10.0     0.006    NaN  0.967                          fail: r_t 0.81
+zhang        10  1.000  0.851  0.013  0.106    0.5     0.004    NaN    NaN                          fail: r_t 0.85
+
+== 2. Comparators per dataset (BH q < 0.1 for deconvolution + t-test; PALM module = PALM's effects on that tool's fractions)
+                                       n    cov    r_t   rmse  width  calls  fpr_null  auroc  tpr_t
+dataset     kind        method                                                                     
+kang        palm_module cellgeometry   2  1.000  0.745  0.174  0.807    4.5     0.000    NaN  0.500
+                        cibersort     10  0.993  0.853  0.109  0.709    4.5     0.000    NaN  0.625
+                        instaprism    10  0.982  0.778  0.136  0.688    4.2     0.000    NaN  0.450
+                        reallocation  10  0.989  0.787  0.135  0.749    4.2     0.000    NaN  0.600
+                        tca           10  0.989  0.787  0.135  0.749    4.2     0.000    NaN  0.600
+                        toast         10  0.989  0.787  0.135  0.749    4.2     0.000    NaN  0.600
+            practice    cellgeometry   2  0.518  0.973  0.054  0.085   25.5     0.557    NaN  1.000
+                        cibersort     10  0.589  0.979  0.044  0.079   24.4     0.585    NaN  1.000
+                        instaprism    10  0.507  0.968  0.055  0.075   25.5     0.708    NaN  1.000
+                        naive         10  0.296  0.920  0.080  0.077   24.8     0.762    NaN  1.000
+                        reallocation  10  0.446  0.983  0.043  0.079   19.7     0.421    NaN  0.800
+                        tca           10    NaN  0.248  0.627    NaN    9.7     0.112    NaN  0.650
+                        toast         10    NaN  0.652  0.150    NaN    6.0     0.064    NaN  1.000
+mcf_ida     palm_module cellgeometry  10  0.952  0.919  0.060  0.238    7.7     0.048  0.989  0.800
+                        cibersort     10  0.957  0.921  0.060  0.252    6.6     0.048  0.933  0.750
+                        instaprism    10  0.948  0.919  0.061  0.250    6.1     0.022  0.978  0.675
+                        reallocation  10  0.910  0.911  0.065  0.244    9.6     0.061  0.956  0.925
+                        tca           10  0.910  0.911  0.065  0.244    9.6     0.061  0.956  0.925
+                        toast         10  0.910  0.911  0.065  0.244    9.6     0.061  0.956  0.925
+            practice    cellgeometry  10  0.050  0.773  0.101  0.017   37.9     0.920  1.000  1.000
+                        cibersort     10  0.088  0.774  0.100  0.016   34.7     0.766  1.000  1.000
+                        instaprism    10  0.076  0.782  0.097  0.016   37.2     0.898  1.000  1.000
+                        naive         10  0.052  0.702  0.114  0.016   37.8     0.949  0.500  1.000
+                        reallocation  10  0.062  0.777  0.100  0.017   35.0     0.771  1.000  1.000
+                        tca           10    NaN  0.848  0.085    NaN   16.6     0.284  0.967  1.000
+                        toast         10    NaN  0.709  0.129    NaN   10.6     0.131  0.833  0.875
+mcf_tram    palm_module cellgeometry  10  0.955  0.905  0.044  0.184   14.6     0.092    NaN  0.980
+                        cibersort     10  0.960  0.924  0.038  0.172   13.7     0.093    NaN  1.000
+                        instaprism    10  0.964  0.920  0.039  0.182   13.5     0.068    NaN  1.000
+                        reallocation  10  0.912  0.827  0.059  0.213    9.5     0.116    NaN  0.920
+                        tca           10  0.912  0.827  0.059  0.213    9.5     0.116    NaN  0.920
+                        toast         10  0.912  0.827  0.059  0.213    9.5     0.116    NaN  0.920
+            practice    cellgeometry  10  0.079  0.868  0.048  0.015   37.7     0.857    NaN  1.000
+                        cibersort     10  0.057  0.867  0.048  0.015   35.0     0.764    NaN  1.000
+                        instaprism    10  0.064  0.870  0.048  0.014   34.7     0.738    NaN  1.000
+                        naive         10  0.100  0.823  0.056  0.014   36.6     0.857    NaN  1.000
+                        reallocation  10  0.093  0.810  0.057  0.016   32.2     0.735    NaN  0.840
+                        tca           10    NaN  0.830  0.066    NaN   16.9     0.302    NaN  1.000
+                        toast         10    NaN  0.744  0.138    NaN   10.8     0.139    NaN  1.000
+parse_gmcsf palm_module cibersort     10  1.000  0.817  0.026  0.295    0.3     0.000    NaN    NaN
+                        instaprism    10  0.998  0.857  0.023  0.302    0.3     0.000    NaN    NaN
+                        reallocation  10  1.000  0.785  0.030  0.303    0.8     0.000    NaN    NaN
+            practice    cibersort     10  0.729  0.767  0.030  0.086   12.1     0.218    NaN    NaN
+                        instaprism    10  0.743  0.800  0.029  0.080   11.5     0.206    NaN    NaN
+                        naive         10  0.659  0.568  0.039  0.085   13.3     0.226    NaN    NaN
+                        reallocation  10  0.435    NaN    NaN    NaN    6.2     0.125    NaN    NaN
+parse_ifnb  palm_module cibersort     10  1.000  0.899  0.029  0.495    1.0     0.000    NaN    NaN
+                        instaprism    10  1.000  0.891  0.031  0.498    0.9     0.003    NaN    NaN
+                        reallocation  10  1.000  0.904  0.029  0.471    0.9     0.003    NaN    NaN
+            practice    cibersort     10  0.684  0.876  0.034  0.094   19.4     0.398    NaN    NaN
+                        instaprism    10  0.616  0.861  0.036  0.084   14.8     0.313    NaN    NaN
+                        naive         10  0.661  0.880  0.034  0.084   25.2     0.519    NaN    NaN
+                        reallocation  10  0.429    NaN    NaN    NaN   10.8     0.188    NaN    NaN
+parse_ifng  palm_module cibersort     10  1.000  0.896  0.021  0.366    0.5     0.000    NaN    NaN
+                        instaprism    10  1.000  0.898  0.021  0.391    0.1     0.000    NaN    NaN
+                        reallocation  10  1.000  0.891  0.021  0.373    0.6     0.000    NaN    NaN
+            practice    cibersort     10  0.702  0.846  0.025  0.068   16.8     0.332    NaN    NaN
+                        instaprism    10  0.637  0.847  0.025  0.061   15.6     0.302    NaN    NaN
+                        naive         10  0.676  0.832  0.026  0.064   14.7     0.289    NaN    NaN
+                        reallocation  10  0.363    NaN    NaN    NaN    4.1     0.077    NaN    NaN
+parse_il4   palm_module cibersort     10  1.000  0.668  0.041  0.400    0.0     0.000    NaN    NaN
+                        instaprism    10  1.000  0.705  0.038  0.406    0.2     0.000    NaN    NaN
+                        reallocation  10  1.000  0.644  0.043  0.429    0.0     0.000    NaN    NaN
+            practice    cibersort     10  0.559  0.720  0.043  0.085   26.0     0.501    NaN    NaN
+                        instaprism    10  0.614  0.749  0.038  0.080   23.3     0.432    NaN    NaN
+                        naive         10  0.651  0.626  0.047  0.085   25.2     0.520    NaN    NaN
+                        reallocation  10  0.378    NaN    NaN    NaN   15.2     0.314    NaN    NaN
+parse_tnf   palm_module cibersort     10  0.998  0.915  0.014  0.168    0.4     0.002    NaN    NaN
+                        instaprism    10  0.998  0.935  0.014  0.183    0.1     0.000    NaN    NaN
+                        reallocation  10  0.988  0.858  0.023  0.166    0.6     0.002    NaN    NaN
+            practice    cibersort     10  0.569  0.177  0.034  0.049    0.1     0.002    NaN    NaN
+                        instaprism    10  0.502  0.272  0.032  0.043    0.1     0.003    NaN    NaN
+                        naive         10  0.549  0.174  0.032  0.042    0.7     0.010    NaN    NaN
+                        reallocation  10  0.429  0.204  0.032  0.024    0.3     0.007    NaN    NaN
+tahoe_enc   palm_module cibersort     10  0.954  0.438  0.049  0.201    4.6     0.030  0.717  0.400
+                        instaprism    10  0.954  0.430  0.045  0.212    1.9     0.017  0.750  0.100
+                        reallocation  10  0.956  0.377  0.053  0.206    4.4     0.030  0.633  0.450
+            practice    cibersort     10  0.135  0.606  0.036  0.015   51.0     0.814  0.350  1.000
+                        instaprism    10  0.160  0.613  0.035  0.014   51.7     0.823  0.439  1.000
+                        naive         10  0.127  0.517  0.038  0.012   56.7     0.895  0.500  1.000
+                        reallocation  10  0.154  0.532  0.038  0.014   48.5     0.756  0.273  1.000
+tahoe_gem   palm_module cibersort     10  0.933  0.537  0.037  0.150    3.7     0.051  0.828  0.000
+                        instaprism    10  0.943  0.619  0.033  0.146    1.2     0.018  0.800  0.000
+                        reallocation  10  0.933  0.500  0.037  0.152    2.9     0.035  0.783  0.000
+            practice    cibersort     10  0.237  0.750  0.027  0.014   51.8     0.791  0.922  0.889
+                        instaprism    10  0.233  0.753  0.027  0.014   50.7     0.772  0.906  0.889
+                        naive         10  0.206  0.563  0.033  0.012   53.1     0.822  0.500  0.778
+                        reallocation  10  0.219  0.738  0.027  0.015   42.0     0.644  0.949  0.833
+tahoe_rmc   palm_module cibersort     10  0.959  0.707  0.069  0.279    9.6     0.020    NaN  0.833
+                        instaprism    10  0.979  0.734  0.064  0.315    6.7     0.003    NaN  0.689
+                        reallocation  10  0.979  0.733  0.063  0.306    7.4     0.013    NaN  0.711
+            practice    cibersort     10  0.152  0.889  0.040  0.017   47.6     0.719    NaN  1.000
+                        instaprism    10  0.138  0.886  0.041  0.016   46.2     0.676    NaN  1.000
+                        naive         10  0.098  0.869  0.044  0.013   52.2     0.794    NaN  1.000
+                        reallocation  10  0.100    NaN    NaN    NaN   40.0     0.640    NaN  0.767
+tahoe_tram  palm_module cibersort     10  0.970  0.818  0.066  0.310   11.8     0.018    NaN  0.967
+                        instaprism    10  0.986  0.812  0.064  0.359    7.5     0.006    NaN  0.789
+                        reallocation  10  0.989  0.764  0.071  0.344    9.8     0.021    NaN  0.911
+            practice    cibersort     10  0.159  0.925  0.040  0.016   56.8     0.829    NaN  1.000
+                        instaprism    10  0.176  0.925  0.040  0.015   54.5     0.807    NaN  1.000
+                        naive         10  0.086  0.878  0.050  0.013   55.8     0.884    NaN  1.000
+                        reallocation  10  0.105    NaN    NaN    NaN   41.1     0.589    NaN  0.767
+zhang       palm_module cellgeometry  10  0.979  0.800  0.022  0.110    1.0     0.030    NaN    NaN
+                        cibersort     10  0.986  0.704  0.020  0.122    0.0     0.000    NaN    NaN
+                        instaprism    10  0.996  0.836  0.016  0.114    0.2     0.008    NaN    NaN
+                        reallocation  10  0.996  0.590  0.028  0.142    0.2     0.008    NaN    NaN
+                        tca           10  0.996  0.590  0.028  0.142    0.2     0.008    NaN    NaN
+                        toast         10  0.996  0.590  0.028  0.142    0.2     0.008    NaN    NaN
+            practice    cellgeometry  10  0.861  0.812  0.016  0.085    0.2     0.008    NaN    NaN
+                        cibersort     10  0.939  0.636  0.023  0.089    0.0     0.000    NaN    NaN
+                        instaprism    10  0.982  0.733  0.017  0.090    0.0     0.000    NaN    NaN
+                        naive         10  0.861  0.494  0.022  0.072    0.4     0.017    NaN    NaN
+                        reallocation  10  0.375    NaN    NaN    NaN    0.0     0.000    NaN    NaN
+                        tca           10    NaN  0.050  0.106    NaN    9.5     0.333    NaN    NaN
+                        toast         10    NaN -0.144  0.141    NaN    9.1     0.324    NaN    NaN
+
+== 3. PALM minus comparator, paired over dataset x split [95% bootstrap CI]
+                                                      cov                       fpr_null                         tpr_t                            r_t                         auroc
+palm_module | cellgeometry   +0.011 [+0.001, +0.022] n=32   -0.013 [-0.028, +0.001] n=32  +0.055 [-0.011, +0.114] n=22   +0.004 [-0.038, +0.036] n=24  +0.011 [+0.000, +0.033] n=10
+palm_module | cibersort     +0.004 [+0.001, +0.008] n=130  -0.003 [-0.008, +0.001] n=130  -0.012 [-0.063, +0.036] n=69  +0.005 [-0.009, +0.019] n=114  +0.019 [-0.028, +0.065] n=30
+palm_module | instaprism    +0.001 [-0.002, +0.004] n=130  +0.006 [+0.002, +0.010] n=130  +0.115 [+0.060, +0.174] n=69  -0.004 [-0.015, +0.006] n=114  +0.002 [-0.059, +0.054] n=30
+palm_module | reallocation  +0.008 [+0.004, +0.013] n=130  -0.005 [-0.010, -0.001] n=130  -0.003 [-0.056, +0.051] n=69  +0.040 [+0.026, +0.054] n=114  +0.054 [+0.007, +0.096] n=30
+palm_module | tca            +0.028 [+0.017, +0.040] n=40   -0.014 [-0.028, -0.002] n=40  -0.032 [-0.102, +0.033] n=30   +0.058 [+0.023, +0.095] n=32  +0.044 [+0.000, +0.111] n=10
+palm_module | toast          +0.028 [+0.017, +0.040] n=40   -0.014 [-0.028, -0.002] n=40  -0.032 [-0.102, +0.033] n=30   +0.058 [+0.023, +0.095] n=32  +0.044 [+0.000, +0.111] n=10
+practice | cellgeometry      +0.634 [+0.504, +0.755] n=32   -0.552 [-0.678, -0.416] n=32  -0.091 [-0.193, -0.011] n=22   +0.061 [-0.006, +0.106] n=24  +0.000 [+0.000, +0.000] n=10
+practice | cibersort        +0.551 [+0.501, +0.601] n=130  -0.500 [-0.553, -0.447] n=130  -0.334 [-0.425, -0.247] n=69  -0.018 [-0.054, +0.019] n=114  +0.087 [+0.013, +0.167] n=30
+practice | instaprism       +0.562 [+0.514, +0.610] n=130  -0.496 [-0.551, -0.442] n=130  -0.334 [-0.425, -0.247] n=69  -0.027 [-0.060, +0.007] n=114  +0.063 [+0.004, +0.130] n=30
+practice | naive            +0.595 [+0.547, +0.644] n=130  -0.563 [-0.624, -0.503] n=130  -0.320 [-0.409, -0.235] n=69  +0.055 [+0.019, +0.092] n=114  +0.344 [+0.281, +0.398] n=30
+practice | reallocation     +0.706 [+0.677, +0.735] n=130  -0.388 [-0.439, -0.337] n=130  -0.207 [-0.310, -0.112] n=69   +0.055 [-0.037, +0.170] n=23  +0.104 [+0.013, +0.200] n=30
+practice | tca                                        NaN   -0.225 [-0.272, -0.178] n=40  -0.100 [-0.175, -0.042] n=30   +0.279 [+0.185, +0.380] n=32  +0.033 [+0.000, +0.078] n=10
+practice | toast                                      NaN   -0.132 [-0.180, -0.089] n=40  -0.175 [-0.292, -0.058] n=30   +0.235 [+0.159, +0.321] n=32  +0.167 [+0.122, +0.211] n=10
+
+== 4. COMBAT real bulk (splits >= 20)
+                                            n    cov      r   rmse  fpr_null  calls
+contrast bulk            method                                                    
+sepsis   real            instaprism_ttest  10  0.306 -0.044  0.162     0.640   28.8
+                         palm              10  0.969  0.084  0.106     0.000    0.0
+         real_offset     instaprism_ttest  10  0.210  0.291  0.150     0.809   38.3
+                         palm              10  1.000  0.489  0.113     0.000    0.5
+         real_selfoffset instaprism_ttest  10  0.355  0.395  0.099     0.518   24.6
+                         palm              10  0.988  0.325  0.127     0.000    1.1
+         sc              instaprism_ttest  10  0.600  0.462  0.068     0.220   12.1
+                         palm              10  0.978  0.634  0.065     0.006    0.6
+severe   real            instaprism_ttest  10  0.320  0.019  0.081     0.556   27.5
+                         palm              10  0.986  0.198  0.062     0.000    0.0
+         real_offset     instaprism_ttest  10  0.171  0.352  0.099     0.913   43.6
+                         palm              10  0.984  0.307  0.068     0.000    0.0
+         real_selfoffset instaprism_ttest  10  0.384  0.445  0.061     0.497   24.4
+                         palm              10  0.973  0.659  0.054     0.000    0.4
+         sc              instaprism_ttest  10  0.641  0.603  0.045     0.276   16.0
+                         palm              10  0.967  0.700  0.041     0.000    0.7
+
+== 5a. By benchmark family (mean over dataset x split; read separately, do not average across)
+             datasets    cov    r_t   rmse  width  calls  fpr_null  auroc  tpr_t
+family                                                                          
+blood cells         7  0.999  0.839  0.037  0.365  0.843     0.001    NaN  0.400
+cell lines          6  0.961  0.726  0.052  0.233  7.433     0.036  0.844  0.694
+
+== 5b. Pair-level coverage by route (program level; guard firings not recorded in v2)
+                        pairs    cov  width   rmse
+family      route                                 
+blood cells calibrated   2932  1.000  0.345  0.029
+            unmixed        78  0.974  0.777  0.265
+cell lines  calibrated   1527  0.962  0.225  0.044
+            unmixed      1833  0.960  0.243  0.061
+
+== 5c. Pair-level coverage by response regime in the truth (|beta| > 0.10 counts as responding)
+                        pairs    cov  width   rmse
+family      regime                                
+blood cells all types     116  0.991  1.015  0.209
+            none         2123  1.000  0.269  0.022
+            some types    771  1.000  0.496  0.049
+cell lines  all types     180  0.944  0.259  0.079
+            none         2169  0.975  0.221  0.048
+            some types   1011  0.935  0.259  0.061
+
+   per dataset, 'all types' regime only:
+            pairs    cov  width   rmse
+dataset                               
+kang          116  0.991  1.015  0.209
+tahoe_rmc      90  0.900  0.263  0.092
+tahoe_tram     90  0.989  0.255  0.064
+

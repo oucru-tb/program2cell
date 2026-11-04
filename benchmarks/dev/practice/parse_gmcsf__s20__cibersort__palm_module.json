@@ -1,0 +1,1 @@
+[{"cov": 1.0, "r": 0.847279474455801, "rmse": 0.03387056508731159, "width": 0.34092923246433426, "r_t": 0.847279474455801, "calls": 1, "fpr_null": 0.0, "dataset": "parse_gmcsf", "split": 20, "method": "cibersort", "kind": "palm_module", "rule": "palm", "seconds": 225.39039778709412}]

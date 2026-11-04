@@ -86,7 +86,12 @@ results slides.
     interferon none (v1) → 0.48. Coverage stays ≥ 0.93.
   - Say: "PALM now also finds changes that every cell type shares, not only cell-type-specific ones."
 - **Pre-registration:** the method was frozen (tag `method-freeze-v2`) and the held-out protocol written down
-  *before* the held-out run. That run uses splits 20–29 of 14 datasets plus COMBAT, with the results to come.
+  *before* the held-out run (splits 20–29, 13 datasets plus COMBAT, run once; docs/heldout_v2_results.md).
+  - Held out, the intervals covered the truth on every dataset (0.93–1.00) and false calls on unchanged pairs
+    stayed ≤ 8% (COMBAT real bulk: 0–0.6%); deconvolution + t-test flagged up to 90% (cell lines), 50 points more on average.
+  - Honest limits: the accuracy and power targets were met on 5 of 13 datasets; blood (Kang) finds 40% of true
+    effects; two weak Tahoe drugs are poor for every method.
+  - Say: "On data it had never seen, PALM kept its promise on honesty; the next version is about power."
 - **Controls fixed by genetics:** the three idasanutlin responders are TP53 wild-type, and the three
   non-responders carry homozygous TP53 mutations (Cellosaurus), so the "3 TP53 WT and 3 TP53 mutant" wording
   is correct.

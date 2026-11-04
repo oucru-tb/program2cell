@@ -1,0 +1,1 @@
+[{"cov": 1.0, "r": 0.7379541852082198, "rmse": 0.018579513317454034, "width": 0.11965809229866164, "r_t": NaN, "calls": 0, "fpr_null": 0.0, "dataset": "zhang", "split": 24, "method": "cellgeometry", "kind": "palm_module", "rule": "palm", "seconds": 172.1548204421997}]

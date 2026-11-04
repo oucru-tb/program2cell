@@ -22,3 +22,5 @@ src/palm_bulk/compare/R/CIBERSORT.R
 
 # intermediate files of real-data runs
 benchmarks/real/*/work/
+benchmarks/*.zip
+benchmarks/*.zip.sha256

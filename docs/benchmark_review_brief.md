@@ -172,9 +172,10 @@ method-agnostic.
    from other people's single-cell data) now tests the platform gap. A reference from another study is
    still planned.
 3. **The method was developed on these datasets.** It is now frozen (v2, 2026-11-03), and the protocol was
-   written first. The held-out run uses splits 20–29, never run before, across 14 datasets and COMBAT. The
-   splits reuse cells (item 5), so the held-out test checks against tuning to particular splits, not
-   generalisation to new experiments. Parse and the Tahoe strong-dose arms entered development only recently.
+   written first. The held-out run used splits 20–29, never run before, across 13 datasets and COMBAT
+   (results: heldout_v2_results.md; coverage and false calls held everywhere, accuracy and power targets were
+   met on 5 of 13). The splits reuse cells (item 5), so the held-out test checks against tuning to particular
+   splits, not generalisation to new experiments. Parse and the Tahoe strong-dose arms entered development only recently.
 4. **Comparators:** CIBERSORTx high-resolution, bMIND and ENIGMA are not yet included. TCA and TOAST are
    scored with our ULM-on-log-fold-change test, not their native tests. After fixing a scoring bug, BH q < 0.1
    gives these unchanged-box false flags:

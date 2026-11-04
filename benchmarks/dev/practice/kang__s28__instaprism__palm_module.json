@@ -1,0 +1,1 @@
+[{"cov": 1.0, "r": 0.6981060402175905, "rmse": 0.16056575817144683, "width": 0.6052166722715709, "r_t": 0.6981060402175905, "calls": 4, "fpr_null": 0.0, "auroc": NaN, "tpr": 0.25, "fpr": NaN, "tpr_t": 0.25, "cov_known": 1.0, "dataset": "kang", "split": 28, "method": "instaprism", "kind": "palm_module", "rule": "palm", "seconds": 92.35446333885193}]

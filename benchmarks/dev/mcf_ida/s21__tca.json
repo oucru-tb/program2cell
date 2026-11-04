@@ -1,0 +1,27 @@
+[
+ {
+  "config": "tca",
+  "row": "model",
+  "method": "tca",
+  "runtime": 13.143978834152222,
+  "frac_rmse": 0.03263065056135552,
+  "frac_pearson": 0.9530058993384013,
+  "frac_r_per_type": 0.9612304610557003,
+  "eff_pearson": 0.877627086585423,
+  "eff_auroc": 0.8161764705882353,
+  "eff_sign_agree": 1.0,
+  "eff_localise": 0.2,
+  "eff_mae": 0.06063818711697114,
+  "ulm_act_spearman_across_samples": null,
+  "ulm_act_spearman_shared": null,
+  "ulm_act_spearman_specific": null,
+  "ulm_act_spearman_across_types": null,
+  "ulm_act_leakage": null,
+  "ulm_act_prog_leakage": null,
+  "ulm_act_coupling": null,
+  "time": 13.15707778930664,
+  "dataset": "mcf_ida",
+  "split": 21,
+  "act_specific_share": 0.49177780771045543
+ }
+]

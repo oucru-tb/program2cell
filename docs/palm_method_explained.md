@@ -225,8 +225,13 @@ spillover machinery more than the programs. For blood, Kang's recall is the real
 - COMBAT, real bulk: InstaPrism + t-test flags 59–67% of cell type × program boxes that did not change;
   program2cell flags 0–1%.
 
-**Held-out (v2):** run on splits 20–29; the report is being written. Its numbers replace this paragraph once
-final (benchmark_review_brief.md).
+**Held-out (v2, splits 20–29, run once; heldout_v2_results.md):**
+- The ranges covered the truth on all 13 datasets (0.93–1.00) and false calls on unchanged pairs stayed at or
+  below 8%; on real COMBAT bulk, 0–0.6%. Deconvolution + t-test flagged up to 90% of unchanged pairs (cell lines), 50 percentage points more on average.
+- Accuracy and power met their targets on 5 of 13 datasets (McFarland, three Parse cytokines). Blood: Kang
+  found 40% of true effects; real bulk: almost no calls. Two weak Tahoe drugs were poor for every method, and
+  worse for program2cell than for the best comparator.
+- In short: honest on unseen data; power is the next problem (v3_plan.md).
 
 ---
 
