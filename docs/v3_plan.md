@@ -40,8 +40,19 @@ first**: it targets the weakest held-out regime (broad responses).
    McFarland and Tahoe trametinib.
 3. Candidate 12 on COMBAT (globin / platelet masking): fraction r and effect r on real bulk.
 4. Candidate 5 (gene-level unmixing) if 9 does not recover Kang's power.
-5. Blocked until data: 1 (granulocyte truth), 6 and 7 (blood counts; check COMBAT clinical tables first), 13
-   (ordered TB axis needs the cohort).
+5. Blocked until data: 1 (granulocyte truth), 6 and 7 (blood counts), 13 (ordered TB axis needs the cohort).
+
+**Data check (2026-11-04):**
+- COMBAT blood counts: the data dictionary (`CBD-KEY-CLINVAR`, Zenodo 6120249) lists `neutrophil_count`,
+  `lymphocyte_count`, `monocyte_count`, `white_cell_count` and `platelet_count` at sampling (±24 h), but only in
+  the controlled clinical data (EGA, EGAS00001005493, data access agreement). The public file has none.
+  Candidates 6–7 on COMBAT need that agreement: a PI decision.
+- COMBAT whole-blood CyTOF (`CBD-KEY-CYTOF-WB`, 0.9 GB, public) gives granulocyte *composition* truth for the
+  same samples: the fraction half of candidate 1, available now. No activity truth.
+- COMBAT FACS is on PBMC (no granulocytes).
+- Candidate 12 on COMBAT: globin genes are 0.1% of bulk reads (median; max 0.6%), platelet genes 0.3% (max
+  1.3%): the library was evidently globin-depleted, so masking would change little here. It stays relevant for
+  TB cohorts sequenced without globin depletion.
 
 ## A. Validation before any whole-blood TB claim
 
