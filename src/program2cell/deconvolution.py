@@ -185,12 +185,20 @@ def program_deconvolution(inputs, calibration, fractions=None, fraction_draws=No
 
 def _unmix_effects(out, inputs, calibration, fractions, fraction_draws, raw, raw_draws, T, X, groups, level, seed,
                    n_sim, mode, eff_cal, iv_cal, sim_widen=True, pev=False, separate=False, misfit=False,
-                   per_pair=False, plant="prior", shared=False, margin=0.1, choose="rmse"):
+                   per_pair=False, plant="prior", shared=False, margin=0.1, choose="rmse", pool=False,
+                   pool_alpha=0.1):
     """Effects by unmixing (core.unmix) for every program ('unmix') or where the design check favours it
     ('auto'); the others keep the calibrated effects. Intervals: unmixed, bootstrap half-width widened to
     max(t, simulated studentised error quantile) standard errors; calibrated, the calibrated interval widened
     to at least the simulated studentised error quantile of rescaled reallocation (its leakage bias).
-    shared=True: also out.info["shared_response"] (shared_response)."""
+    shared=True: also out.info["shared_response"] (shared_response).
+    pool=True (v3 candidate, opt-in; docs/v3_plan.md item 9): per program, a Wald test of the types' deviations
+    from the shared-response fit (bootstrap covariance, its diagonal raised to the deviation se with shrinkage
+    and misfit); where it does not reject at pool_alpha, every type gets the shared effect, interval
+    +- q sqrt(common se^2 + misfit^2 + tau^2) with tau^2 the between-type spread beyond noise. Motivation: a
+    response shared by all types (Kang interferon) unmixed type by type flips a rare type's sign (NK -0.28,
+    truth +0.26, held-out v2). The width rule and the guard then compare this (pooled or unmixed) estimate with
+    the calibrated one as before."""
     from scipy.stats import t as tdist
     from .core import unmix as um
     B, G = inputs.B, inputs.Gmat
@@ -204,15 +212,36 @@ def _unmix_effects(out, inputs, calibration, fractions, fraction_draws, raw, raw
     r = um.unmix_effects(raw, A, T, X, groups, level=level, dhat_draws=dd, A_draws=Ad, pi=fractions, B=B, G=G,
                          pi_draws=zd, seed=seed, pev=pev, separate=separate,
                          misfit_tau="auto" if misfit else None, Y=inputs.Y,
-                         shared_fit=shared or plant == "shared")
+                         shared_fit=shared or plant == "shared" or pool)
     chk = um.design_check(calibration, fractions, T, X, groups, n_sim=n_sim, level=level, seed=seed,
                           effect_hint=r["effects"] if plant == "shared" else eff_cal,
                           offprog_sd=r["tau"] if misfit else 0.0, plant=plant,
                           shared_hint=r.get("common") if plant == "shared" else None)
     q = tdist.ppf(0.5 + level / 2, max(r["n_units"] - 1, 1))
     q = q if misfit else max(chk["z_q"], q)
-    lo_u, hi_u = r["effects"] - q * r["se"], r["effects"] + q * r["se"]
     C, P = r["effects"].shape
+    eff_u, se_u = r["effects"], r["se"]
+    pooled, p_het = np.zeros(P, bool), np.full(P, np.nan)
+    if pool and "common" in r:
+        from scipy.stats import chi2
+        d = r["effects"] - r["common"][None]
+        Db = r["boot"] - r["common_boot"][:, None]
+        for p in range(P):
+            S = np.atleast_2d(np.cov(Db[:, :, p], rowvar=False))
+            sd = np.sqrt(np.clip(np.diag(S), 1e-24, None))
+            k = np.maximum(r["deviation_se"][:, p] / sd, 1.0)          # raise to the full deviation se
+            S = S * np.outer(k, k)
+            p_het[p] = chi2.sf(float(d[:, p] @ np.linalg.pinv(S) @ d[:, p]), max(C - 1, 1))
+        pooled = p_het > pool_alpha
+        tau2 = np.clip((d ** 2).mean(0) - (r["deviation_se"] ** 2).mean(0), 0, None)
+        mis = 0.0 if r["misfit_sd"] is None else np.asarray(r["misfit_sd"])
+        se_pool = np.sqrt(r["common_se"][None] ** 2 + mis ** 2 + tau2[None])
+        eff_u = np.where(pooled[None], r["common"][None], r["effects"])
+        se_u = np.where(pooled[None], se_pool, r["se"])
+    lo_u, hi_u = eff_u - q * se_u, eff_u + q * se_u
+    # conditioning of the unmixing design per program (v3 reporting item 4b): the leakage maps stacked over samples
+    Ap = np.stack([A[:, :, p, :, p] for p in range(P)], 0) if A.ndim == 5 else np.moveaxis(A, 3, 0)
+    cond = [float(np.linalg.cond(Ap[p].reshape(-1, C))) for p in range(P)]
     # calibrated programs: widen to the simulated studentised error of rescaled reallocation (at least)
     h = (iv_cal[1] - iv_cal[0]) / 2
     if sim_widen:
@@ -222,6 +251,7 @@ def _unmix_effects(out, inputs, calibration, fractions, fraction_draws, raw, raw
             q_t = tdist.ppf(0.5 + level / 2, max(r["n_units"] - 1, 1))
             h_sim = np.sqrt(chk["q_abs_realloc_cp"] ** 2 + (q_t * se_r) ** 2)
         h = h_sim if sim_widen == "replace" else np.maximum(h, h_sim)
+    guard = np.zeros((C, P), bool)
     if mode == "unmix":
         use = np.ones((C, P), bool)
     elif choose in ("width", "width_guard"):    # the narrower of the two simulation-calibrated intervals
@@ -230,15 +260,20 @@ def _unmix_effects(out, inputs, calibration, fractions, fraction_draws, raw, raw
         if choose == "width_guard":         # a type whose unmixed effect falls outside its (valid, wide)
             # calibrated interval keeps the calibrated result: unmixing has failed for it (e.g. Kang NK NF-kB
             # unmixed -1.34 [-1.96, -0.73], truth +0.15, calibrated [-0.49, 0.72])
-            use = use & (np.abs(r["effects"] - eff_cal) <= h)
+            ok = np.abs(eff_u - eff_cal) <= h
+            guard = use & ~ok
+            use = use & ok
     else:                                   # simulated RMSE, per program, or per (type, program) with per_pair
         use = chk["use_unmix_cp"] if per_pair else np.broadcast_to(chk["use_unmix"][None], (C, P))
-    eff = np.where(use, r["effects"], eff_cal)
+    eff = np.where(use, eff_u, eff_cal)
     iv = (np.where(use, lo_u, eff_cal - h), np.where(use, hi_u, eff_cal + h))
     out.info["unmix"] = dict(programs=[p for p, u in zip(inputs.programs, use.any(0)) if u], pairs=use.tolist(),
                              rmse_unmix=chk["rmse_unmix"].tolist(), rmse_realloc=chk["rmse_realloc"].tolist(),
                              z_q=chk["z_q"], shrinkage=r["lam"][:, 1].tolist(), tau=r["tau"],
-                             misfit_sd=None if r["misfit_sd"] is None else r["misfit_sd"].tolist())
+                             misfit_sd=None if r["misfit_sd"] is None else r["misfit_sd"].tolist(),
+                             guard=guard.tolist(), condition=cond,
+                             pooled=[p for p, u in zip(inputs.programs, pooled & use.any(0)) if u],
+                             p_heterogeneity=p_het.tolist())
     if shared:
         out.info["shared_response"] = shared_response(r, eff, iv, use, q, tdist.ppf(0.5 + level / 2, max(r["n_units"] - 1, 1)),
                                                       inputs.cell_types, inputs.programs, margin)

@@ -390,7 +390,8 @@ def unmix_effects(dhat, A, T, X=None, groups=None, level=0.9, n_boot=200, dhat_d
         dse = (boot - cboot[:, None]).std(0)
         dse = dse if pev_sd is None else np.maximum(dse, pev_sd)
         dse = dse if mis is None else np.sqrt(dse ** 2 + mis ** 2)
-        res.update(common=common, common_se=cboot.std(0), deviation=beta - common[None], deviation_se=dse)
+        res.update(common=common, common_se=cboot.std(0), deviation=beta - common[None], deviation_se=dse,
+                   common_boot=cboot)
     return res
 
 

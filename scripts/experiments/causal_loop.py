@@ -75,6 +75,9 @@ ESTIMATORS = {"diff": dict(estimator="diff"),
               "auto_wg": dict(estimator="auto", sim_widen="abs", unmix_kw=dict(pev=True, misfit=True, choose="width_guard")),
               # freeze v2 (2026-11-03): program_deconvolution defaults = auto_wg
               "auto_v2": dict(estimator="auto"),
+              # v3 development (2026-11-04, docs/v3_plan.md item 9): pool the types to the shared-response fit where
+              # their deviations are not distinguishable (Wald test, alpha 0.1); else as auto_v2
+              "auto_v3pool": dict(estimator="auto", unmix_kw=dict(pool=True)),
               "direct": dict(estimator="direct", direct_kw=dict(n_boot=40)),
               "direct_nb": dict(estimator="direct", direct_kw=dict(n_boot=40, weights="nb")),
               "direct_pair": dict(estimator="direct", paired=True, direct_kw=dict(n_boot=40))}
@@ -82,7 +85,7 @@ ESTIMATORS = {"diff": dict(estimator="diff"),
 # the defaults changed at freeze v2 (sim_widen "abs", choose "width_guard"): every older estimator keeps the
 # settings it was run with (freeze v1 defaults sim_widen=True, choose="rmse")
 for _n, _kw in ESTIMATORS.items():
-    if _kw.get("estimator") in ("auto", "unmix") and _n != "auto_v2":
+    if _kw.get("estimator") in ("auto", "unmix") and _n != "auto_v2" and not _n.startswith("auto_v3"):
         _kw.setdefault("sim_widen", True)
         _kw["unmix_kw"] = {"choose": "rmse", **_kw.get("unmix_kw", {})}
 
@@ -155,6 +158,9 @@ def run(datasets, splits, names):
                 s = score(r.effects, lo, hi, r.calls, beta, list(inp.cell_types), list(inp.programs), KNOWN.get(dsn))
                 s.update(dataset=dsn, split=split, estimator=name, fractions=fsrc, seconds=time.time() - t0,
                          unmixed=",".join(r.info.get("unmix", {}).get("programs", [])),
+                         pooled=",".join(r.info.get("unmix", {}).get("pooled", [])),
+                         guard=r.info.get("unmix", {}).get("guard"), condition=r.info.get("unmix", {}).get("condition"),
+                         p_het=r.info.get("unmix", {}).get("p_heterogeneity"),
                          arrays=dict(effects=r.effects.tolist(), lo=lo.tolist(), hi=hi.tolist(),
                                      calls=r.calls.tolist(), beta=beta.tolist(), cell_types=list(inp.cell_types),
                                      programs=list(inp.programs)))
