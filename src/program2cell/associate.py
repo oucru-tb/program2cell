@@ -48,7 +48,33 @@ def associate(activity, z, covariates=None, level=0.9, n_boot=500, n_perm=999, a
     A = np.asarray(activity, float)
     N, C, P = A.shape
     z = np.asarray(z, float)
-    ok = np.isfinite(z) & np.isfinite(A.reshape(N, -1)).all(1)
+    flat = A.reshape(N, -1)
+    if not np.isfinite(flat).all() and np.isfinite(flat).any():
+        # missing values in some (cell type, program) columns only (e.g. a type with zero fraction in a few
+        # patients): fit each column on its own complete patients; an all-missing column stays NaN
+        cols = []
+        for j in range(C * P):
+            okj = np.isfinite(flat[:, j]) & np.isfinite(z)
+            if okj.sum() >= 4 and np.std(z[okj]) > 0:
+                cols.append(associate(flat[okj, j].reshape(-1, 1, 1), z[okj],
+                                      None if covariates is None else np.asarray(covariates, float).reshape(N, -1)[okj],
+                                      level, n_boot, n_perm, None, seed))
+            else:
+                cols.append(None)
+        nan = np.full(C * P, np.nan)
+        get = lambda k: np.array([nan[0] if c is None else c[k].ravel()[0] for c in cols])
+        sl, lo, hi, p = get("slope"), get("lo"), get("hi"), get("p")
+        alpha = 1 - level
+        calls = np.where(np.isfinite(p), (_bh(np.where(np.isfinite(p), p, 1)) if adjust == "bh" else p) < alpha, False)
+        sh = (C, P)
+        out = dict(slope=sl.reshape(sh), lo=lo.reshape(sh), hi=hi.reshape(sh), p=p.reshape(sh), calls=calls.reshape(sh),
+                   z_scale=float(np.ptp(z[np.isfinite(z)])), n=int(np.isfinite(flat).all(1).sum()))
+        if cell_types is not None and programs is not None:
+            import pandas as pd
+            out["table"] = pd.DataFrame(dict(cell_type=np.repeat(cell_types, P), program=np.tile(programs, C),
+                                             slope=sl, lo=lo, hi=hi, p=p, called=calls))
+        return out
+    ok = np.isfinite(z) & np.isfinite(flat).all(1)
     A, z = A[ok].reshape(ok.sum(), C * P), z[ok]
     X = None if covariates is None else np.asarray(covariates, float).reshape(len(ok), -1)[ok]
     n = len(z)
