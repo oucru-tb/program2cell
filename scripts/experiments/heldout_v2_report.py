@@ -106,6 +106,53 @@ def main():
         print(t4.round(3).to_string())
     else:
         print("no rows yet")
+    breakdowns(P)
+
+
+FAMILY = lambda d: "cell lines" if d.startswith(("mcf", "tahoe")) else "blood cells"
+
+
+def breakdowns(P):
+    """Added 2026-11-04 (reporting only, after the external critique; docs/v3_plan.md A2-A4): results by benchmark
+    family, and pair-level coverage by route (unmixed vs calibrated program; the per-type guard is not recorded in
+    v2 rows) and by response regime of the program in the truth (none / some types / all types respond)."""
+    print("\n== 5a. By benchmark family (mean over dataset x split; read separately, do not average across)")
+    t = P.assign(family=P.dataset.map(FAMILY)).groupby("family")[[m for m in METRICS if m in P]].mean()
+    t.insert(0, "datasets", P.assign(family=P.dataset.map(FAMILY)).groupby("family").dataset.nunique())
+    print(t.round(3).to_string())
+    pairs = []
+    for f in glob.glob(os.path.join(cl.OUT, "*__%s.json" % EST)):
+        s = json.load(open(f))
+        if s["split"] < FIRST:
+            continue
+        a = s["arrays"]
+        eff, lo, hi, beta = (np.asarray(a[k], float) for k in ("effects", "lo", "hi", "beta"))
+        progs = list(a["programs"])
+        unm = set(filter(None, (s.get("unmixed") or "").split(",")))
+        resp = (np.abs(beta) > cl.R_MIN_EFFECT).sum(0)                       # responding types per program
+        C = beta.shape[0]
+        for c in range(C):
+            for p, prog in enumerate(progs):
+                if not np.isfinite(beta[c, p]) or not np.isfinite(lo[c, p]):
+                    continue
+                pairs.append(dict(dataset=s["dataset"], family=FAMILY(s["dataset"]), split=s["split"],
+                                  route="unmixed" if prog in unm else "calibrated",
+                                  regime="none" if resp[p] == 0 else ("all types" if resp[p] == C else "some types"),
+                                  covered=lo[c, p] <= beta[c, p] <= hi[c, p], width=hi[c, p] - lo[c, p],
+                                  err=eff[c, p] - beta[c, p]))
+    if not pairs:
+        return
+    d = pd.DataFrame(pairs)
+    agg = dict(pairs=("covered", "size"), cov=("covered", "mean"), width=("width", "mean"),
+               rmse=("err", lambda e: float(np.sqrt(np.mean(np.square(e))))))
+    print("\n== 5b. Pair-level coverage by route (program level; guard firings not recorded in v2)")
+    print(d.groupby(["family", "route"]).agg(**agg).round(3).to_string())
+    print("\n== 5c. Pair-level coverage by response regime in the truth (|beta| > %.2f counts as responding)"
+          % cl.R_MIN_EFFECT)
+    print(d.groupby(["family", "regime"]).agg(**agg).round(3).to_string())
+    print("\n   per dataset, 'all types' regime only:")
+    sub = d[d.regime == "all types"]
+    print(sub.groupby("dataset").agg(**agg).round(3).to_string() if len(sub) else "   none")
 
 
 if __name__ == "__main__":

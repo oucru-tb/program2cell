@@ -48,16 +48,20 @@ two consequences:
 
 ### 2.2 What a program does: `G`
 
-A program is a list of genes with weights: +1 "goes up when the program is on", −1 "goes down" (`G[p, g]`,
-from PROGENy). The same weights are used in every cell type.
+A program is a list of genes with weights (`G[p, g]`, from PROGENy). A positive weight means "goes up when
+the program is on", a negative one "goes down", and the size says how strongly. PROGENy's weights are
+continuous; each program is rescaled so its median |weight| is 1, which keeps `delta` on a comparable scale.
+The same weights are used in every cell type.
 
 ### 2.3 How active a program is: `delta`
 
-`delta[c, p]` says how strongly program `p` is switched on in cell type `c`, relative to `B`:
+`delta[i, c, p]` says how strongly program `p` is switched on in cell type `c` of patient `i`, relative to
+`B`. Every patient has their own value:
 
-> profile of cell type c = B × exp(sum over programs of delta × program weights), rescaled to add up to 1.
+> profile of cell type c in patient i = B × exp(sum over programs of delta × program weights), rescaled to
+> add up to 1.
 
-With `delta = 1` for interferon in monocytes, every interferon gene with weight +1 is multiplied by e ≈ 2.7 in
+With `delta = 1` for interferon in monocytes, an interferon gene with weight 1 is multiplied by e ≈ 2.7 in
 monocytes. Multiplying (on the log scale) matches how regulation works: programs double or halve genes.
 
 ### 2.4 Mixing and noise
@@ -67,6 +71,10 @@ monocytes. Multiplying (on the log scale) matches how regulation works: programs
 The fractions are **read fractions**: a monocyte makes more RNA than a T cell, so read fractions are
 converted to cell fractions with each type's RNA content. Counts scatter around the expected value as
 negative binomial noise, with one dispersion per gene.
+
+**Where it breaks:** RNA content is the mean UMIs per cell in the atlas. That mixes true RNA content with
+capture efficiency (worst for neutrophils), carries no uncertainty, and is the same in TB and healthy. If
+activated cells make more RNA, that can only show up as "more cells". Blood counts would fix this (v3 plan).
 
 ---
 
@@ -78,6 +86,16 @@ For each patient with disease status `D` (0 healthy, 1 TB):
 
 `beta` per cell type and program is the main answer. The contributions (section 4, stage E) combine it with
 the fractions.
+
+**One quantity, two estimates.** PALM has its own parameter for `beta`, but it is used only inside the model.
+The reported value, written `β̂` where the difference matters, comes from stage D (section 4), which is
+checked against a known answer.
+
+**Known covariates** (age, sex, site, batch, HIV status) enter both the model and the unmixing, so a
+difference in them is not read as disease. Paired designs (the same patient twice) and weighting for
+non-randomised groups (IPW / AIPW) are supported. Disease does not have to be yes/no: an ordered or continuous
+measure goes through the path of section 6; an ordered TB axis (uninfected, latent, active, on treatment) is
+in the v3 plan.
 
 ---
 
@@ -195,6 +213,10 @@ run, once, with no retuning. Any later change becomes v3 with new held-out split
 
 ## 8. What the evidence says
 
+Cell-line results (McFarland, Tahoe) and blood-cell results (Kang, Parse, Zhang, COMBAT) should be read
+separately: PROGENy's programs were learned largely from cell lines, so the cell-line benchmarks test the
+spillover machinery more than the programs. For blood, Kang's recall is the realistic expectation.
+
 **Development** (splits 0–2):
 - Coverage ≥ 0.93 on every dataset.
 - The v2 routing rule raised the share of true effects called (Kang 0.23 → 0.48, Tahoe trametinib 0.33 → 0.89,
@@ -211,7 +233,14 @@ final (benchmark_review_brief.md).
 ## 9. Limits to keep in mind
 
 - **A cell type missing from the reference gives confidently wrong answers.** Its signal is absorbed by the
-  types that are present. For whole-blood TB samples, the reference must include neutrophils.
+  types that are present, and there is no detector for it yet. For whole-blood TB samples, the reference must
+  include neutrophils.
+- **Neutrophils are not yet validated.** Every benchmark is cell lines or PBMC (COMBAT's single-cell arm is
+  PBMC), so no result so far could show a granulocyte failure. A whole-blood benchmark comes before any
+  whole-blood TB claim.
+- **Whole blood has contaminants** that vary per sample: globin and platelet reads. Mask them before fitting.
+- **Broad responses are the hard case.** When every cell type responds (interferon in TB), the per-type
+  split is least accurate, and the method may report the program-level change instead.
 - **Power depends on the design.** With little variation in the cell mix between patients, rare types get
   wide ranges (section 5).
 - **Real bulk loses accuracy** through the platform gap (stage 0).
