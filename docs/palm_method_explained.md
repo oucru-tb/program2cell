@@ -1,345 +1,236 @@
-# PALM-bulk, explained simply
+# program2cell and its PALM model, explained simply
 
-*What the method does, how it works, and what has been built and checked so far (status 2026-10-19).
-Written in the Feynman style: plain words first, then the precise version, then where the simple story
-breaks down.*
+*What the method does, how it works, and what the evidence says (status 2026-11-04, method freeze v2).
+Plain words first, then the precise version, then where the simple story breaks down. The formal
+definitions are in `method_spec.md` and `model_dag.md`; this file is the explanation.*
+
+**Names.** **program2cell** is the tool (the package, formerly palm-bulk). **PALM** is the Bayesian model at
+its core, which estimates each sample's cell mix. The per-cell-type changes come from calibrated steps built
+around that model (section 4).
 
 ---
 
 ## 1. The problem in one picture
 
-A bulk RNA-seq sample is a smoothie. You blend many fruits (cell types) and measure only the taste of the
-whole glass (the total reads of each gene). Two things can change the taste:
+A bulk RNA-seq sample is a smoothie. You blend many fruits (cell types) and taste only the whole glass (the
+total reads of each gene). Two things can change the taste:
 
 - **The recipe changed.** There is more mango than before (more monocytes, fewer T cells).
 - **The fruit changed.** The mangoes themselves got sweeter (monocytes switched on an interferon program).
 
-A plain bulk analysis tastes "sweeter" and stops there. It cannot say whether you added mango or the mango
-got riper. PALM tries to answer both, for every sample, and to say how sure it is.
+A plain bulk analysis tastes "sweeter" and stops there. program2cell answers four questions, from bulk
+counts plus a single-cell atlas:
 
-Concretely, from bulk counts plus a single-cell reference it estimates:
-
-1. **Cell-type fractions:** how much of each fruit is in the glass.
-2. **Program activity inside each cell type:** how "ripe" each fruit is, for known gene programs
-   such as interferon response, TNF-α/NF-κB or hypoxia (PROGENy, Hallmark, CollecTRI).
-3. **Attribution:** of the total interferon signal in the glass, what share comes from each fruit.
-4. **For treated vs control:** how much of a program's change comes from cells responding (intrinsic) and
-   how much from the cell mix shifting (composition).
-
-Every answer comes with an interval, not only a number.
+1. **How much of each fruit:** cell-type fractions per sample.
+2. **How each fruit changed:** for each cell type and known gene program (PROGENy pathways such as
+   interferon, TNF-α/NF-κB, hypoxia), the change between groups (TB vs healthy, treated vs control), with a
+   90% range.
+3. **Who is responsible:** each cell type's share of the bulk change, split into "more cells" and "cells
+   changed".
+4. **How sure, and what this design can resolve:** every answer has an interval that was checked against
+   a known answer, plus the smallest change this study could detect.
 
 ---
 
 ## 2. The building blocks
 
-### 2.1 What each cell type normally looks like: the reference `B`
+### 2.1 What a cell type looks like: the reference `B`
 
-From single-cell data we know, for each cell type, what share of its reads goes to each gene. Call it
-`B[c, g]`: a cell type's resting "flavour profile". We build it from pseudo-bulks per donor (summing cells of
-one type from one donor) and then average across donors, so one unusual donor cannot dominate.
+From the single-cell atlas we know, for each cell type, what share of its reads goes to each gene: `B[c, g]`.
+It is built from pseudo-bulks per donor (summing one type's cells in one donor), averaged across donors.
 
-### 2.2 What a program does: the dictionary `G`
+**Where the simple story breaks:** `B` is the *average* cell of that type in the atlas, not a "resting" cell.
+An atlas contains activated cells too. That is fine for group comparisons (the baseline cancels), but it has
+two consequences:
+- use healthy donors of the atlas for a disease cohort, so the baseline is a known state;
+- merge activation-state clusters ("IFN-stimulated monocytes") into their parent type. Otherwise a cell that
+  switches a program on is counted as *more cells of another type* instead of *cells changed*.
 
-A program is a list of genes with weights. Weight +1 means "this gene goes up when the program is on";
-−1 means "goes down". This is `G[p, g]`, taken from public resources.
+### 2.2 What a program does: `G`
 
-### 2.3 How active a program is in a cell type: `delta`
+A program is a list of genes with weights: +1 "goes up when the program is on", −1 "goes down" (`G[p, g]`,
+from PROGENy). The same weights are used in every cell type.
 
-This is the key number. `delta[c, p]` says how strongly program `p` is switched on in cell type `c`,
-**relative to that cell type's reference state**. The model turns it into a new flavour profile:
+### 2.3 How active a program is: `delta`
 
-> new profile of cell type c = reference profile × exp(sum over programs of delta × program weights),
-> then rescaled so the shares add up to 1.
+`delta[c, p]` says how strongly program `p` is switched on in cell type `c`, relative to `B`:
 
-In words: if interferon has `delta = 1` in monocytes, every interferon gene with weight 1 is multiplied by
-e (about 2.7) in monocytes. Genes with negative weight are divided. Genes outside the program stay where they
-are, apart from the rescaling.
+> profile of cell type c = B × exp(sum over programs of delta × program weights), rescaled to add up to 1.
 
-Why multiply on the log scale? Because gene regulation acts like that: a program doubles or halves genes. It
-does not add a fixed number of reads.
+With `delta = 1` for interferon in monocytes, every interferon gene with weight +1 is multiplied by e ≈ 2.7 in
+monocytes. Multiplying (on the log scale) matches how regulation works: programs double or halve genes.
 
-**Where the simple story breaks:** the rescaling means that when a program pushes some genes up, every other
-gene's *share* goes down slightly. That is why gene selection includes "anchor" genes (section 4): stable
-genes stop a strong program from making everything else look repressed.
+### 2.4 Mixing and noise
 
-### 2.4 Mixing: the bulk sample
+> expected share of gene g in sample i = Σ over cell types of (fraction of reads from c) × (profile of c)
 
-> expected share of gene g in sample i = sum over cell types of (fraction of reads from c) × (profile of c in sample i)
-
-The fractions here are **read fractions**: the share of the sample's reads that come from each cell type.
-A monocyte has more RNA than a T cell, so read fractions are not cell fractions. We convert using each cell
-type's average RNA content from the reference.
-
-### 2.5 Noise: negative binomial counts
-
-Real counts scatter more than coin flips would predict (biological variation between samples), so counts
-are negative binomial around the expected value. Each gene gets its own dispersion, because some genes are
-simply noisier than others. By default it is estimated once from the bulk counts and held fixed (see 5.5);
-`dispersion="gene"` samples it instead, partly pooled across genes.
-
-### 2.6 Platform bias: `m`
-
-Single-cell and bulk protocols do not capture every gene equally well. A gene can look twice as high in
-bulk for purely technical reasons. A per-gene scale `m[g]`, shared by all samples, absorbs this. Without
-it, the model would explain a technical shift with a biological program.
+The fractions are **read fractions**: a monocyte makes more RNA than a T cell, so read fractions are
+converted to cell fractions with each type's RNA content. Counts scatter around the expected value as
+negative binomial noise, with one dispersion per gene.
 
 ---
 
-## 3. Treatments, covariates and the decomposition
+## 3. Groups: how a disease enters
 
-### 3.1 How a treatment enters
+For each patient with disease status `D` (0 healthy, 1 TB):
+- **Composition:** the cell mix shifts with disease (`gamma`).
+- **Activity:** each program in each cell type shifts with disease (`beta`).
 
-For each sample, with treatment indicator `T` (0 or 1):
-
-- **Composition:** `fractions = softmax(a + gamma × T + sample noise)`. `gamma` is how much the
-  treatment shifts the mix.
-- **Activity:** `delta = kappa + beta × T + sample noise`. `kappa` is the baseline activity of each
-  program in each cell type; `beta` is how much the treatment changes it.
-
-Known covariates such as batch, sex or age shift both parts. Effects are then reported for a sample at the
-average covariate value. This matters: in simulations with a batch linked to treatment, the coverage of
-treatment-effect intervals rose from 0.25–0.44 without covariates to 0.81–1.00 with them.
-
-### 3.2 Sparse priors: the horseshoe
-
-Most programs are not active in most cell types. `kappa` and `beta` get a *horseshoe* prior, which says
-"most of these are near zero, but a few can be large". It shrinks noise towards zero without crushing real
-signals. Think of a strict editor who deletes weak claims but leaves strong ones alone.
-
-### 3.3 Attribution: switch one program off and see what is lost
-
-To ask "how much of sample i's interferon signal comes from monocytes", the model runs a small thought
-experiment:
-
-1. Compute monocytes' program signal with everything as estimated.
-2. Compute it again with only interferon switched off in monocytes.
-3. The difference, weighted by the monocyte fraction, is monocytes' contribution.
-
-Do this for every cell type. Each one's share of the total is its attribution. Because each draw from the
-posterior gives a slightly different answer, the shares come with intervals.
-
-**Where it breaks:** if a program's genes look the same in every cell type, the bulk cannot tell who
-carries it. Attribution intervals then become wide. That is the honest answer, not a failure.
-
-### 3.4 Intrinsic vs composition: a fair split
-
-The total change of a program between treated and control has two causes that act together. Fractions
-change (composition) and per-cell activity changes (intrinsic). Splitting a product of two changes is
-ambiguous: whichever you change first "gets" the interaction term. PALM uses the Shapley rule, the same idea
-as splitting a restaurant bill fairly: average over both orders. The split is then **exact**
-(intrinsic + composition = total, to machine precision) and symmetric.
+`beta` per cell type and program is the main answer. The contributions (section 4, stage E) combine it with
+the fractions.
 
 ---
 
-## 4. Which genes go into the model
+## 4. How the answer is computed: five stages
 
-Using all 20,000 genes would be slow and add noise. So PALM asks every gene one question: *how much would
-adding you sharpen our estimates?* A gene's answer depends on two things. The first is how strongly its
-expected count moves when a fraction or a program shift moves. The second is how noisy it is (its
-dispersion). PALM adds genes one at a time, each time taking the gene that most increases the total
-information (the determinant of the Fisher information, a "D-optimal design"). It stops when the next gene
-would add almost nothing, or at the cap (`max_genes`), so the number of genes comes from the data.
+The first version of this method (October 2026) read everything off one Bayesian model. Benchmarks with a
+known answer showed that its per-cell effects were biased and its intervals too narrow when cell types
+spill into each other. The frozen method keeps the model for what it does well, the cell mix, and computes
+the per-cell changes with steps that are checked against a known answer.
 
-Nothing tells it which genes do which job, yet the jobs appear on their own. Program genes inform the
-shifts. Markers inform the fractions. Stable genes become valuable because they separate a program change
-from a composition change. Noisy genes are down-weighted automatically.
+### Stage 0 (optional, real bulk): platform correction
 
-**The older rule** (`gene_selection="groups"`) fills a fixed budget from four hand-set groups:
+Bulk and single-cell protocols capture genes differently: a gene can look twice as high in bulk for purely
+technical reasons. `correct_platform` estimates one offset per gene from the study's own bulk and removes it.
+One offset for all patients, so a disease difference is not absorbed.
 
-| Group | Share | Job |
-|---|---|---|
-| Program genes (top weights, taken in turn per program) | 45% | Measure program activity and attribution |
-| Cell-type markers (taken in turn per type) | 30% | Pin down fractions, so programs are not confused with composition |
-| Highly variable genes in the reference | 10% | Catch cell-state variation that markers miss |
-| Anchors (well expressed, stable across types, in no program) | 15% | Hold the rescaling steady |
+**Where it breaks:** the study's *average* composition cannot be identified from the bulk alone, so fraction
+accuracy stays limited on real bulk. In a TB-only cohort, an offset estimated from TB samples could absorb a
+signal shared by every patient.
 
-In the simulated gene-budget study the information rule matched or beat the four groups at every cap. At
-300 genes its κ error was about 30% lower. With a cap of 1,500 it stopped by itself near 1,070 genes and
-the fit took half the time, with the same accuracy. It is therefore the default.
+### Stage A: the cell mix (the PALM model)
 
-**Where the simple story breaks:** the information is computed with programs switched off (δ = 0), a local
-approximation. If strongly induced programs turn out to be under-served, averaging the information over a
-few plausible δ values is the next step.
+PALM is a Bayesian model of the whole smoothie (sections 2–3). It is fitted in two steps: each sample is
+summarised around its best fit, then NUTS samples the population-level parameters. It returns 50 plausible
+cell mixes per patient (posterior draws), so the uncertainty about the mix is carried forward. PALM-lite is a
+fast approximation for large studies.
 
-## 5. How the model is fitted
+### Stage B: split each patient's reads between cell types (reallocation)
 
-### 5.1 Bayesian sampling (NUTS)
+Each gene's reads are shared out between cell types in proportion to fraction × reference profile, and each
+type's share is scored on the `delta` scale (`estimate_delta`). This is the first step of
+BayesPrism/InstaPrism with a fixed reference.
 
-We do not want one best guess; we want the range of answers compatible with the data. NUTS (the No-U-Turn
-Sampler) explores that range like a ball rolling over a landscape whose height is how poorly the parameters
-fit the data. It spends time in proportion to how plausible each region is. The collection of visited
-points (draws) is the posterior: medians give estimates, quantiles give intervals.
+**Where it breaks, and why the next two stages exist:** the split uses the *unchanged* profiles. So a cell
+type that switched a program on keeps only part of its change (attenuation), and the rest leaks into the
+other cell types (spillover). Every deconvolve-then-test workflow has this problem; it is what makes
+InstaPrism + t-test call changes in cell types that did not change.
 
-### 5.2 Warm start with variational inference
+### Stage C: calibrate on atlas donors with a known answer
 
-Rolling the ball from a random spot wastes most of the run finding the valley. PALM first runs a quick
-approximate fit (variational inference) to locate the valley and its rough width, then starts NUTS there.
-This was about 2.5 times more efficient per gradient, with the same accuracy, and allows a shorter warmup.
+We build synthetic bulk samples from atlas donors that were not used for the reference: half of each donor's
+cells make a bulk with known fractions, the other half give the true activity. Running stage B on these shows
+how much each type's activity is attenuated, and the leftover errors set the width of the 90% ranges. Because
+the ranges come from errors measured against a truth, they are honest by construction, not by assumption.
 
-### 5.3 Precision: float64 for real data
+### Stage D: undo the spillover across patients (the effects router)
 
-With hundreds of samples and about 1,500 genes, the total log-likelihood is around 10 million. In 32-bit
-floats, rounding errors of several units then appear in exactly the differences NUTS uses to accept steps.
-At realistic size this shrank the step size 330-fold and raised the fraction error by about 70%. Real data
-should run in 64-bit.
+The spillover follows a known pattern: how much of type k's change appears in type c depends on each
+patient's fractions and the reference. Across many patients with different mixes, that pattern can be
+inverted: **unmixing** solves for the per-cell changes that, after spilling, explain what reallocation saw.
 
-### 5.4 Checking the sampler worked (new)
+Two estimates are available for each program:
+- **unmixed:** less biased, but its range is wide when the cell mix barely varies between patients;
+- **calibrated reallocation:** stable, with a range widened to the spillover error simulated for this study.
 
-A sampler can look fine and still be wrong if it got stuck. PALM now:
+The frozen rule: use the unmixed estimate where its range is narrower; but if a cell type's unmixed value
+falls outside its calibrated range, keep the calibrated one (the guard). A design check with about 10
+simulated cohorts, built from real reference counts with this study's fractions and design, supplies the
+spillover error.
 
-- runs **2 chains by default**, started at different points. If they disagree, something is wrong;
-- reports **split R-hat**: how much chains (and halves of chains) disagree. It should be below 1.01;
-- reports **effective sample size (ESS)**: how many independent draws the correlated draws are worth.
-  It should be at least 100 per chain;
-- checks fractions, program activity, baseline and treatment effects, the intrinsic/composition parts and
-  dispersion, and warns when any check fails.
+### Stage E: the readouts
 
-Before this change, most runs used one chain, and one chain cannot see two chains disagreeing.
-
-### 5.5 Making the run faster (new)
-
-The time of a fit is (cost of one gradient) × (gradients per iteration) × (iterations). Two changes
-attacked the first two factors:
-
-- **A cheaper likelihood.** The negative-binomial formula is now written out directly instead of going
-  through numpyro's general version. It gives the same numbers, but each gradient went from about 10 ms to
-  about 4 ms on the PBMC benchmark.
-- **Dispersion estimated once, not sampled.** Each gene's noise level θ_g is now estimated from the bulk
-  counts before fitting and held fixed. Sampling 1,000 dispersions under one shared scale makes a
-  "funnel": a narrow neck where the sampler must take tiny steps and a wide mouth where it needs big ones.
-  Removing it halved the steps per iteration and made each step cheaper again. On PBMC the fit went from
-  3.5 hours to about 1 hour for twice as many draws, and the chains finally agreed (R-hat 1.013).
-
-The price: the uncertainty about each gene's noise is no longer in the intervals, and treatment-effect
-intervals covered the truth 82% instead of 89% of the time. For a final analysis, `dispersion="gene"` puts
-it back.
-
-Three other ideas were tried and dropped: a zero-sum version of the composition logits, a dense mass
-matrix for the shared parameters, and a cap on trajectory length. Each made iterations cheaper, but the
-chains then disagreed, so they gave fewer useful draws per minute, not more.
+| Answer | What it means |
+|---|---|
+| Per-cell change `beta` ± 90% range, call | Did this cell type change this program between groups? Called when the range excludes 0 |
+| Contributions | Each cell type's share of the bulk change, split exactly into "more cells" and "cells changed" (Shapley rule: average over both orders, like splitting a bill fairly) |
+| Shared response | When every type responds (interferon), the program-level change instead of a per-type split |
+| Robustness | How strong an unmeasured confounder would have to be to explain the change away |
+| Design limit | The smallest per-type change this design can resolve |
 
 ---
 
-## 6. The code base after the restructure
+## 5. Why some intervals are long, and why that is right
 
-Three layers, matching the two-paper plan:
+A long range is the method telling you that this design cannot separate this cell type's change from its
+neighbours'. It happens when the type is rare, when its fraction barely varies between patients, or when its
+program genes look the same as another type's. A short range in that situation would be a guess presented as
+a measurement: InstaPrism + t-test gives short ranges there and calls changes that did not happen. The
+design-limit readout says in advance how large a change must be to show up.
 
-- **Core** (shared by both papers): the equations of section 2 written once, so the same code runs on
-  numpy (truth tables), JAX (the sampler) and PyTorch (training the fast network in Paper 2). A test checks
-  that all three give the same numbers and that PyTorch can take gradients through them. The core also
-  holds reference building, gene selection, covariates and the simulators.
-- **Bayesian inference** (Paper 1): priors, sampler, warm start, diagnostics, result tables.
-- **Comparison** (new): competing methods behind one interface, and scoring against truth.
-
-### 6.1 One ruler for everyone: `estimate_delta`
-
-To compare methods, everything must be measured on the same scale. `estimate_delta` takes any observed
-cell-type profile and asks: "what `delta` would turn this cell type's reference profile into this one?"
-It answers with the same equation the model uses, solved directly by Newton steps on a concave likelihood.
-
-It is used in two places:
-
-- **Ground truth on real data:** pool the real cells of one type in one sample, compute that pseudo-bulk,
-  and run `estimate_delta`. That is the true program activity, by the model's own definition. The same
-  approach gives Paper 2's training labels.
-- **Competitors:** InstaPrism, CIBERSORTx and BLADE output a per-sample expression profile for each cell type.
-  Running `estimate_delta` on those puts them on PALM's scale. The conventional route (decoupler ULM, the
-  usual "deconvolve then PROGENy") is reported alongside it.
-
-On simulated profiles drawn from the model, `estimate_delta` recovers the true shifts to within 0.05.
+**Is it a Bayesian method?** For the cell mix, yes. The per-cell change is a calibrated, spillover-aware
+estimate, because that was both more accurate and more honest on benchmarks with a known answer than the
+model's own posterior.
 
 ---
 
-## 7. The competitors and how they are scored
+## 6. Cohorts with one group only (e.g. TB patients only)
 
-| Method | What it gives | How it becomes comparable |
-|---|---|---|
-| Naive two-step | NNLS fractions; one program shift per bulk sample | Same shift copied to every cell type, so it cannot say who carries a program |
-| Reallocation | NNLS fractions; reads split between cell types in proportion to fraction × reference | Programs per cell type with `estimate_delta` (the first step of BayesPrism / InstaPrism, with a fixed reference) |
-| InstaPrism | Fractions; per-type expression per sample | `estimate_delta` or ULM |
-| CIBERSORTx | Fractions; high-resolution per-type expression | Same (not run yet: needs Docker and a token) |
-| BLADE | Fractions; per-type expression per sample | Same |
-| TOAST, TCA | Gene-level treatment effect per cell type | Projected onto program weights to give per-type program effects |
-
-**Scores** (each method only on what it outputs):
-
-- **Fractions:** error and correlation with the truth.
-- **Activity:** rank correlation across samples, per cell type and program ("does it go up in the right
-  samples?"). This metric also works for paired real data, where absolute values are not trustworthy.
-  Rank correlation across cell types within a sample ("does it name the right carrier?").
-- **Effects:** correlation with the true `beta`. AUROC for telling responding cell types from the rest
-  (0.5 means it cannot tell).
-- **Intervals:** coverage of the 90% intervals, for methods that give intervals (only PALM).
+Without a comparison group there is no disease effect. The question becomes: does a cell type's program
+follow a clinical measure `z` (bacterial load, severity, cavitation) across patients?
+- Correlating each patient's per-type activity with `z` inherits spillover: in the first McFarland gradient
+  test, 63% of unchanged pairs were called.
+- `associate_unmix` puts `z` into the unmixing instead of the 0/1 group, which cut that to 21%. The target
+  is ≤ 10%, so this path is **not yet validated**; a 10-split benchmark is queued (benchmarking.md §0.8).
 
 ---
 
-## 8. What the evidence says so far
+## 7. How it is tested
 
-All of this is on **simulated data**. No real-data validation exists yet.
+**Datasets with a known answer** (benchmarking.md): pooled cancer cell lines with real drug responses
+(McFarland; Tahoe-100M, 4 drugs), stimulated blood cells (Kang IFN-β; Parse, 5 cytokines; Zhang), and
+COVID-19/sepsis blood with paired bulk and single-cell data (COMBAT). The truth per cell type comes from
+held-back cells.
 
-**Calibration** (calibration benchmarks): 90% intervals cover 91–96% of true values with the current
-defaults. Gene-wise dispersion raised coverage on noisy genes from 0.88 to 0.94.
+**Competitors,** each followed by the usual test: CIBERSORT, InstaPrism, NNLS reallocation, a naive bulk
+score; TOAST, TCA and cellGeometry where affordable.
 
-**First head-to-head** (2 simulated studies, 24 samples, 5 cell types, 4 programs):
+**Scores:** coverage of the 90% ranges (target ≥ 0.90), false calls on unchanged pairs, share of true
+effects called, correlation with the true effects.
 
-| | Fraction error | Activity rank corr. | Effect corr. | Finds responding cells (AUROC) |
-|---|---|---|---|---|
-| PALM | 0.011 | 0.76 | 0.99 | 1.00 |
-| Reallocation | 0.048 | 0.45 | 0.48 | 0.82 |
-| Naive two-step | 0.048 | 0.34 | 0.05 | 0.50 |
+**Pre-registration.** The method was frozen (tag `method-freeze-v2`) before the held-out splits 20–29 were
+run, once, with no retuning. Any later change becomes v3 with new held-out splits.
 
-PALM's 90% intervals covered 89% of true activities and 95% of true effects.
+---
 
-**All methods on one simple study** (12 samples, 4 cell types, 3 programs; a check that every part works,
-not a benchmark):
+## 8. What the evidence says
 
-| | Fraction error | Activity rank corr. | Names the right carrier | Effect corr. | AUROC |
-|---|---|---|---|---|---|
-| PALM | 0.014 | 0.71 | 0.84 | 0.96 | 1.00 |
-| Reallocation | 0.067 | 0.52 | 0.58 | 0.30 | 0.64 |
-| BLADE | 0.118 | 0.51 | 0.23 | 0.33 | 0.72 |
-| Naive two-step | 0.067 | 0.44 | none | 0.03 | 0.50 |
-| TOAST | (NNLS fractions) | none | none | 0.10 | 0.53 |
-| TCA | (NNLS fractions) | none | none | −0.36 | 0.39 |
+**Development** (splits 0–2):
+- Coverage ≥ 0.93 on every dataset.
+- The v2 routing rule raised the share of true effects called (Kang 0.23 → 0.48, Tahoe trametinib 0.33 → 0.89,
+  McFarland with a composition shift 0.67 → 1.00) and lowered false calls (Zhang 0.038 → 0.008). It costs
+  some accuracy where every type responds (Tahoe RMC-6236, r 0.80 → 0.64).
+- COMBAT, real bulk: InstaPrism + t-test flags 59–67% of cell type × program boxes that did not change;
+  program2cell flags 0–1%.
 
-Every deconvolution method scored worse at naming the carrier when its per-type expression went through
-the usual decoupler ULM instead of `estimate_delta`. TOAST and TCA are weak with 12 samples, as expected
-for gene-level cell-type-specific tests. BLADE's fractions were poor with both input recipes tried; whether
-that is BLADE or the inputs is not settled. CIBERSORTx has not been run.
-
-**An important warning from the new diagnostics.** In that head-to-head, PALM's chains had not converged
-(R-hat up to 1.27, ESS as low as 3) with 200 warmup and 200 sampling steps, although the estimates scored
-well. With 500 warmup and 500 sampling steps on the simple study, R-hat fell to at most 1.024 and the
-lowest ESS rose to 116: much better, still short of the targets (1.01 and 200). Before the PBMC benchmark
-(E2), we need to settle how long warmup must be. The current defaults were chosen from runs that could not
-detect this problem.
+**Held-out (v2):** run on splits 20–29; the report is being written. Its numbers replace this paragraph once
+final (benchmark_review_brief.md).
 
 ---
 
 ## 9. Limits to keep in mind
 
 - **A cell type missing from the reference gives confidently wrong answers.** Its signal is absorbed by the
-  cell types that are present, and the intervals do not widen. The built-in reference check is weak.
-  The reference must cover the tissue.
-- **The reference is treated as known.** Donor-to-donor variation in the baseline profiles is not
-  carried into the intervals.
-- **Causal reading needs a causal design.** "Intrinsic effect" means "the cells responded" only when
-  treatment is randomised or confounders are adjusted for. Bulk data cannot tell which cell type *caused*
-  another to respond.
-- **Programs must be right.** The model measures known programs; it does not discover new ones.
-- **Compute.** Fit time grows with samples × genes × cell types × programs. Hundreds of samples need a GPU
-  or a long CPU run.
+  types that are present. For whole-blood TB samples, the reference must include neutrophils.
+- **Power depends on the design.** With little variation in the cell mix between patients, rare types get
+  wide ranges (section 5).
+- **Real bulk loses accuracy** through the platform gap (stage 0).
+- **Programs are known and the same in every cell type.** The method measures known programs; it does not
+  discover new ones.
+- **Association, not causation.** "Cells changed" means "the cells responded" only in a randomised or
+  well-adjusted design; the robustness readout says how fragile a call is.
 
 ---
 
 ## 10. The whole method in five sentences
 
-1. Each cell type has a known resting profile, and each gene program is a known set of up and down genes.
-2. In each sample, every cell type's profile is its resting profile pushed along each program by an unknown
-   amount (`delta`), and the bulk sample is a mixture of those profiles with unknown fractions.
-3. A Bayesian model, with noise per gene, a platform correction and sparse priors, finds all plausible values
-   of the fractions and pushes at once, so every answer has an interval.
-4. From those values it computes who carries each program (switch-one-off attribution) and, for treatments,
-   an exact fair split of each program change into "cells responded" and "cell mix changed".
-5. The same equations, written once, serve as the ruler for ground truth, for scoring competing methods, and
-   later for training a fast network for all public bulk data.
+1. Each cell type has a reference profile from a healthy atlas, and each gene program is a known set of up
+   and down genes.
+2. PALM, a Bayesian model of the bulk as a mixture of those profiles, estimates each patient's cell mix with
+   its uncertainty.
+3. Each patient's reads are split between cell types, and the split's bias is measured on atlas donors with
+   a known answer, which also sets honest 90% ranges.
+4. Across patients, the spillover between cell types is undone where the design allows it, giving each cell
+   type's change between groups.
+5. The changes and the cell mix together say who drives a program's change in bulk: more cells, or cells
+   changed.
