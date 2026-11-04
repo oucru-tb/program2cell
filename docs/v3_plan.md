@@ -21,6 +21,28 @@ why, is listed at the end.
 results are 5, 6 (with blood counts), 8, 9 and 10; of the method changes, **test 9 (MASH-style sharing)
 first**: it targets the weakest held-out regime (broad responses).
 
+## Matched to held-out v2 (2026-11-04; docs/heldout_v2_results.md)
+
+| Where held-out fell short | Evidence | Candidates |
+|---|---|---|
+| **Unmixing a broad response costs accuracy.** For calibrated-route programs PALM's point estimate equals `diff`'s, so its r loss is from unmixed programs | Kang r 0.82 vs `diff` 0.94; unmixed blood pairs RMSE 0.27 vs 0.03 calibrated; Kang's unmixed program is JAK-STAT (interferon, all types respond) | **9** (sharing as the estimand: a shared response plus per-type deviations, instead of unmixing each type alone) |
+| **Power in blood** | Kang: 40% of true effects called, mean interval width 0.75 (current practice 0.08) | 9, 5 |
+| **Weak drug responses** | Tahoe encorafenib / gemcitabine r 0.42 / 0.54 (best comparator 0.61 / 0.75), almost no calls | 9 (if unmixed programs drive the loss, as on Kang: to check), 10 |
+| **Real bulk: specific but no power** | COMBAT ≤ 1 call per split; fraction r 0.09–0.70 on real bulk | 6, 7, 12 (globin and platelets: testable now on COMBAT development splits) |
+| **Reporting gaps** | guard firings not recorded; no conditioning readout | 4, 4b, 4d |
+| Not a method problem | McFarland p53 called in TP53-mutant lines (57% of 3 pairs), which show a small real induction | none (report with the measured induction) |
+
+**Order of work for step 6 (development data only; stop before the freeze):**
+1. Record the guard and the conditioning per study (4, 4b): cheap, and needed to read every later comparison.
+2. Candidate 9, sharing across cell types: first the simple form (shared s_p + deviations d_cp with REML
+   shrinkage, routed by the same width rule), then the MASH-style learned sharing if the simple form helps.
+   Success: Kang r back towards `diff`'s 0.94 with at least `auto_v2`'s power and coverage ≥ 0.9, no loss on
+   McFarland and Tahoe trametinib.
+3. Candidate 12 on COMBAT (globin / platelet masking): fraction r and effect r on real bulk.
+4. Candidate 5 (gene-level unmixing) if 9 does not recover Kang's power.
+5. Blocked until data: 1 (granulocyte truth), 6 and 7 (blood counts; check COMBAT clinical tables first), 13
+   (ordered TB axis needs the cohort).
+
 ## A. Validation before any whole-blood TB claim
 
 1. **Granulocyte-containing benchmark.** Every current benchmark is cell lines or PBMC; COMBAT's single-cell

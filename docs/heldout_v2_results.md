@@ -22,7 +22,9 @@ per-split rows in `benchmarks/dev/causal_loop/`, `practice/`, `combat_real/`. Re
 ## 1. PALM per dataset against the pre-set targets
 
 Targets (set before the run): coverage ≥ 0.85, r ≥ 0.9, responder AUROC ≥ 0.95, true effects called ≥ 0.9, false
-calls on unchanged pairs ≤ 0.1. Means over 10 splits; `diff` = uncorrected reallocation, for reference.
+calls on unchanged pairs ≤ 0.1. Means over 10 splits; `diff` = calibrated reallocation without the unmixing
+step or the simulation widening, for reference (for programs routed to the calibrated estimate, PALM's point
+estimate equals `diff`'s; only the interval is widened).
 
 | Dataset | Family | Coverage | r | False calls (unchanged) | True effects called | AUROC | Verdict | diff: coverage / r / called |
 |---|---|---|---|---|---|---|---|---|
@@ -45,9 +47,12 @@ Notes:
 - McFarland idasanutlin, known-answer pairs only: the p53 program was called in the 3 non-responder lines in 57%
   of cases (0, 1, 2 or 3 of 3 per split). These lines show a small measured p53 induction (0.5–0.7 log2 FC); over
   all unchanged pairs the false-call rate is 0.049.
-- Against uncorrected reallocation, PALM raises coverage everywhere and calls true effects that reallocation
-  misses (McFarland, Tahoe RMC-6236 and trametinib). Its r is lower on Kang (0.82 vs 0.94) and Tahoe gemcitabine
-  (0.54 vs 0.66), equal on Parse and Zhang.
+- Against `diff`, PALM raises coverage everywhere (the simulation widening) and calls true effects that `diff`
+  misses (McFarland, Tahoe RMC-6236 and trametinib; the unmixing). Its r is equal on Parse and Zhang, where
+  almost nothing was unmixed, and lower on Kang (0.82 vs 0.94) and Tahoe gemcitabine (0.54 vs 0.66). Because
+  calibrated-route point estimates are identical, the r loss comes from the unmixed programs: on Kang the
+  interferon program (JAK-STAT), where unmixing raised the share of true effects called (0.40 vs 0.28) but its
+  pair error was about ten times that of the calibrated route (section 4).
 
 ## 2. Against current practice and on other tools' fractions
 
