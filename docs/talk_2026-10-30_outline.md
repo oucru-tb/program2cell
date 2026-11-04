@@ -48,6 +48,7 @@ results slides.
 | Backup | **"PALM as a graphical model"**, detailed | `2_2c_graphical_model.svg/.png` (`scripts/experiments/talk_graphical_models.py`) | — | Faithful to the frozen method. Left: the model PALM fits (it gives π); B and G in the gene plate, the cell-profile node E = B·exp(δ×G). Right: the reported β comes from split reads → calibrate on atlas donors → unmix across patients; the atlas feeds both B and the calibration; contributions from π and β |
 | Backup | **"PALM with TB patients only"**, simple | `2_2d_graphical_model_tb_only_simple.svg/.png` | — | No treatment node; what you can and can't claim; the comparison along Z is marked "being validated" |
 | Backup | **"PALM with TB patients only"**, detailed | `2_2d_graphical_model_tb_only.svg/.png` | — | Same layout as the detailed two-group slide; unmixing along the clinical measure z gives the change over the z range; "not yet validated" box with the first-split numbers (`benchmarking.md` §0.8) |
+| Backup | **"PALM as a Bayesian network"** (for statisticians) | `2_2e_graphical_model_bayes.svg/.png` (`scripts/experiments/talk_graphical_model_bayes.py`) | — | Standard plate notation of the stage-A generative model: latent / observed / deterministic nodes, priors, plates N, C, P, G, equations alongside; footnote that the reported β̂ comes from the calibrated unmixing (modular / cut inference) |
 
 - **One sentence (slide 2.1, or a title):** "Bulk = a mix of cell types, each one its atlas profile with
   gene programs turned up or down; we estimate both the mix and the switches."
@@ -361,6 +362,7 @@ standard tools, dark = truth. Rebuild with `python scripts/experiments/talk_figu
 | 2.3 (optional) | Graphical model, simple | `2_2c_graphical_model_simple.png` |
 | Backup | Graphical model, detailed (model + calibrated estimator) | `2_2c_graphical_model.png` |
 | Backup | TB patients only, simple / detailed | `2_2d_graphical_model_tb_only_simple.png` / `2_2d_graphical_model_tb_only.png` |
+| Backup | PALM as a Bayesian network (plate notation) | `2_2e_graphical_model_bayes.png` |
 | C1 | Three rules for an answer key | `2_3_answer_key.png` |
 | C2 | Ladder of evidence | draw (four rungs) |
 | C3 | Design limit vs donors; composition spread | `2_4_design_power.png` |

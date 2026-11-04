@@ -1,0 +1,126 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1600 900" width="1600" height="900" font-family="Helvetica, Arial, sans-serif">
+<defs><marker id="arr" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#4b5563"/></marker></defs>
+<rect width="1600" height="900" fill="#ffffff"/>
+<text x="40" y="52" font-size="32" fill="#2b2d42" font-weight="bold" text-anchor="start">PALM as a Bayesian network</text>
+<text x="40" y="84" font-size="18" fill="#5c6670" font-weight="normal" text-anchor="start">The generative model fitted in stage A, in plate notation: each node is drawn given its parents</text>
+<rect x="140" y="200" width="660" height="410" rx="10" fill="none" stroke="#8a9099" stroke-width="2"/>
+<text x="152" y="222" font-size="14" fill="#5c6670" font-weight="bold" text-anchor="start">C cell types</text>
+<rect x="140" y="450" width="840" height="270" rx="10" fill="none" stroke="#8a9099" stroke-width="2"/>
+<text x="970" y="710" font-size="14" fill="#5c6670" font-weight="bold" text-anchor="end">P programs</text>
+<rect x="410" y="160" width="740" height="585" rx="10" fill="none" stroke="#8a9099" stroke-width="2"/>
+<text x="420" y="739" font-size="14" fill="#5c6670" font-weight="bold" text-anchor="start">N patients</text>
+<rect x="990" y="330" width="190" height="500" rx="10" fill="none" stroke="#8a9099" stroke-width="2"/>
+<text x="1170" y="820" font-size="14" fill="#5c6670" font-weight="bold" text-anchor="end">G genes</text>
+<circle cx="270" cy="125" r="31" fill="#dbeafe" stroke="#2563eb" stroke-width="2.5"/>
+<text x="270" y="132" font-size="22" font-weight="bold" fill="#2563eb" text-anchor="middle">s<tspan font-size="13.2" dy="5">η</tspan></text>
+<text x="318" y="120" font-size="12.5" fill="#2563eb" font-weight="normal" text-anchor="start">mix noise</text>
+<circle cx="78" cy="530" r="31" fill="#ffedd5" stroke="#ea580c" stroke-width="2.5"/>
+<text x="78" y="537" font-size="22" font-weight="bold" fill="#ea580c" text-anchor="middle">τ<tspan font-size="13.2" dy="5"></tspan></text>
+<text x="78" y="578" font-size="12.5" fill="#ea580c" font-weight="normal" text-anchor="middle">sparsity</text>
+<text x="78" y="593" font-size="12.5" fill="#ea580c" font-weight="normal" text-anchor="middle">(horseshoe)</text>
+<circle cx="210" cy="270" r="31" fill="#dbeafe" stroke="#2563eb" stroke-width="2.5"/>
+<text x="210" y="277" font-size="22" font-weight="bold" fill="#2563eb" text-anchor="middle">a<tspan font-size="13.2" dy="5">c</tspan></text>
+<text x="210" y="318" font-size="12.5" fill="#2563eb" font-weight="normal" text-anchor="middle">baseline mix</text>
+<circle cx="330" cy="340" r="31" fill="#dbeafe" stroke="#2563eb" stroke-width="2.5"/>
+<text x="330" y="347" font-size="22" font-weight="bold" fill="#2563eb" text-anchor="middle">γ<tspan font-size="13.2" dy="5">c</tspan></text>
+<text x="330" y="388" font-size="12.5" fill="#2563eb" font-weight="normal" text-anchor="middle">disease shifts</text>
+<circle cx="210" cy="395" r="31" fill="#ffedd5" stroke="#ea580c" stroke-width="2.5"/>
+<text x="210" y="402" font-size="22" font-weight="bold" fill="#ea580c" text-anchor="middle">σ<tspan font-size="13.2" dy="5">c</tspan></text>
+<text x="250" y="400" font-size="12.5" fill="#ea580c" font-weight="normal" text-anchor="start">spread</text>
+<circle cx="210" cy="505" r="31" fill="#ffedd5" stroke="#ea580c" stroke-width="2.5"/>
+<text x="210" y="512" font-size="22" font-weight="bold" fill="#ea580c" text-anchor="middle">κ<tspan font-size="13.2" dy="5">cp</tspan></text>
+<text x="210" y="556" font-size="12.5" fill="#ea580c" font-weight="normal" text-anchor="middle">baseline</text>
+<circle cx="330" cy="565" r="31" fill="#ffedd5" stroke="#ea580c" stroke-width="2.5"/>
+<text x="330" y="572" font-size="22" font-weight="bold" fill="#ea580c" text-anchor="middle">β<tspan font-size="13.2" dy="5">cp</tspan></text>
+<text x="370" y="586" font-size="12.5" fill="#ea580c" font-weight="normal" text-anchor="start">disease effect</text>
+<circle cx="300" cy="668" r="31" fill="#ffedd5" stroke="#ea580c" stroke-width="2.5"/>
+<text x="300" y="675" font-size="22" font-weight="bold" fill="#ea580c" text-anchor="middle">λ<tspan font-size="13.2" dy="5">p</tspan></text>
+<text x="300" y="713" font-size="12.5" fill="#ea580c" font-weight="normal" text-anchor="middle">shared-factor scale</text>
+<circle cx="500" cy="300" r="31" fill="#dbeafe" stroke="#2563eb" stroke-width="2.5"/>
+<text x="500" y="307" font-size="22" font-weight="bold" fill="#2563eb" text-anchor="middle">η<tspan font-size="13.2" dy="5">ic</tspan></text>
+<text x="500" y="348" font-size="12.5" fill="#2563eb" font-weight="normal" text-anchor="middle">mix logit</text>
+<circle cx="660" cy="300" r="31" fill="#dbeafe" stroke="#2563eb" stroke-width="2.5"/>
+<circle cx="660" cy="300" r="26" fill="none" stroke="#2563eb" stroke-width="1.8"/>
+<text x="660" y="307" font-size="22" font-weight="bold" fill="#2563eb" text-anchor="middle">π<tspan font-size="13.2" dy="5">ic</tspan></text>
+<text x="660" y="348" font-size="12.5" fill="#2563eb" font-weight="normal" text-anchor="middle">cell mix</text>
+<circle cx="880" cy="250" r="31" fill="#cfd4da" stroke="#2b2d42" stroke-width="2.5"/>
+<text x="880" y="257" font-size="22" font-weight="bold" fill="#2b2d42" text-anchor="middle">D<tspan font-size="13.2" dy="5">i</tspan></text>
+<text x="918" y="255" font-size="12.5" fill="#2b2d42" font-weight="normal" text-anchor="start">TB or healthy</text>
+<circle cx="600" cy="530" r="31" fill="#ffedd5" stroke="#ea580c" stroke-width="2.5"/>
+<text x="600" y="537" font-size="22" font-weight="bold" fill="#ea580c" text-anchor="middle">δ<tspan font-size="13.2" dy="5">icp</tspan></text>
+<text x="600" y="578" font-size="12.5" fill="#ea580c" font-weight="normal" text-anchor="middle">program activity</text>
+<circle cx="890" cy="580" r="31" fill="#ffedd5" stroke="#ea580c" stroke-width="2.5"/>
+<text x="890" y="587" font-size="22" font-weight="bold" fill="#ea580c" text-anchor="middle">u<tspan font-size="13.2" dy="5">ip</tspan></text>
+<text x="890" y="628" font-size="12.5" fill="#ea580c" font-weight="normal" text-anchor="middle">patient factor</text>
+<text x="890" y="643" font-size="12.5" fill="#ea580c" font-weight="normal" text-anchor="middle">(all types)</text>
+<circle cx="1085" cy="430" r="31" fill="#ffffff" stroke="#2b2d42" stroke-width="2.5"/>
+<circle cx="1085" cy="430" r="26" fill="none" stroke="#2b2d42" stroke-width="1.8"/>
+<text x="1085" y="437" font-size="22" font-weight="bold" fill="#2b2d42" text-anchor="middle">μ<tspan font-size="13.2" dy="5">ig</tspan></text>
+<text x="1093" y="476" font-size="12" fill="#2b2d42" font-weight="normal" text-anchor="start">expected</text>
+<text x="1093" y="490" font-size="12" fill="#2b2d42" font-weight="normal" text-anchor="start">count</text>
+<circle cx="1085" cy="620" r="31" fill="#cfd4da" stroke="#2b2d42" stroke-width="2.5"/>
+<text x="1085" y="627" font-size="22" font-weight="bold" fill="#2b2d42" text-anchor="middle">Y<tspan font-size="13.2" dy="5">ig</tspan></text>
+<text x="1093" y="666" font-size="12" fill="#2b2d42" font-weight="normal" text-anchor="start">bulk</text>
+<text x="1093" y="680" font-size="12" fill="#2b2d42" font-weight="normal" text-anchor="start">counts</text>
+<circle cx="1085" cy="778" r="31" fill="#f1f3f5" stroke="#4b5563" stroke-width="2.5"/>
+<text x="1085" y="785" font-size="22" font-weight="bold" fill="#4b5563" text-anchor="middle">θ<tspan font-size="13.2" dy="5">g</tspan></text>
+<text x="1050" y="772" font-size="11.5" fill="#4b5563" font-weight="normal" text-anchor="end">dispersion</text>
+<text x="1050" y="787" font-size="11.5" fill="#4b5563" font-weight="normal" text-anchor="end">(fixed)</text>
+<circle cx="990" cy="125" r="6" fill="#4b5563"/>
+<circle cx="1080" cy="125" r="6" fill="#4b5563"/>
+<text x="990" y="108" font-size="18" font-weight="bold" fill="#4b5563" text-anchor="middle">B<tspan font-size="11" dy="4">cg</tspan></text>
+<text x="1080" y="108" font-size="18" font-weight="bold" fill="#4b5563" text-anchor="middle">G<tspan font-size="11" dy="4">pg</tspan></text>
+<text x="935" y="128" font-size="12" fill="#5c6670" font-weight="normal" text-anchor="end">atlas profiles</text>
+<text x="1095" y="130" font-size="12" fill="#5c6670" font-weight="normal" text-anchor="start">program weights</text>
+<g stroke="#4b5563" stroke-width="2.2" fill="none" marker-end="url(#arr)">
+<path d="M294.671,143.771 L472.942,279.412"/>
+<path d="M240.835,273.19 L466.18,296.501"/>
+<path d="M360.176,332.9 L466.904,307.787"/>
+<path d="M849.835,242.856 Q690,205 530.411,284.795"/>
+<path d="M531,300 L626,300"/>
+<path d="M108.459,524.231 L176.594,511.327"/>
+<path d="M101.393,550.342 Q170,610 297.27,574.205"/>
+<path d="M240.937,506.983 L566.07,527.825"/>
+<path d="M360.743,561.015 L566.282,534.371"/>
+<path d="M239.295,405.14 L567.87,518.878"/>
+<path d="M328.163,655.045 L569.111,544.209"/>
+<path d="M859.451,574.733 L633.506,535.777"/>
+<path d="M858.08,271.92 L624.042,505.958"/>
+<path d="M689.644,309.068 L1052.49,420.055"/>
+<path d="M630.361,523.74 L1051.7,436.866"/>
+<path d="M992.082,131.683 L1074.89,397.538"/>
+<path d="M1080.11,131.999 L1084.44,396.005"/>
+<path d="M1085,461 L1085,586"/>
+<path d="M1085,747 L1085,654"/>
+</g>
+<rect x="1205" y="110" width="360" height="430" rx="12" fill="#f8fafc" stroke="#e1e4e8" stroke-width="2"/>
+<text x="1220" y="140" font-size="18" fill="#2b2d42" font-weight="bold" text-anchor="start">Generative model</text>
+<text x="1220" y="180" font-size="14" font-weight="bold" fill="#2563eb">Composition</text>
+<text x="1227" y="206" font-size="16.5" fill="#2b2d42">η<tspan font-size='11' dy='4'>ic</tspan><tspan dy='-4'> ~ N(a</tspan><tspan font-size='11' dy='4'>c</tspan><tspan dy='-4'> + γ</tspan><tspan font-size='11' dy='4'>c</tspan><tspan dy='-4'> D</tspan><tspan font-size='11' dy='4'>i</tspan><tspan dy='-4'>, s</tspan><tspan font-size='11' dy='4'>η</tspan><tspan dy='-4'>²)</tspan></text>
+<text x="1227" y="236" font-size="16.5" fill="#2b2d42">π<tspan font-size='11' dy='4'>i</tspan><tspan dy='-4'> = softmax(η</tspan><tspan font-size='11' dy='4'>i</tspan><tspan dy='-4'>)</tspan></text>
+<text x="1220" y="274" font-size="14" font-weight="bold" fill="#ea580c">Program activity</text>
+<text x="1227" y="300" font-size="16.5" fill="#2b2d42">δ<tspan font-size='11' dy='4'>icp</tspan><tspan dy='-4'> ~ N(κ</tspan><tspan font-size='11' dy='4'>cp</tspan><tspan dy='-4'> + β</tspan><tspan font-size='11' dy='4'>cp</tspan><tspan dy='-4'> D</tspan><tspan font-size='11' dy='4'>i</tspan><tspan dy='-4'> + λ</tspan><tspan font-size='11' dy='4'>p</tspan><tspan dy='-4'> u</tspan><tspan font-size='11' dy='4'>ip</tspan><tspan dy='-4'>, σ</tspan><tspan font-size='11' dy='4'>c</tspan><tspan dy='-4'>²)</tspan></text>
+<text x="1227" y="330" font-size="16.5" fill="#2b2d42">κ, β ~ horseshoe(τ);  u<tspan font-size='11' dy='4'>ip</tspan><tspan dy='-4'> ~ N(0, 1)</tspan></text>
+<text x="1220" y="368" font-size="14" font-weight="bold" fill="#2b2d42">Counts</text>
+<text x="1227" y="394" font-size="16.5" fill="#2b2d42">μ<tspan font-size='11' dy='4'>ig</tspan><tspan dy='-4'> = L</tspan><tspan font-size='11' dy='4'>i</tspan><tspan dy='-4'> Σ</tspan><tspan font-size='11' dy='4'>c</tspan><tspan dy='-4'> π</tspan><tspan font-size='11' dy='4'>ic</tspan><tspan dy='-4'> E</tspan><tspan font-size='11' dy='4'>icg</tspan></text>
+<text x="1227" y="424" font-size="16.5" fill="#2b2d42">E<tspan font-size='11' dy='4'>icg</tspan><tspan dy='-4'> = softmax</tspan><tspan font-size='11' dy='4'>g</tspan><tspan dy='-4'>(log B</tspan><tspan font-size='11' dy='4'>cg</tspan><tspan dy='-4'> + Σ</tspan><tspan font-size='11' dy='4'>p</tspan><tspan dy='-4'> δ</tspan><tspan font-size='11' dy='4'>icp</tspan><tspan dy='-4'> G</tspan><tspan font-size='11' dy='4'>pg</tspan><tspan dy='-4'>)</tspan></text>
+<text x="1227" y="454" font-size="16.5" fill="#2b2d42">L<tspan font-size='11' dy='4'>i</tspan><tspan dy='-4'>: library size (fixed)</tspan></text>
+<text x="1227" y="484" font-size="16.5" fill="#2b2d42">Y<tspan font-size='11' dy='4'>ig</tspan><tspan dy='-4'> ~ NegBin(μ</tspan><tspan font-size='11' dy='4'>ig</tspan><tspan dy='-4'>, θ</tspan><tspan font-size='11' dy='4'>g</tspan><tspan dy='-4'>)</tspan></text>
+<text x="1220" y="575" font-size="16" fill="#2b2d42" font-weight="bold" text-anchor="start">Notation</text>
+<circle cx="1233" cy="598" r="10" fill="#ffffff" stroke="#2b2d42" stroke-width="2"/>
+<text x="1255" y="603" font-size="14" fill="#333" font-weight="normal" text-anchor="start">latent (estimated)</text>
+<circle cx="1233" cy="628" r="10" fill="#cfd4da" stroke="#2b2d42" stroke-width="2"/>
+<text x="1255" y="633" font-size="14" fill="#333" font-weight="normal" text-anchor="start">observed</text>
+<circle cx="1233" cy="658" r="10" fill="#ffffff" stroke="#2b2d42" stroke-width="2"/>
+<circle cx="1233" cy="658" r="6.5" fill="none" stroke="#2b2d42" stroke-width="1.5"/>
+<text x="1255" y="663" font-size="14" fill="#333" font-weight="normal" text-anchor="start">deterministic</text>
+<circle cx="1233" cy="688" r="5" fill="#4b5563"/>
+<text x="1255" y="693" font-size="14" fill="#333" font-weight="normal" text-anchor="start">fixed input</text>
+<rect x="1220" y="709" width="26" height="18" rx="4" fill="none" stroke="#8a9099" stroke-width="2"/>
+<text x="1255" y="723" font-size="14" fill="#333" font-weight="normal" text-anchor="start">plate: repeated over the index</text>
+<text x="1220" y="765" font-size="13" fill="#5c6670" font-weight="normal" text-anchor="start">blue = cell mix, orange = program activity</text>
+<rect x="1205" y="790" width="360" height="72" rx="10" fill="#fff7ed" stroke="#ea580c" stroke-width="1.5"/>
+<text x="1220" y="814" font-size="13.5" fill="#ea580c" font-weight="bold" text-anchor="start">Reported per-cell change β̂ is not this β:</text>
+<text x="1220" y="834" font-size="13" fill="#333" font-weight="normal" text-anchor="start">π's posterior feeds the calibrated unmixing</text>
+<text x="1220" y="852" font-size="13" fill="#333" font-weight="normal" text-anchor="start">(modular, or 'cut', Bayesian inference)</text>
+</svg>
