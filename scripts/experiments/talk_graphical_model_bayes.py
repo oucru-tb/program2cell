@@ -87,7 +87,8 @@ plate(990, 330, 190, 500, "G genes", 1170, 820)
 # nodes
 s_eta = node(270, 125, "s", "η", "lat", BLUE, BLUE_F, None)
 text(318, 120, "mix noise", 12.5, BLUE, anchor="start")
-tau = node(78, 530, "τ", "", "lat", ORANGE, ORANGE_F, "sparsity", "(horseshoe)")
+tau_k = node(78, 470, "τ", "κ", "lat", ORANGE, ORANGE_F, None)
+tau_b = node(78, 610, "τ", "β", "lat", ORANGE, ORANGE_F, "horseshoe", "scales")
 a = node(210, 270, "a", "c", "lat", BLUE, BLUE_F, "baseline mix")
 gam = node(330, 340, "γ", "c", "lat", BLUE, BLUE_F, "disease shifts")
 sig = node(210, 395, "σ", "c", "lat", ORANGE, ORANGE_F, None)
@@ -108,8 +109,9 @@ mu = node(1085, 430, "μ", "ig", "det", DARK, "#ffffff", None)
 text(1093, 476, "expected", 12, DARK, anchor="start"); text(1093, 490, "count", 12, DARK, anchor="start")
 Y = node(1085, 620, "Y", "ig", "obs", DARK, OBS_F, None)
 text(1093, 666, "bulk", 12, DARK, anchor="start"); text(1093, 680, "counts", 12, DARK, anchor="start")
-theta = node(1085, 778, "θ", "g", "lat", GREY, "#f1f3f5", None)
-text(1050, 772, "dispersion", 11.5, GREY, anchor="end"); text(1050, 787, "(fixed)", 11.5, GREY, anchor="end")
+theta = dot(1085, 790, "θ", "g", None, below=False)
+s.append('<text x="1062" y="796" font-size="18" font-weight="bold" fill="%s" text-anchor="end">θ<tspan font-size="11" dy="4">g</tspan></text>' % GREY)
+text(1100, 788, "dispersion", 11.5, MUTED, anchor="start"); text(1100, 802, "(plug-in)", 11.5, MUTED, anchor="start")
 B = dot(990, 125, "B", "cg", None, below=False)
 Gp = dot(1080, 125, "G", "pg", None, below=False)
 s.append('<text x="990" y="108" font-size="18" font-weight="bold" fill="%s" text-anchor="middle">B<tspan font-size="11" dy="4">cg</tspan></text>' % GREY)
@@ -122,8 +124,8 @@ edge(a, eta)
 edge(gam, eta)
 edge(D, eta, bend=(690, 205))
 edge(eta, pi)
-edge(tau, kap)
-edge(tau, bet, bend=(170, 610))
+edge(tau_k, kap)
+edge(tau_b, bet)
 edge(kap, delta)
 edge(bet, delta)
 edge(sig, delta)
@@ -156,7 +158,7 @@ eqs = [
      "<tspan font-size='11' dy='4'>i</tspan><tspan dy='-4'> + λ</tspan><tspan font-size='11' dy='4'>p</tspan>"
      "<tspan dy='-4'> u</tspan><tspan font-size='11' dy='4'>ip</tspan><tspan dy='-4'>, σ</tspan>"
      "<tspan font-size='11' dy='4'>c</tspan><tspan dy='-4'>²)</tspan>", DARK),
-    ("κ, β ~ horseshoe(τ);  u<tspan font-size='11' dy='4'>ip</tspan><tspan dy='-4'> ~ N(0, 1)</tspan>", DARK),
+    ("κ ~ HS(τ<tspan font-size='11' dy='4'>κ</tspan><tspan dy='-4'>), β ~ HS(τ</tspan><tspan font-size='11' dy='4'>β</tspan><tspan dy='-4'>);  u</tspan><tspan font-size='11' dy='4'>ip</tspan><tspan dy='-4'> ~ N(0, 1)</tspan>", DARK),
     ("Counts", DARK),
     ("μ<tspan font-size='11' dy='4'>ig</tspan><tspan dy='-4'> = L</tspan><tspan font-size='11' dy='4'>i</tspan>"
      "<tspan dy='-4'> Σ</tspan><tspan font-size='11' dy='4'>c</tspan><tspan dy='-4'> π</tspan>"
@@ -165,7 +167,7 @@ eqs = [
      "<tspan dy='-4'>(log B</tspan><tspan font-size='11' dy='4'>cg</tspan><tspan dy='-4'> + Σ</tspan>"
      "<tspan font-size='11' dy='4'>p</tspan><tspan dy='-4'> δ</tspan><tspan font-size='11' dy='4'>icp</tspan>"
      "<tspan dy='-4'> G</tspan><tspan font-size='11' dy='4'>pg</tspan><tspan dy='-4'>)</tspan>", DARK),
-    ("L<tspan font-size='11' dy='4'>i</tspan><tspan dy='-4'>: library size (fixed)</tspan>", DARK),
+    ("L<tspan font-size='11' dy='4'>i</tspan><tspan dy='-4'> library size, θ</tspan><tspan font-size='11' dy='4'>g</tspan><tspan dy='-4'> dispersion: plugged in</tspan>", DARK),
     ("Y<tspan font-size='11' dy='4'>ig</tspan><tspan dy='-4'> ~ NegBin(μ</tspan><tspan font-size='11' dy='4'>ig</tspan>"
      "<tspan dy='-4'>, θ</tspan><tspan font-size='11' dy='4'>g</tspan><tspan dy='-4'>)</tspan>", DARK),
 ]
@@ -178,6 +180,9 @@ for t, c in eqs:
     else:
         s.append('<text x="%d" y="%d" font-size="16.5" fill="%s">%s</text>' % (X0 + 12, y, DARK, t))
     y += 30 if not head else 26
+
+text(X0 + 5, 512, "Fit: each patient summarised at its mode (Laplace),", 12.5, MUTED, anchor="start")
+text(X0 + 5, 529, "then NUTS on the shared parameters (two-stage).", 12.5, MUTED, anchor="start")
 
 # notation legend
 ly = 575
@@ -201,11 +206,12 @@ for k, (kind, lab) in enumerate(items):
 text(X0 + 5, ly + 190, "blue = cell mix, orange = program activity", 13, MUTED, anchor="start")
 
 # footnote
-s.append('<rect x="%d" y="790" width="360" height="72" rx="10" fill="#fff7ed" stroke="%s" stroke-width="1.5"/>'
+s.append('<rect x="%d" y="780" width="360" height="98" rx="10" fill="#fff7ed" stroke="%s" stroke-width="1.5"/>'
          % (X0 - 10, ORANGE))
-text(X0 + 5, 814, "Reported per-cell change β̂ is not this β:", 13.5, ORANGE, "bold", "start")
-text(X0 + 5, 834, "π's posterior feeds the calibrated unmixing", 13, "#333", anchor="start")
-text(X0 + 5, 852, "(modular, or 'cut', Bayesian inference)", 13, "#333", anchor="start")
+text(X0 + 5, 803, "Reported per-cell change β̂ is not this β:", 13.5, ORANGE, "bold", "start")
+text(X0 + 5, 823, "π's posterior feeds the calibrated unmixing", 13, "#333", anchor="start")
+text(X0 + 5, 841, "(modular, or 'cut', Bayesian inference).", 13, "#333", anchor="start")
+text(X0 + 5, 865, "Bayesian fit: McFarland, Kang, Zhang; PALM-lite elsewhere.", 12, MUTED, anchor="start")
 
 s.append("</svg>")
 with open(os.path.join(OUT, "2_2e_graphical_model_bayes.svg"), "w", encoding="utf-8") as fh:
