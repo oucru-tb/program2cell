@@ -38,6 +38,14 @@ first**: it targets the weakest held-out regime (broad responses).
    shrinkage, routed by the same width rule), then the MASH-style learned sharing if the simple form helps.
    Success: Kang r back towards `diff`'s 0.94 with at least `auto_v2`'s power and coverage ≥ 0.9, no loss on
    McFarland and Tahoe trametinib.
+   - **First result (2026-11-04, splits 20–29, all-or-nothing pooling, `pool=True`):** Kang r 0.82 → 0.95,
+     Tahoe RMC-6236 r 0.72 → 0.84 and true effects called 0.78 → 0.94; but false calls rose on McFarland
+     idasanutlin (0.05 → 0.11, above target) and Zhang (0.00 → 0.09, r 0.85 → 0.80). Cause: the new false
+     calls are tiny true effects (|β| 0.01–0.05) given the average over types, with an interval that took
+     the between-type spread as zero (4–6 types cannot estimate it); not leakage of a large response.
+   - **Next (`pool="partial"`):** empirical-Bayes partial pooling (no test; weight τ²/(τ²+s²)), interval
+     from the upper confidence bound of τ² (Q-profile). Screen on Kang, Zhang, McFarland idasanutlin,
+     Tahoe gemcitabine and RMC-6236, splits 20–24.
 3. Candidate 12 on COMBAT (globin / platelet masking): fraction r and effect r on real bulk.
 4. Candidate 5 (gene-level unmixing) if 9 does not recover Kang's power.
 5. Blocked until data: 1 (granulocyte truth), 6 and 7 (blood counts), 13 (ordered TB axis needs the cohort).

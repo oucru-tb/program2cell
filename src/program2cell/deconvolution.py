@@ -183,6 +183,22 @@ def program_deconvolution(inputs, calibration, fractions=None, fraction_draws=No
     return out
 
 
+def _tau2_upper(d, s2, alpha):
+    """Upper 1 - alpha confidence bound of the between-type variance tau^2 of deviations d with sampling
+    variances s2 (Q-profile, as in random-effects meta-analysis): the tau^2 at which sum d^2 / (s2 + tau^2)
+    equals the alpha quantile of chi^2 with len(d) - 1 df."""
+    from scipy.stats import chi2
+    from scipy.optimize import brentq
+    target = chi2.ppf(alpha, max(len(d) - 1, 1))
+    Q = lambda t2: float(np.sum(d ** 2 / (s2 + t2))) - target
+    if Q(0.0) <= 0:
+        return 0.0
+    hi = max(float(np.max(d ** 2)), 1e-12)
+    while Q(hi) > 0:
+        hi *= 4
+    return brentq(Q, 0.0, hi)
+
+
 def _unmix_effects(out, inputs, calibration, fractions, fraction_draws, raw, raw_draws, T, X, groups, level, seed,
                    n_sim, mode, eff_cal, iv_cal, sim_widen=True, pev=False, separate=False, misfit=False,
                    per_pair=False, plant="prior", shared=False, margin=0.1, choose="rmse", pool=False,
@@ -198,7 +214,10 @@ def _unmix_effects(out, inputs, calibration, fractions, fraction_draws, raw, raw
     +- q sqrt(common se^2 + misfit^2 + tau^2) with tau^2 the between-type spread beyond noise. Motivation: a
     response shared by all types (Kang interferon) unmixed type by type flips a rare type's sign (NK -0.28,
     truth +0.26, held-out v2). The width rule and the guard then compare this (pooled or unmixed) estimate with
-    the calibrated one as before."""
+    the calibrated one as before.
+    pool="partial": no test; every type is pulled towards the shared effect by w = tau^2 / (tau^2 + s^2) (empirical
+    Bayes), interval from the upper confidence bound of tau^2 (the all-or-nothing test pooled a real between-type
+    spread of tiny effects on McFarland and Zhang and its interval missed it: false calls, dev splits 20-29)."""
     from scipy.stats import t as tdist
     from .core import unmix as um
     B, G = inputs.B, inputs.Gmat
@@ -232,12 +251,24 @@ def _unmix_effects(out, inputs, calibration, fractions, fraction_draws, raw, raw
             k = np.maximum(r["deviation_se"][:, p] / sd, 1.0)          # raise to the full deviation se
             S = S * np.outer(k, k)
             p_het[p] = chi2.sf(float(d[:, p] @ np.linalg.pinv(S) @ d[:, p]), max(C - 1, 1))
-        pooled = p_het > pool_alpha
         tau2 = np.clip((d ** 2).mean(0) - (r["deviation_se"] ** 2).mean(0), 0, None)
         mis = 0.0 if r["misfit_sd"] is None else np.asarray(r["misfit_sd"])
-        se_pool = np.sqrt(r["common_se"][None] ** 2 + mis ** 2 + tau2[None])
-        eff_u = np.where(pooled[None], r["common"][None], r["effects"])
-        se_u = np.where(pooled[None], se_pool, r["se"])
+        if pool == "partial":
+            # empirical-Bayes partial pooling: each type moves towards the shared effect by
+            # w = tau^2 / (tau^2 + s^2); the interval uses the upper confidence bound of tau^2 (Q-profile,
+            # 1 - pool_alpha), so a between-type spread that few types cannot estimate is not taken as zero
+            s2 = r["deviation_se"] ** 2
+            tau2_hi = np.array([_tau2_upper(d[:, p], s2[:, p], pool_alpha) for p in range(P)])
+            w = tau2[None] / (tau2[None] + s2)
+            w_hi = tau2_hi[None] / (tau2_hi[None] + s2)
+            eff_u = r["common"][None] + w * d
+            se_u = np.sqrt(r["common_se"][None] ** 2 + mis ** 2 + w_hi * s2 + ((w_hi - w) * d) ** 2)
+            pooled = (w < 0.5).mean(0) > 0.5            # recorded: programs mostly pulled to the shared effect
+        else:
+            pooled = p_het > pool_alpha
+            se_pool = np.sqrt(r["common_se"][None] ** 2 + mis ** 2 + tau2[None])
+            eff_u = np.where(pooled[None], r["common"][None], r["effects"])
+            se_u = np.where(pooled[None], se_pool, r["se"])
     lo_u, hi_u = eff_u - q * se_u, eff_u + q * se_u
     # conditioning of the unmixing design per program (v3 reporting item 4b): the leakage maps stacked over samples
     Ap = np.stack([A[:, :, p, :, p] for p in range(P)], 0) if A.ndim == 5 else np.moveaxis(A, 3, 0)

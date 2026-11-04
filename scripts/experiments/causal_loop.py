@@ -78,6 +78,7 @@ ESTIMATORS = {"diff": dict(estimator="diff"),
               # v3 development (2026-11-04, docs/v3_plan.md item 9): pool the types to the shared-response fit where
               # their deviations are not distinguishable (Wald test, alpha 0.1); else as auto_v2
               "auto_v3pool": dict(estimator="auto", unmix_kw=dict(pool=True)),
+              "auto_v3partial": dict(estimator="auto", unmix_kw=dict(pool="partial")),
               "direct": dict(estimator="direct", direct_kw=dict(n_boot=40)),
               "direct_nb": dict(estimator="direct", direct_kw=dict(n_boot=40, weights="nb")),
               "direct_pair": dict(estimator="direct", paired=True, direct_kw=dict(n_boot=40))}
