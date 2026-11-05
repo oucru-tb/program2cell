@@ -137,3 +137,30 @@ passing. Kang's power is not expected to change (design limit).
    about a day). Framed as anchoring composition, not β (R11 correction).
 3. Download COMBAT whole-blood CyTOF (public, 0.9 GB): yes recommended.
 4. A whole-blood single-cell dataset with granulocytes: decide after the missing-type harm simulation (R12).
+
+## 6. Idea register, first results (2026-11-05, splits 20–22; `scripts/experiments/v4dev_summary.py`)
+
+- **Self-tests (ideas 3 and 4; `program2cell.selftest`, `selftest_bench.py`; v2, splits 20–21):**
+  - Null programs are 3 × 7 per split, matched gene by gene on expression, from genes outside every program and
+    not specific to one type, with gene selection rerun.
+  - Raw null call rate: Kang, Zhang and Parse TNF-α 0.006–0.007; Tahoe RMC-6236 0.07; McFarland idasanutlin
+    **0.27**. The McFarland calls are correct calls of tiny real off-program shifts (called truth ≈ 0.04,
+    coverage 0.99; τ ≈ 0.6 there). The null rate therefore needs an **effect floor**: calls with
+    |estimate| ≥ 0.1 give 0.000–0.037 on all five datasets.
+  - Marker leakage (calls in non-owner types): 0.000 on Kang, Zhang, Parse and McFarland; 0.02 on Tahoe.
+  - Truth for marker programs in non-owner types is noise (genes barely expressed there), so leakage is
+    judged in-study only.
+  - Caveat: in assembled benchmarks the treatment barely moves composition, so the leakage assay is weak
+    there. It has to run on COMBAT real bulk, where composition shifts with disease.
+- **Fractions measured with error (idea 2; `fraction_error.py`, split 20):**
+  - Per-sample fraction noise at real-bulk level (per-type r ≈ 0.4–0.5) breaks the GLS estimator on McFarland:
+    coverage 0.50, false calls 0.43, within-program r −0.13. v2 degrades less (0.81 / 0.14). Tahoe GLS:
+    coverage 0.84.
+  - Shared per-type bias (platform-like level error, r unchanged) is nearly harmless for both.
+  - PALM-lite on the benchmarks is accurate (r 0.96–0.98 on cell lines, 0.71 on Kang), so this is a
+    real-bulk risk. The v4 estimator must propagate fraction error; the simulation alone re-estimates
+    fractions only from noise-free-platform data.
+- **Low-rank deviations (idea 1; `lowrank_dev.py`):** rejected. Rank 1 lowers within-program r on cell lines
+  (Tahoe gemcitabine 0.79 → 0.04, encorafenib 0.37 → 0.17, RMC-6236 0.61 → 0.47); rank 2 ≈ full; no gain
+  anywhere. The review predicted a gain on cell lines. With 7 programs there is too little shared structure
+  to borrow.

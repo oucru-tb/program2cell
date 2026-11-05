@@ -46,13 +46,37 @@ def gls_unmix(raw, A, T, groups=None):
     return b, se, s2
 
 
+def lowrank_deviation(b, se, w, k, n_iter=50):
+    """Low-rank type x program deviations (v4 development, idea register 1): b (C, P) = mu_p + D_cp with
+    mu_p = sum_c w_c b_cp (w the mean read fractions) and D replaced by its rank-k fit, weighted by 1/se^2
+    (alternating weighted least squares from the SVD start). k=None returns b unchanged."""
+    if k is None:
+        return b
+    w = np.asarray(w, float) / np.sum(w)
+    mu = w @ b
+    D = b - mu[None]
+    W = 1.0 / np.maximum(se, 1e-6) ** 2
+    U, s, Vt = np.linalg.svd(D, full_matrices=False)
+    U, V = U[:, :k] * s[:k], Vt[:k].T                                  # (C, k), (P, k)
+    for _ in range(n_iter):
+        for c in range(D.shape[0]):
+            U[c] = np.linalg.lstsq(V * np.sqrt(W[c])[:, None], D[c] * np.sqrt(W[c]), rcond=None)[0]
+        for p in range(D.shape[1]):
+            V[p] = np.linalg.lstsq(U * np.sqrt(W[:, p])[:, None], D[:, p] * np.sqrt(W[:, p]), rcond=None)[0]
+    Dk = U @ V.T
+    Dk = Dk - (w @ Dk)[None]                                           # keep sum_c w_c D_cp = 0
+    return mu[None] + Dk
+
+
 def gls_calibrated(cal, pi, T, B, G, b_study, n_sim=30, level=0.9, seed=0, groups=None, offprog_sd=0.0,
-                   plant_mult=1.0):
+                   plant_mult=1.0, post=None):
     """Scale calibration of gls_unmix by simulation (v3 candidate 10 with the GLS estimator): cohorts shaped like
     the study (its fractions and design) built from reference specimens with planted effects
     (unmix.simulate_cohort, sizes from the study's own GLS effects), fractions re-estimated (PALM-lite) as on the
     study, GLS applied (offprog_sd: off-program response as unmix.offprogram_tau measures it); per (type, program) a slope through the origin of planted on estimated, k_cp, and the
-    level-quantile of |planted - k_cp * estimate| / (k_cp * se). Returns (effects, lo, hi) for the study."""
+    level-quantile of |planted - k_cp * estimate| / (k_cp * se). Returns (effects, lo, hi) for the study.
+    post(b, se, pi) -> b: a transform of the GLS estimate (e.g. lowrank_deviation), applied in every simulated
+    cohort as on the study; b_study must then be the transformed study estimate."""
     from program2cell.core import unmix as um
     from program2cell.core.realloc import reallocate, em_fractions
     rng = np.random.default_rng(seed + 101)
@@ -65,6 +89,8 @@ def gls_calibrated(cal, pi, T, B, G, b_study, n_sim=30, level=0.9, seed=0, group
         raw = reallocate(Y, pf, Bk, G)
         A = um.leakage_operator(pf, Bk, G, diagonal=False)
         b, se, _ = gls_unmix(np.asarray(raw), np.asarray(A), T, None)
+        if post is not None:
+            b = post(b, se, pf)
         est.append(b); true.append(beta); ses.append(se)
     est, true, ses = np.array(est), np.array(true), np.array(ses)
     k = (est * true).sum(0) / np.maximum((est ** 2).sum(0), 1e-12)          # (C, P)
