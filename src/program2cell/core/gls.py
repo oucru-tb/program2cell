@@ -116,8 +116,46 @@ def shrink_deviations(b, se, w):
     return mu[None] + tau2[None] / (tau2[None] + se ** 2 + 1e-12) * d
 
 
+LINEAGE_MYELOID = ("mono", "dc", "myeloid", "macro", "neutro", "granulo", "mast", "baso", "eosin")
+
+
+def lineage_groups(cell_types):
+    """Two-branch tree for blood types by name: myeloid vs lymphoid (cell lines: one branch)."""
+    return np.array(["myeloid" if any(k in str(c).lower() for k in LINEAGE_MYELOID) else "lymphoid"
+                     for c in cell_types])
+
+
+def shrink_tree(b, se, w, groups):
+    """Tree-structured shrinkage (modelling review; BayesCNet-style sharing along the cell hierarchy): the
+    shared response mu; branch means m_l shrunk towards mu, and each type's deviation from its branch shrunk
+    towards the branch, each level by method of moments (tau^2 / (tau^2 + se^2))."""
+    w = np.asarray(w, float) / np.sum(w)
+    groups = np.asarray(groups)
+    mu = w @ b
+    out = np.empty_like(b)
+    labs = np.unique(groups)
+    if len(labs) < 2:
+        return shrink_deviations(b, se, w)
+    M, S = [], []
+    for g in labs:
+        m = groups == g
+        wg = w[m] / w[m].sum()
+        M.append(wg @ b[m]); S.append(np.sqrt((wg[:, None] ** 2 * se[m] ** 2).sum(0)))
+    M, S = np.array(M), np.array(S)
+    dM = M - mu[None]
+    t2 = np.clip((dM ** 2).mean(0) - (S ** 2).mean(0), 0, None)
+    Ms = mu[None] + t2[None] / (t2[None] + S ** 2 + 1e-12) * dM          # shrunk branch means
+    for i, g in enumerate(labs):
+        m = groups == g
+        d = b[m] - M[i][None]
+        t2c = np.clip((d ** 2).mean(0) - (se[m] ** 2).mean(0), 0, None) if m.sum() > 1 else np.zeros(b.shape[1])
+        out[m] = Ms[i][None] + t2c[None] / (t2c[None] + se[m] ** 2 + 1e-12) * d
+    return out
+
+
 def gls_calibrated(cal, pi, T, B, G, b_study, n_sim=30, level=0.9, seed=0, offprog_sd=0.0, frac_sd=0.0,
-                   shrink=False, se_study=None, diff_study=None, raw_sd_study=None):
+                   shrink=False, se_study=None, diff_study=None, raw_sd_study=None, tree_groups=None,
+                   tree_study=None):
     """Simulation calibration of gls_unmix (see module doc). shrink: shrink_deviations applied in every simulated
     cohort as on the study (b_study must then be the shrunk study estimate). se_study (C, P): the study's GLS
     standard errors; where their median exceeds the simulated cohorts' the error quantile is scaled up by the
@@ -127,7 +165,7 @@ def gls_calibrated(cal, pi, T, B, G, b_study, n_sim=30, level=0.9, seed=0, offpr
     from .realloc import reallocate, em_fractions
     rng = np.random.default_rng(seed + 101)
     scale = np.clip(np.abs(b_study).max(0), 0.05, 1.0)        # planted sizes U(-scale, scale) per program
-    est, true, ses, diffs, raw_sds = [], [], [], [], []
+    est, true, ses, diffs, raw_sds, trees = [], [], [], [], [], []
     for _ in range(n_sim):
         Y, pt, Bk, beta = um.simulate_cohort(cal, pi, T, rng, scale, offprog_sd=offprog_sd)
         pf = perturb_fractions(em_fractions(np.asarray(Y, float), np.asarray(Bk, float)), frac_sd, rng)
@@ -141,6 +179,8 @@ def gls_calibrated(cal, pi, T, B, G, b_study, n_sim=30, level=0.9, seed=0, offpr
             raw = np.asarray(raw)
             diffs.append(raw[np.asarray(T) == 1].mean(0) - raw[np.asarray(T) == 0].mean(0))
             raw_sds.append(_within_arm_sd(raw, T))
+            if tree_study is not None:
+                trees.append(shrink_tree(b, se, pf.mean(0), tree_groups))
     est, true = np.array(est), np.array(true)
     ratio = 1.0
     if se_study is not None:
@@ -150,8 +190,9 @@ def gls_calibrated(cal, pi, T, B, G, b_study, n_sim=30, level=0.9, seed=0, offpr
     if diff_study is not None:
         # stacking: per (type, program) the least-squares combination of GLS and the reallocated contrast that
         # best predicts the planted effect over the simulated cohorts; leave-one-out residual quantile
-        X = np.stack([est, np.array(diffs)], -1)                               # (S, C, P, 2)
-        XtX = np.einsum("scpi,scpj->cpij", X, X) + 1e-10 * np.eye(2)
+        cols = [est, np.array(diffs)] + ([np.array(trees)] if tree_study is not None else [])
+        X = np.stack(cols, -1)                                                 # (S, C, P, K)
+        XtX = np.einsum("scpi,scpj->cpij", X, X) + 1e-10 * np.eye(X.shape[-1])
         Xty = np.einsum("scpi,scp->cpi", X, true)
         coef = np.linalg.solve(XtX, Xty[..., None])[..., 0]                    # (C, P, 2)
         Hinv = np.linalg.inv(XtX)
@@ -159,8 +200,11 @@ def gls_calibrated(cal, pi, T, B, G, b_study, n_sim=30, level=0.9, seed=0, offpr
         res = (true - np.einsum("scpi,cpi->scp", X, coef)) / np.clip(1 - h, 0.05, None)
         q = np.quantile(np.abs(res), level, axis=0) * ratio
         eff = coef[..., 0] * b_study + coef[..., 1] * diff_study
+        if tree_study is not None:
+            eff = eff + coef[..., 2] * tree_study
         return eff, eff - q, eff + q, coef, dict(noise_ratio=ratio, weight_gls=coef[..., 0].tolist(),
-                                                 weight_diff=coef[..., 1].tolist())
+                                                 weight_diff=coef[..., 1].tolist(),
+                                                 weight_tree=coef[..., 2].tolist() if tree_study is not None else None)
     k = np.clip((est * true).sum(0) / np.maximum((est ** 2).sum(0), 1e-12), 0.0, 1.5)
     q = np.quantile(np.abs(true - k[None] * est), level, axis=0) * ratio
     eff = k * b_study
@@ -168,7 +212,8 @@ def gls_calibrated(cal, pi, T, B, G, b_study, n_sim=30, level=0.9, seed=0, offpr
 
 
 def v4_effects(Y, fractions, B, G, T, calibration, groups=None, level=0.9, seed=0, n_sim=30, frac_sd=0.0,
-               min_effect=0.0, shrink=False, noise_anchor=False, stack=False, raw_noise=False):
+               min_effect=0.0, shrink=False, noise_anchor=False, stack=False, raw_noise=False, tree=False,
+               cell_types=None):
     """The v4 estimator on one study. frac_sd: number, or "estimate" (estimate_frac_sd; for fractions that did
     not come from this bulk). min_effect: effect floor for calls (|effect| >= min_effect and the interval
     excludes 0). Returns dict(effects, lo, hi, calls, shared, deviation, k, tau, frac_sd, ...)."""
@@ -186,12 +231,15 @@ def v4_effects(Y, fractions, B, G, T, calibration, groups=None, level=0.9, seed=
             raise ValueError("frac_sd: a number or 'estimate'")
         frac_sd, info = estimate_frac_sd(calibration, pi, Y, T, B, G, b, offprog_sd=tau, seed=seed)
     bs = shrink_deviations(b, se, pi.mean(0)) if shrink else b
+    tg = lineage_groups(cell_types) if (stack and tree) else None
     eff, lo, hi, k, ci = gls_calibrated(calibration, pi, T, B, G, bs, n_sim=n_sim, level=level, seed=seed,
                                         offprog_sd=tau, frac_sd=float(frac_sd), shrink=shrink,
                                         se_study=se if noise_anchor and not raw_noise else None,
                                         diff_study=(np.asarray(raw)[T == 1].mean(0) - np.asarray(raw)[T == 0].mean(0))
                                         if stack else None,
-                                        raw_sd_study=_within_arm_sd(raw, T) if stack and raw_noise else None)
+                                        raw_sd_study=_within_arm_sd(raw, T) if stack and raw_noise else None,
+                                        tree_groups=tg, tree_study=shrink_tree(b, se, pi.mean(0), tg) if tg is not None
+                                        else None)
     info.update(ci)
     w = pi.mean(0) / pi.mean(0).sum()
     mu = w @ eff

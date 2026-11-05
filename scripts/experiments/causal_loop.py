@@ -94,7 +94,10 @@ ESTIMATORS = {"diff": dict(estimator="diff"),
               "v4k_pair": dict(estimator="v4", paired=True, v4_kw=dict(stack=True, noise_anchor=True)),
               # + noise ratio on the within-arm noise of the reallocated activity (shared by both estimators)
               "v4k2": dict(estimator="v4", v4_kw=dict(stack=True, noise_anchor=True, raw_noise=True)),
-              "v4k2_pair": dict(estimator="v4", paired=True, v4_kw=dict(stack=True, noise_anchor=True, raw_noise=True))}
+              "v4k2_pair": dict(estimator="v4", paired=True, v4_kw=dict(stack=True, noise_anchor=True, raw_noise=True)),
+              # + tree-structured shrinkage (myeloid / lymphoid) as a third stacked estimator (modelling review)
+              "v4kt": dict(estimator="v4", v4_kw=dict(stack=True, noise_anchor=True, tree=True)),
+              "v4kt_pair": dict(estimator="v4", paired=True, v4_kw=dict(stack=True, noise_anchor=True, tree=True))}
 
 # the defaults changed at freeze v2 (sim_widen "abs", choose "width_guard"): every older estimator keeps the
 # settings it was run with (freeze v1 defaults sim_widen=True, choose="rmse")

@@ -327,3 +327,43 @@ trametinib.)
 - Noise ratio on the raw within-arm noise instead of GLS standard errors (`v4k2`): Parse wider (1.37),
   Zhang false calls 0.11. Rejected. It shows the Parse width is a real study-vs-simulation noise mismatch
   (Parse's within-arm noise exceeds the simulated cohorts'), not a GLS artefact.
+
+## 10. Modelling-review ideas, quick tests (2026-11-05; `palm_modelling_review_2025_2026.md`)
+
+**A. Real-bulk fraction error is bias, not scatter** (COMBAT sepsis, splits 20–24, from `combat_fracnoise`):
+
+| Bulk | Per-type log bias (RMS) | Per-sample scatter (sd) |
+|---|---|---|
+| Single-cell pseudobulk | 0.32 | 1.09 |
+| Real whole blood | 4.09 | 1.41 |
+| Real, self-offset | 3.30 | 2.21 |
+
+Real whole blood drives B cells (−6.9) and CD8 T (−6.5) to almost zero, which alone can explain v2's lack of
+calls on COMBAT. The review is right that the error model needs a bias component. A shared level error of
+0.5 was harmless (section 6); errors of this size remove types.
+
+**B. Target-revised reference (EPIC-unmix style) and a learned missing-type profile** (`target_reference.py`,
+splits 20–21; profiles learned on the test specimens and, `COHORT=1`, on all 114 paired bulk specimens):
+- the revised reference lowers fraction accuracy or leaves it unchanged (mean r 0.32–0.45 vs 0.37–0.46);
+- the learned extra profile takes ~50–78% of each sample but correlates negatively with CyTOF granulocytes
+  (−0.12 to −0.60): it absorbs platform and total-RNA differences, not granulocyte biology.
+- Rejected at the quick-test level. CyTOF-anchored fractions are the direct route to the real-bulk bias.
+
+**C. Tree-structured shrinkage (BayesCNet style; myeloid / lymphoid) as a third stacked estimator**
+(`shrink_tree`, estimator `v4kt`, 8 datasets, splits 20–22): r 0.74 → 0.71, power 0.30 → 0.28; Parse TNF-α
+r 0.57 → 0.47; McFarland false calls 0.04 → 0.09. Rejected: PBMC footprints are already shared (section 8),
+cell lines have no tree, and a third weight fitted on 30 cohorts adds variance.
+
+**Not tested, with reasons:** amortised inference on the simulator with misspecification handling (large
+build; the stacking of section 9 is a linear, amortised-by-design special case); generalized-posterior
+calibration (our leave-one-out quantile calibration is the informal version; revisit with the intervals
+work); joint conformal regions for the deviation vector (needs calls on COMBAT); BLEND individualised
+references (one reference per study here).
+
+**Adopted as rules:**
+- Never learn a prior from earlier PALM outputs (provable, undetectable overconfidence). Priors come from
+  the atlas or held-out truth.
+- Report the prior or penalty that identifies a deviation as an assumption, next to the design limit.
+
+**Plan unchanged:** (2) noise-matched simulation, (1) stacking more estimators, (3) CyTOF-anchored COMBAT
+fractions, then a full 13-dataset run of the best variant.

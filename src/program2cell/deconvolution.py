@@ -177,7 +177,7 @@ def program_deconvolution(inputs, calibration, fractions=None, fraction_draws=No
         if mode == "v4":
             from .core.gls import v4_effects
             v = v4_effects(Y, fractions, B, G, T, calibration, groups=groups, level=level, seed=seed,
-                           **(v4_kw or {}))
+                           cell_types=list(inputs.cell_types), **(v4_kw or {}))
             eff, iv = v["effects"], (v["lo"], v["hi"])
             out.info["v4"] = {k: (x.tolist() if isinstance(x, np.ndarray) else x) for k, x in v.items()
                               if k not in ("effects", "lo", "hi")}
