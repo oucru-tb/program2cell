@@ -46,20 +46,21 @@ def gls_unmix(raw, A, T, groups=None):
     return b, se, s2
 
 
-def gls_calibrated(cal, pi, T, B, G, b_study, n_sim=30, level=0.9, seed=0, groups=None):
+def gls_calibrated(cal, pi, T, B, G, b_study, n_sim=30, level=0.9, seed=0, groups=None, offprog_sd=0.0,
+                   plant_mult=1.0):
     """Scale calibration of gls_unmix by simulation (v3 candidate 10 with the GLS estimator): cohorts shaped like
     the study (its fractions and design) built from reference specimens with planted effects
     (unmix.simulate_cohort, sizes from the study's own GLS effects), fractions re-estimated (PALM-lite) as on the
-    study, GLS applied; per (type, program) a slope through the origin of planted on estimated, k_cp, and the
+    study, GLS applied (offprog_sd: off-program response as unmix.offprogram_tau measures it); per (type, program) a slope through the origin of planted on estimated, k_cp, and the
     level-quantile of |planted - k_cp * estimate| / (k_cp * se). Returns (effects, lo, hi) for the study."""
     from program2cell.core import unmix as um
     from program2cell.core.realloc import reallocate, em_fractions
     rng = np.random.default_rng(seed + 101)
     C, P = b_study.shape
-    scale = np.clip(2 * np.abs(b_study).max(0) * 0.5, 0.05, 1.0)    # GLS overstates: plant at half its size
+    scale = np.clip(plant_mult * np.abs(b_study).max(0), 0.05, 1.0)    # sizes U(-scale, scale) per program
     est, true, ses = [], [], []
     for _ in range(n_sim):
-        Y, pt, Bk, beta = um.simulate_cohort(cal, pi, T, rng, scale)
+        Y, pt, Bk, beta = um.simulate_cohort(cal, pi, T, rng, scale, offprog_sd=offprog_sd)
         pf = em_fractions(np.asarray(Y, float), np.asarray(Bk, float))
         raw = reallocate(Y, pf, Bk, G)
         A = um.leakage_operator(pf, Bk, G, diagonal=False)

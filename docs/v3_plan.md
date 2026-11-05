@@ -62,6 +62,19 @@ first**: it targets the weakest held-out regime (broad responses).
      Tahoe trametinib worse (called 0.81 → 0.59, within-program r 0.63 → 0.33) and on McFarland its intervals
      are far too narrow (coverage 0.59–0.63, false calls 0.41): the simulation misses an error source there.
      Next: find that source (fraction error of PALM-lite on paired mixtures?) and route by the design limit.
+   - **Source found (2026-11-05, splits 20–22; `scripts/experiments/gls_diag.py`):** the simulated cohorts
+     lacked the off-program response (`offprogram_tau`, τ ≈ 0.57–0.69 on McFarland), which v2's design check
+     already plants. With `offprog_sd=τ`: McFarland idasanutlin coverage 0.64 → 0.92, false calls 0.35 → 0.06
+     (v2 0.98 / 0.03), true effects called 0.67 (v2 0.55), within-program r 0.66 (v2 0.44); McFarland
+     trametinib coverage 0.86, false calls 0.04, called 0.87 (v2 0.83), within-program r 0.66 (v2 0.85).
+     Fraction estimator not the cause (PALM draws same or worse than PALM-lite). Tahoe: coverage 0.96–0.99,
+     false calls ≤ 0.05; within-program r vs v2: RMC-6236 0.61 / 0.23 (called 0.53 / 0.69), gemcitabine
+     0.79 / 0.64, encorafenib 0.37 / 0.16 (called 0.50 / 0.33), trametinib 0.36 / 0.58 (called 0.56 / 0.88).
+   - Trametinib (both datasets) is the remaining loss. A shared/spread rule does not separate it from
+     RMC-6236 (ratio 1.4–3.2 vs 2.1–3.4). Estimates are attenuated (Tahoe MAPK −0.13 to −0.21 vs true −0.26),
+     but planting larger effects in the calibration (`plant_mult=2`) is worse everywhere (Tahoe trametinib
+     called 0.56 → 0.20, RMC-6236 0.53 → 0.15): rejected. Next: route by comparing the two estimators'
+     intervals per program (e.g. the narrower honest one), checked on all development datasets.
    - **Metric check against the biology (2026-11-04, splits 20–29):**
      - Encorafenib known answer (BRAF-V600 lines LOX-IMVI, HT-29, RKO) is not supported by the measured truth:
        MAPK −0.02 / −0.14 / −0.06, while KRAS-G12C NCI-H2030 is −0.10. Unlike dabrafenib, it was never checked
