@@ -68,15 +68,68 @@ def lowrank_deviation(b, se, w, k, n_iter=50):
     return mu[None] + Dk
 
 
+def perturb_fractions(pi, s, rng):
+    """Per-sample fraction error: softmax(log pi + N(0, s^2)) independently per sample and type."""
+    if not s:
+        return pi
+    from scipy.special import softmax
+    return softmax(np.log(np.clip(pi, 1e-4, None)) + rng.normal(0, s, np.shape(pi)), 1)
+
+
+def frac_misfit(Y, pi, B):
+    """Depth-corrected misfit of bulk counts Y (N, G) to the mixture pi B: per sample the mean over the more
+    expressed half of the genes of ((y - mu)^2 - mu) / mu^2 (squared relative error beyond Poisson); median
+    over samples."""
+    Y = np.asarray(Y, float)
+    Bn = np.asarray(B, float) / np.asarray(B, float).sum(1, keepdims=True)
+    mu = Y.sum(1, keepdims=True) * (np.asarray(pi, float) @ Bn)
+    keep = mu.mean(0) >= np.quantile(mu.mean(0), 0.5)
+    y, m = Y[:, keep], np.maximum(mu[:, keep], 1e-9)
+    return float(np.median((((y - m) ** 2 - m) / m ** 2).mean(1)))
+
+
+def estimate_frac_sd(cal, pi, Y, T, B, G, b_study, offprog_sd=0.0, n_sim=8, seed=0,
+                     grid=(0.0, 0.1, 0.2, 0.35, 0.5, 0.75, 1.0, 1.5, 2.0), anchor="excess"):
+    """Fraction-error level anchored on the data (v4): the study's fraction misfit (frac_misfit of Y on the
+    fractions in use) against simulated cohorts shaped like the study, whose PALM-lite fractions are perturbed
+    by perturb_fractions(., s) over a grid of s; returns the s whose mean simulated misfit matches the study's
+    (linear interpolation; 0 when the study fits no worse than the unperturbed simulations).
+    anchor="absolute": raw misfits (2026-11-05: reads baseline misfit - biology, platform - as fraction error;
+    Kang true fractions -> 2.0, rand 0.45 -> 1.51). anchor="excess": misfit beyond the study's own best fit
+    (PALM-lite on Y), in the study and the simulations alike; detects fractions that disagree with the bulk
+    (external fractions), 0 for PALM-lite itself, blind to a bias shared by the bulk fit."""
+    from program2cell.core import unmix as um
+    from program2cell.core.realloc import em_fractions
+    rng = np.random.default_rng(seed + 202)
+    m_study = frac_misfit(Y, pi, B)
+    if anchor == "excess":
+        m_study -= frac_misfit(Y, em_fractions(np.asarray(Y, float), np.asarray(B, float)), B)
+    scale = np.clip(np.abs(b_study).max(0), 0.05, 1.0)
+    M = np.zeros((n_sim, len(grid)))
+    for i in range(n_sim):
+        Ys, pt, Bk, beta = um.simulate_cohort(cal, pi, T, rng, scale, offprog_sd=offprog_sd)
+        pf = em_fractions(np.asarray(Ys, float), np.asarray(Bk, float))
+        for j, s in enumerate(grid):
+            M[i, j] = frac_misfit(Ys, perturb_fractions(pf, s, rng), Bk)
+        if anchor == "excess":
+            M[i] -= frac_misfit(Ys, pf, Bk)
+    m = M.mean(0)
+    m = np.maximum.accumulate(m)                      # misfit grows with s; guard the interpolation
+    s = float(np.interp(m_study, m, grid)) if m_study > m[0] else 0.0
+    return s, dict(m_study=m_study, m_grid=m.tolist())
+
+
 def gls_calibrated(cal, pi, T, B, G, b_study, n_sim=30, level=0.9, seed=0, groups=None, offprog_sd=0.0,
-                   plant_mult=1.0, post=None):
+                   plant_mult=1.0, post=None, frac_sd=0.0):
     """Scale calibration of gls_unmix by simulation (v3 candidate 10 with the GLS estimator): cohorts shaped like
     the study (its fractions and design) built from reference specimens with planted effects
     (unmix.simulate_cohort, sizes from the study's own GLS effects), fractions re-estimated (PALM-lite) as on the
     study, GLS applied (offprog_sd: off-program response as unmix.offprogram_tau measures it); per (type, program) a slope through the origin of planted on estimated, k_cp, and the
     level-quantile of |planted - k_cp * estimate| / (k_cp * se). Returns (effects, lo, hi) for the study.
     post(b, se, pi) -> b: a transform of the GLS estimate (e.g. lowrank_deviation), applied in every simulated
-    cohort as on the study; b_study must then be the transformed study estimate."""
+    cohort as on the study; b_study must then be the transformed study estimate.
+    frac_sd: per-sample fraction error added to the simulated cohorts' re-estimated fractions
+    (perturb_fractions; level from estimate_frac_sd), so the intervals carry the study's fraction error."""
     from program2cell.core import unmix as um
     from program2cell.core.realloc import reallocate, em_fractions
     rng = np.random.default_rng(seed + 101)
@@ -85,7 +138,7 @@ def gls_calibrated(cal, pi, T, B, G, b_study, n_sim=30, level=0.9, seed=0, group
     est, true, ses = [], [], []
     for _ in range(n_sim):
         Y, pt, Bk, beta = um.simulate_cohort(cal, pi, T, rng, scale, offprog_sd=offprog_sd)
-        pf = em_fractions(np.asarray(Y, float), np.asarray(Bk, float))
+        pf = perturb_fractions(em_fractions(np.asarray(Y, float), np.asarray(Bk, float)), frac_sd, rng)
         raw = reallocate(Y, pf, Bk, G)
         A = um.leakage_operator(pf, Bk, G, diagonal=False)
         b, se, _ = gls_unmix(np.asarray(raw), np.asarray(A), T, None)

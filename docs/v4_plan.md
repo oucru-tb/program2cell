@@ -164,3 +164,57 @@ passing. Kang's power is not expected to change (design limit).
   (Tahoe gemcitabine 0.79 → 0.04, encorafenib 0.37 → 0.17, RMC-6236 0.61 → 0.47); rank 2 ≈ full; no gain
   anywhere. The review predicted a gain on cell lines. With 7 programs there is too little shared structure
   to borrow.
+
+## 7. Fraction-error propagation (2026-11-05, splits 20–22; `frac_prop.py`, `combat_fracnoise.py`, `frac_prop_summary.py`)
+
+Change: `gls_calibrated(..., frac_sd=s)` perturbs the simulated cohorts' re-estimated fractions per sample,
+softmax(log π + N(0, s²)), so the calibration (slope k and error quantile) sees the study's fraction error.
+The level s comes from `estimate_frac_sd`: fraction misfit of the bulk (depth-corrected squared relative
+error beyond Poisson), matched between study and simulations.
+
+**Real-bulk fraction noise (COMBAT sepsis, splits 20–24).** PALM-lite fractions vs the same specimens'
+single-cell read fractions:
+
+| Bulk | Per-type r | MAE | Matching s |
+|---|---|---|---|
+| Single-cell pseudobulk | 0.90 | 0.037 | 0.27 (0.25–0.30) |
+| Real whole blood | 0.47 | 0.137 | 1.03 (0.85–1.20) |
+| Real, self-offset | 0.57 | 0.156 | 0.81 (0.65–0.95) |
+
+Real bulk carries per-sample fraction noise s ≈ 1, more than the `rand` condition of §6 on Kang (0.40) and
+similar to McFarland and Tahoe (0.87–0.90).
+
+**Propagation with the true level (oracle), noisy fractions:**
+
+| Dataset | Coverage none → oracle | False calls | Power | Within-program r |
+|---|---|---|---|---|
+| Tahoe RMC-6236 | 0.85 → 0.97 | 0.05 → 0.00 | 0.63 → 0.38 | 0.24 → 0.23 |
+| McFarland idasanutlin | 0.59 → 0.76 | 0.31 → 0.13 | 0.47 → 0.47 | −0.03 → −0.03 |
+| Kang | 1.00 → 0.99 | 0.06 → 0.00 | 0.28 → 0.34 | 0.69 → 0.65 |
+
+Propagation repairs the intervals on Tahoe and Kang. On McFarland it falls short of nominal even at the
+exact level (0.74–0.79 per split), and the within-program ranking is lost (r ≈ 0): at s ≈ 1 the cell-line
+design no longer separates the types, and no interval can recover a ranking the estimate does not contain.
+
+**Estimating the level from the bulk.**
+- `anchor="absolute"` (raw misfit) fails both ways: it reads baseline misfit (biology, platform) as fraction
+  error (Kang true 0 → 1.20, sys 0 → 1.13) and misses real error on Tahoe (0.90 → 0.00). Rejected.
+- `anchor="excess"` (misfit beyond the study's own PALM-lite fit, in study and simulations alike): mean
+  estimates against the injected level: Kang 0.43 vs 0.40, McFarland 0.94 vs 0.87, Tahoe 0.63 vs 0.90.
+  False readings without per-sample noise are 0.07–0.36, and they cost power on McFarland (true fractions:
+  0.73 → 0.59), not coverage. Single splits vary (Kang 0.00 / 0.43 / 0.84 at true 0.45 / 0.35 / ~0.4).
+- Limit: with PALM-lite fractions the excess is 0 by construction. The bulk cannot show an error its own
+  best fit shares, which is the real-bulk case (reference mismatch).
+
+**Decision for v4.**
+- Fraction noise s is an input of the v4 estimator with two sources:
+  - external fractions (CyTOF, cell counts, another tool): `excess` estimate;
+  - PALM-lite fractions on real bulk: a fixed prior level from COMBAT, s = 1.0 (raw) / 0.8 (self-offset),
+    reported with the result; assembled bulk: s = 0.
+- On real bulk at s ≈ 1, expect cell-line-like designs to lose type resolution (McFarland result). The
+  report should then say so: shared response only, with type-specific calls withheld when the design limit
+  at s exceeds the effect floor. This is a new design-limit input (the limit at the fraction noise level),
+  to be built next.
+- Sensitivity: on McFarland, an overestimate of 0.2–0.3 costs 0.1–0.15 power and raises false calls to
+  0.10–0.17 on two of three splits (the slope k inflates the effects). An underestimate costs coverage.
+  Neither direction is free.
