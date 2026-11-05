@@ -1,5 +1,8 @@
 # Method v3: candidate changes (draft, 2026-11-04)
 
+**Superseded order (2026-11-05):** after the Quantitative Core review, the order of work and the split into a
+narrowed v3 (correctness and scoring) and a v4 (estimator redesign) are in `docs/v4_plan.md`. Results below stand.
+
 Status: candidates only. Nothing here changes the frozen method (v2, tag `method-freeze-v2`). The final plan
 is written after the held-out v2 report, matching each candidate to where held-out fell short.
 
