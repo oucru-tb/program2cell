@@ -1,0 +1,216 @@
+====================================================================================================
+
+### v4k vs v2 (splits 20-29)
+v2 = auto_v2, v4 = v4 (v4_pair on kang, zhang); means over splits present for both; floor = calls need |eff| >= 0.1
+dataset      n  est      cov   r     within null  power width
+kang         10 v2        1.00  0.82  0.81  0.00  0.20  0.75
+kang         10 v4k       1.00  0.90  0.77  0.00  0.16  0.96
+mcf_ida      10 v2        0.96  0.92  0.36  0.05  0.49  0.25
+mcf_ida      10 v4k       0.93  0.91  0.74  0.09  0.62  0.23
+mcf_tram     10 v2        0.96  0.92  0.79  0.08  0.83  0.19
+mcf_tram     10 v4k       0.92  0.87  0.62  0.10  0.86  0.16
+parse_gmcsf  10 v2        1.00  0.85  0.92  0.00  0.16  0.30
+parse_gmcsf  10 v4k       1.00  0.73  0.85  0.00  0.00  0.84
+parse_ifnb   10 v2        1.00  0.90  0.87  0.00  0.02  0.45
+parse_ifnb   10 v4k       1.00  0.75 -0.09  0.00  0.01  0.95
+parse_ifng   10 v2        1.00  0.91  0.94  0.00  0.02  0.36
+parse_ifng   10 v4k       1.00  0.70 -0.18  0.01  0.07  0.75
+parse_il4    10 v2        1.00  0.69  0.15  0.00  0.05  0.41
+parse_il4    10 v4k       1.00  0.68  0.56  0.00  0.00  0.85
+parse_tnf    10 v2        1.00  0.86   nan  0.00  0.00  0.17
+parse_tnf    10 v4k       1.00  0.64   nan  0.00  0.00  0.86
+tahoe_enc    10 v2        0.95  0.42  0.17  0.02  0.22  0.20
+tahoe_enc    10 v4k       0.97  0.59  0.23  0.02  0.50  0.19
+tahoe_gem    10 v2        0.93  0.54  0.61  0.05  0.00  0.14
+tahoe_gem    10 v4k       0.98  0.76  0.78  0.06  0.05  0.14
+tahoe_rmc    10 v2        0.98  0.72  0.28  0.01  0.71  0.30
+tahoe_rmc    10 v4k       0.99  0.86  0.45  0.00  0.79  0.31
+tahoe_tram   10 v2        0.99  0.81  0.55  0.01  0.79  0.32
+tahoe_tram   10 v4k       1.00  0.89  0.49  0.00  0.63  0.36
+zhang        10 v2        1.00  0.84  0.99  0.00  0.00  0.11
+zhang        10 v4k       0.99  0.15  0.34  0.01  0.00  0.42
+
+mean over datasets
+ALL          13 v2        0.98  0.78  0.62  0.02  0.27  0.30
+ALL          13 v4k       0.98  0.73  0.46  0.02  0.28  0.54
+
+
+### v4kn vs v2 (splits 20-29)
+v2 = auto_v2, v4 = v4 (v4_pair on kang, zhang); means over splits present for both; floor = calls need |eff| >= 0.1
+dataset      n  est      cov   r     within null  power width
+kang         10 v2        1.00  0.82  0.81  0.00  0.20  0.75
+kang         10 v4kn      0.99  0.89  0.74  0.00  0.29  0.67
+mcf_ida      10 v2        0.96  0.92  0.36  0.05  0.49  0.25
+mcf_ida      10 v4kn      0.94  0.91  0.73  0.11  0.63  0.22
+mcf_tram     10 v2        0.96  0.92  0.79  0.08  0.83  0.19
+mcf_tram     10 v4kn      0.94  0.89  0.66  0.11  0.87  0.16
+parse_gmcsf  10 v2        1.00  0.85  0.92  0.00  0.16  0.30
+parse_gmcsf  10 v4kn      1.00  0.74  0.87  0.00  0.11  0.67
+parse_ifnb   10 v2        1.00  0.90  0.87  0.00  0.02  0.45
+parse_ifnb   10 v4kn      1.00  0.80 -0.04  0.00  0.02  0.67
+parse_ifng   10 v2        1.00  0.91  0.94  0.00  0.02  0.36
+parse_ifng   10 v4kn      1.00  0.70  0.25  0.01  0.03  0.49
+parse_il4    10 v2        1.00  0.69  0.15  0.00  0.05  0.41
+parse_il4    10 v4kn      1.00  0.69  0.65  0.00  0.05  0.76
+parse_tnf    10 v2        1.00  0.86   nan  0.00  0.00  0.17
+parse_tnf    10 v4kn      1.00  0.71   nan  0.00  0.00  0.46
+tahoe_enc    10 v2        0.95  0.42  0.17  0.02  0.22  0.20
+tahoe_enc    10 v4kn      0.97  0.58  0.19  0.02  0.45  0.20
+tahoe_gem    10 v2        0.93  0.54  0.61  0.05  0.00  0.14
+tahoe_gem    10 v4kn      0.97  0.74  0.76  0.07  0.05  0.14
+tahoe_rmc    10 v2        0.98  0.72  0.28  0.01  0.71  0.30
+tahoe_rmc    10 v4kn      0.99  0.86  0.56  0.01  0.69  0.31
+tahoe_tram   10 v2        0.99  0.81  0.55  0.01  0.79  0.32
+tahoe_tram   10 v4kn      1.00  0.90  0.53  0.00  0.63  0.35
+zhang        10 v2        1.00  0.84  0.99  0.00  0.00  0.11
+zhang        10 v4kn      0.90  0.22 -0.45  0.12  0.00  0.17
+
+mean over datasets
+ALL          13 v2        0.98  0.78  0.62  0.02  0.27  0.30
+ALL          13 v4kn      0.98  0.74  0.45  0.03  0.29  0.41
+
+
+### v4kr vs v2 (splits 20-29)
+v2 = auto_v2, v4 = v4 (v4_pair on kang, zhang); means over splits present for both; floor = calls need |eff| >= 0.1
+dataset      n  est      cov   r     within null  power width
+kang         10 v2        1.00  0.82  0.81  0.00  0.20  0.75
+kang         10 v4kr      1.00  0.91  0.75  0.00  0.14  0.96
+mcf_ida      10 v2        0.96  0.92  0.36  0.05  0.49  0.25
+mcf_ida      10 v4kr      0.94  0.91  0.74  0.12  0.66  0.22
+mcf_tram     10 v2        0.96  0.92  0.79  0.08  0.83  0.19
+mcf_tram     10 v4kr      0.93  0.88  0.64  0.10  0.89  0.16
+parse_gmcsf  10 v2        1.00  0.85  0.92  0.00  0.16  0.30
+parse_gmcsf  10 v4kr      1.00  0.72  0.93  0.00  0.00  0.83
+parse_ifnb   10 v2        1.00  0.90  0.87  0.00  0.02  0.45
+parse_ifnb   10 v4kr      1.00  0.75 -0.19  0.00  0.00  0.95
+parse_ifng   10 v2        1.00  0.91  0.94  0.00  0.02  0.36
+parse_ifng   10 v4kr      1.00  0.64 -0.55  0.01  0.05  0.74
+parse_il4    10 v2        1.00  0.69  0.15  0.00  0.05  0.41
+parse_il4    10 v4kr      1.00  0.67  0.63  0.00  0.00  0.87
+parse_tnf    10 v2        1.00  0.86   nan  0.00  0.00  0.17
+parse_tnf    10 v4kr      1.00  0.61   nan  0.00  0.00  0.85
+tahoe_enc    10 v2        0.95  0.42  0.17  0.02  0.22  0.20
+tahoe_enc    10 v4kr      0.98  0.63  0.23  0.02  0.53  0.19
+tahoe_gem    10 v2        0.93  0.54  0.61  0.05  0.00  0.14
+tahoe_gem    10 v4kr      0.98  0.76  0.76  0.06  0.15  0.14
+tahoe_rmc    10 v2        0.98  0.72  0.28  0.01  0.71  0.30
+tahoe_rmc    10 v4kr      1.00  0.87  0.44  0.00  0.82  0.31
+tahoe_tram   10 v2        0.99  0.81  0.55  0.01  0.79  0.32
+tahoe_tram   10 v4kr      1.00  0.90  0.49  0.00  0.66  0.35
+zhang        10 v2        1.00  0.84  0.99  0.00  0.00  0.11
+zhang        10 v4kr      0.97  0.13  0.04  0.02  0.00  0.41
+
+mean over datasets
+ALL          13 v2        0.98  0.78  0.62  0.02  0.27  0.30
+ALL          13 v4kr      0.98  0.72  0.41  0.03  0.30  0.54
+
+
+### v4knr vs v2 (splits 20-29)
+v2 = auto_v2, v4 = v4 (v4_pair on kang, zhang); means over splits present for both; floor = calls need |eff| >= 0.1
+dataset      n  est      cov   r     within null  power width
+kang         10 v2        1.00  0.82  0.81  0.00  0.20  0.75
+kang         10 v4knr     0.98  0.90  0.72  0.00  0.28  0.67
+mcf_ida      10 v2        0.96  0.92  0.36  0.05  0.49  0.25
+mcf_ida      10 v4knr     0.94  0.92  0.74  0.12  0.68  0.21
+mcf_tram     10 v2        0.96  0.92  0.79  0.08  0.83  0.19
+mcf_tram     10 v4knr     0.94  0.89  0.65  0.10  0.86  0.16
+parse_gmcsf  10 v2        1.00  0.85  0.92  0.00  0.16  0.30
+parse_gmcsf  10 v4knr     1.00  0.75  0.84  0.00  0.10  0.68
+parse_ifnb   10 v2        1.00  0.90  0.87  0.00  0.02  0.45
+parse_ifnb   10 v4knr     1.00  0.79 -0.29  0.00  0.02  0.67
+parse_ifng   10 v2        1.00  0.91  0.94  0.00  0.02  0.36
+parse_ifng   10 v4knr     1.00  0.64  0.01  0.01  0.09  0.49
+parse_il4    10 v2        1.00  0.69  0.15  0.00  0.05  0.41
+parse_il4    10 v4knr     1.00  0.71  0.73  0.00  0.05  0.76
+parse_tnf    10 v2        1.00  0.86   nan  0.00  0.00  0.17
+parse_tnf    10 v4knr     1.00  0.66   nan  0.00  0.00  0.45
+tahoe_enc    10 v2        0.95  0.42  0.17  0.02  0.22  0.20
+tahoe_enc    10 v4knr     0.98  0.62  0.18  0.01  0.50  0.20
+tahoe_gem    10 v2        0.93  0.54  0.61  0.05  0.00  0.14
+tahoe_gem    10 v4knr     0.98  0.75  0.77  0.06  0.00  0.14
+tahoe_rmc    10 v2        0.98  0.72  0.28  0.01  0.71  0.30
+tahoe_rmc    10 v4knr     1.00  0.86  0.48  0.00  0.75  0.31
+tahoe_tram   10 v2        0.99  0.81  0.55  0.01  0.79  0.32
+tahoe_tram   10 v4knr     1.00  0.90  0.52  0.00  0.65  0.35
+zhang        10 v2        1.00  0.84  0.99  0.00  0.00  0.11
+zhang        10 v4knr     0.82  0.13 -0.07  0.20  0.00  0.17
+
+mean over datasets
+ALL          13 v2        0.98  0.78  0.62  0.02  0.27  0.30
+ALL          13 v4knr     0.97  0.73  0.44  0.04  0.31  0.40
+
+====================================================================================================
+
+### coarse functionals
+clear programs (max |beta| >= 0.1) pooled over splits; mu = unweighted mean over types
+dataset      est      nprog table_r  mu_r  mu_rmse  h_r   restr_acc (share restr)  nresp_mae
+kang         auto_v2   64    0.82    0.94  0.067    0.70   0.84 (0.30)            2.05
+kang         v4k       64    0.90    0.98  0.032    0.80   0.89 (0.30)            2.14
+kang         v4kn      64    0.89    0.98  0.034    0.76   0.86 (0.30)            1.81
+kang         v4kr      64    0.91    0.98  0.034    0.88   0.91 (0.30)            2.20
+kang         v4knr     64    0.90    0.99  0.032    0.83   0.88 (0.30)            1.81
+mcf_ida      auto_v2   52    0.92    0.98  0.025    0.75   0.65 (0.65)            0.96
+mcf_ida      v4k       52    0.91    0.98  0.034    0.81   0.73 (0.65)            0.96
+mcf_ida      v4kn      52    0.91    0.98  0.035    0.81   0.79 (0.65)            0.92
+mcf_ida      v4kr      52    0.91    0.99  0.030    0.82   0.75 (0.65)            0.87
+mcf_ida      v4knr     52    0.92    0.99  0.033    0.78   0.75 (0.65)            0.81
+mcf_tram     auto_v2   31    0.92    1.00  0.012    0.92   0.90 (0.35)            0.68
+mcf_tram     v4k       31    0.87    1.00  0.009    0.92   1.00 (0.35)            0.68
+mcf_tram     v4kn      31    0.89    1.00  0.012    0.86   0.94 (0.35)            0.74
+mcf_tram     v4kr      31    0.88    1.00  0.010    0.86   0.97 (0.35)            0.68
+mcf_tram     v4knr     31    0.89    1.00  0.009    0.83   0.97 (0.35)            0.61
+parse_gmcsf  auto_v2   26    0.85    0.95  0.011    0.86   0.69 (0.38)            1.31
+parse_gmcsf  v4k       26    0.73    0.97  0.009    0.87   0.73 (0.38)            1.42
+parse_gmcsf  v4kn      26    0.74    0.93  0.014    0.84   0.81 (0.38)            1.38
+parse_gmcsf  v4kr      26    0.72    0.94  0.013    0.88   0.69 (0.38)            1.38
+parse_gmcsf  v4knr     26    0.75    0.92  0.014    0.84   0.73 (0.38)            1.38
+parse_ifnb   auto_v2   27    0.90    0.98  0.020    0.78   1.00 (0.00)            3.26
+parse_ifnb   v4k       27    0.75    0.97  0.027    0.44   0.93 (0.00)            3.33
+parse_ifnb   v4kn      27    0.80    0.98  0.025    0.24   1.00 (0.00)            3.26
+parse_ifnb   v4kr      27    0.75    0.98  0.028    0.31   1.00 (0.00)            3.33
+parse_ifnb   v4knr     27    0.79    0.98  0.027    0.17   1.00 (0.00)            3.19
+parse_ifng   auto_v2   17    0.91    0.99  0.010    0.86   1.00 (0.00)            1.29
+parse_ifng   v4k       17    0.70    0.97  0.014    0.30   0.94 (0.00)            1.18
+parse_ifng   v4kn      17    0.70    0.95  0.021    0.49   0.82 (0.00)            1.24
+parse_ifng   v4kr      17    0.64    0.96  0.020    0.41   0.94 (0.00)            1.24
+parse_ifng   v4knr     17    0.64    0.96  0.022    0.75   0.88 (0.00)            1.24
+parse_il4    auto_v2   16    0.69    0.97  0.028    0.17   0.56 (0.44)            1.50
+parse_il4    v4k       16    0.68    0.98  0.013   -0.20   0.56 (0.44)            1.56
+parse_il4    v4kn      16    0.69    0.98  0.010    0.16   0.69 (0.44)            1.50
+parse_il4    v4kr      16    0.67    0.99  0.016    0.15   0.56 (0.44)            1.56
+parse_il4    v4knr     16    0.71    0.99  0.011   -0.11   0.50 (0.44)            1.50
+parse_tnf    auto_v2    3    0.86    0.81  0.020    0.85   1.00 (0.00)            1.00
+parse_tnf    v4k        3    0.64    0.55  0.015    0.99   1.00 (0.00)            1.00
+parse_tnf    v4kn       3    0.71    0.62  0.015   -0.98   1.00 (0.00)            1.00
+parse_tnf    v4kr       3    0.61    0.73  0.008    0.97   1.00 (0.00)            1.00
+parse_tnf    v4knr      3    0.66    0.61  0.017   -0.99   1.00 (0.00)            1.00
+tahoe_enc    auto_v2   21    0.42    0.89  0.019    0.54   0.67 (0.52)            1.10
+tahoe_enc    v4k       21    0.59    0.95  0.013    0.86   0.90 (0.52)            0.81
+tahoe_enc    v4kn      21    0.58    0.94  0.012    0.94   0.95 (0.52)            0.86
+tahoe_enc    v4kr      21    0.63    0.94  0.012    0.90   0.95 (0.52)            0.90
+tahoe_enc    v4knr     21    0.62    0.95  0.012    0.91   1.00 (0.52)            0.76
+tahoe_gem    auto_v2    9    0.54   -0.11  0.011   -0.03   0.78 (1.00)            1.33
+tahoe_gem    v4k        9    0.76    0.25  0.009    0.09   1.00 (1.00)            0.56
+tahoe_gem    v4kn       9    0.74    0.46  0.007    0.02   1.00 (1.00)            1.00
+tahoe_gem    v4kr       9    0.76    0.40  0.008    0.31   1.00 (1.00)            0.56
+tahoe_gem    v4knr      9    0.75    0.31  0.008    0.12   1.00 (1.00)            1.00
+tahoe_rmc    auto_v2   19    0.72    0.98  0.029    0.89   0.95 (0.47)            1.47
+tahoe_rmc    v4k       19    0.86    0.99  0.018    0.96   1.00 (0.47)            1.05
+tahoe_rmc    v4kn      19    0.86    0.99  0.018    0.95   1.00 (0.47)            1.63
+tahoe_rmc    v4kr      19    0.87    0.99  0.016    0.95   1.00 (0.47)            1.00
+tahoe_rmc    v4knr     19    0.86    0.99  0.018    0.97   1.00 (0.47)            1.32
+tahoe_tram   auto_v2   28    0.81    0.98  0.026    0.85   0.86 (0.50)            0.79
+tahoe_tram   v4k       28    0.89    0.99  0.029    0.96   0.86 (0.50)            1.50
+tahoe_tram   v4kn      28    0.90    0.99  0.026    0.94   0.86 (0.50)            1.50
+tahoe_tram   v4kr      28    0.90    0.99  0.017    0.96   0.89 (0.50)            1.39
+tahoe_tram   v4knr     28    0.90    0.99  0.022    0.96   0.86 (0.50)            1.39
+
+====================================================================================================
+
+### COMBAT real bulk, CyTOF-anchored fractions (sepsis, splits 20-24)
+lite   fraction r vs single-cell truth 0.47 (n splits 5)
+   v2   cov 0.99 r 0.13 calls 0.0 null 0.00 power 0.00 width 0.59
+   v4k  cov 0.98 r 0.11 calls 1.2 null 0.02 power 0.04 width 3.07
+cytof  fraction r vs single-cell truth 0.51 (n splits 5)
+   v2   cov 0.98 r 0.10 calls 0.2 null 0.00 power 0.00 width 0.59
+   v4k  cov 0.99 r 0.19 calls 0.6 null 0.01 power 0.03 width 2.51

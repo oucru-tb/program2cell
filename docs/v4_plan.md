@@ -367,3 +367,77 @@ references (one reference per study here).
 
 **Plan unchanged:** (2) noise-matched simulation, (1) stacking more estimators, (3) CyTOF-anchored COMBAT
 fractions, then a full 13-dataset run of the best variant.
+
+## 11. Overnight run: stacked variants on 13 datasets, splits 20–29, and CyTOF-anchored COMBAT (2026-11-05)
+
+`overnight_v4.sh` → `benchmarks/dev/overnight_2026-11-05.txt` (`v4_overnight_summary.py`). Development
+splits only; nothing held-out was touched. Four variants against v2 (auto), `_pair` designs on Kang and Zhang.
+
+**Means over 13 datasets:**
+
+| est | cov | r | within r | null calls | power | width |
+|---|---|---|---|---|---|---|
+| v2 | 0.98 | 0.78 | 0.62 | 0.02 | 0.27 | 0.30 |
+| v4k (stacked) | 0.98 | 0.73 | 0.46 | 0.02 | 0.28 | 0.54 |
+| v4kn (+ noise-matched cohorts) | 0.98 | 0.74 | 0.45 | 0.03 | 0.29 | 0.41 |
+| v4kr (+ ridge-GLS, 60 cohorts) | 0.98 | 0.72 | 0.41 | 0.03 | 0.30 | 0.54 |
+| v4knr (both) | 0.97 | 0.73 | 0.44 | 0.04 | 0.31 | 0.40 |
+
+No variant beats v2 overall. The result splits by system:
+- **Tahoe cell lines: v4 wins on every drug.** r: enc 0.42 → 0.59, gem 0.54 → 0.76, rmc 0.72 → 0.86,
+  tram 0.81 → 0.89. Coverage is equal or better (0.97–1.00). Power rises on enc (0.22 → 0.50) and rmc
+  (0.71 → 0.79) but falls on trametinib (0.79 → 0.63; the R19 saturation issue is still open).
+- **McFarland: r ties (0.87–0.92).** Within-program r is much better on idasanutlin (0.36 → 0.74) and worse
+  on trametinib (0.79 → 0.62–0.66). Null calls rise (0.05 → 0.09–0.12), with coverage 0.92–0.94 at level 0.9.
+- **Kang: r is better (0.82 → 0.89–0.91)**, with coverage 0.98–1.00.
+- **Parse: v4 loses.** r 0.85–0.91 → 0.64–0.80. Within-program r collapses on IFN-β and IFN-γ
+  (0.87–0.94 → −0.55 to 0.25), and intervals are 2–3× wider. Noise matching narrows the Parse intervals
+  (e.g. IFN-β 0.95 → 0.67) but does not repair r.
+- **Zhang: v4 fails (r 0.84 → 0.13–0.22).** Noise matching also breaks coverage there (v4kn 0.90 with null
+  calls 0.12; v4knr 0.82 with 0.20). Within-arm sd on a paired design is not a safe target as implemented.
+
+**Variant ranking:**
+- Ridge-GLS (v4kr) adds nothing for twice the runtime: r 0.72 vs 0.73, power +0.02.
+- Noise matching (v4kn) is the only change that helps Parse widths, but it is unsafe on Zhang.
+- **v4k stays the reference v4 variant.**
+
+**Coarse functionals:**
+- μ (mean over types) is recovered as well or better by every v4 variant on 12 of 13 datasets (r ≥ 0.92).
+- Tahoe gemcitabine μ is the exception where v2 fails (r −0.11) and v4 partly recovers it (0.25–0.46).
+- Parse TNF-α has 3 programs only. So v4's Parse loss is in the deviations, not in the shared response:
+  this revises the split 20–22 reading in section 8, where μ looked like the failure.
+- Shared-vs-restricted accuracy improves on Tahoe (enc 0.67 → 0.90–1.00, gem 0.78 → 1.00).
+
+**COMBAT real bulk, CyTOF-anchored fractions (sepsis vs healthy, splits 20–24):**
+
+| fractions | fraction r | v2 effect r / calls | v4k effect r / calls / width |
+|---|---|---|---|
+| PALM-lite | 0.47 | 0.13 / 0.0 | 0.11 / 1.2 / 3.07 |
+| CyTOF-anchored | 0.51 | 0.10 / 0.2 | 0.19 / 0.6 / 2.51 |
+
+- Anchoring raises fraction r only slightly on average: 0.47 → 0.51; split 20 was 0.59.
+- Effect recovery on real bulk stays at r ≈ 0.1–0.2 with essentially no calls.
+- The v4k intervals (2.5–3.1) are uninformative.
+- The estimated fraction noise is unstable across splits (0.74 on split 20, 0.00 on split 24): the excess
+  anchor needs a floor for external fractions.
+- Conclusion: real whole-blood bulk is not rescued by better coarse fractions. The limit is the within-group
+  split (CD4/CD8, monocyte subsets) and the platform shift, not the four CyTOF groups.
+
+**Reading.** Section 8's footprint gate predicted this pattern:
+- v4 gains where footprints differ by type (cell lines);
+- v4 loses where one shared PBMC response dominates (Parse, Zhang).
+
+**A gated estimator would score well on this development set:**
+- v4k on the six cell-line datasets and v2 elsewhere gives mean r ≈ 0.83 vs v2 0.78, at no loss of coverage.
+- That number is chosen after seeing the results. It counts only once the gate is pre-specified and run on
+  held-out splits.
+- The gate statistic must come from the inputs. The section 8 gate used single-cell truth; candidates are
+  footprint heterogeneity in the calibration atlas, or the system type declared by the user.
+
+**Next (proposed, not started):**
+1. Define the gate from inputs and check it on splits 20–29.
+2. Floor the external-fraction noise estimate.
+3. Then decide the v4 freeze: gated v4k, held-out 40–49.
+
+v3 (v2 estimator + self-tests, F6, noise ratio, μ/shared-restricted report, fraction-noise input) is
+unaffected and remains ready to freeze on the user's go-ahead (held-out 30–39).
