@@ -97,6 +97,13 @@ def estimate_frac_sd(cal, pi, Y, T, B, G, b_study, offprog_sd=0.0, n_sim=8, seed
     return s, dict(m_study=m_study, m_grid=m.tolist())
 
 
+def _within_arm_sd(raw, T):
+    """Within-arm sd of reallocated activity raw (N, C, P) per (type, program)."""
+    raw, T = np.asarray(raw, float), np.asarray(T)
+    res = np.concatenate([raw[T == t] - raw[T == t].mean(0) for t in (0, 1)])
+    return np.sqrt((res ** 2).sum(0) / max(len(T) - 2, 1))
+
+
 def shrink_deviations(b, se, w):
     """Shared response plus shrunk type deviations: mu_p = sum_c w_c b_cp (w the mean read fractions),
     d = b - mu, between-type spread tau_p^2 = max(0, mean_c d^2 - mean_c se^2) (method of moments), each
@@ -110,7 +117,7 @@ def shrink_deviations(b, se, w):
 
 
 def gls_calibrated(cal, pi, T, B, G, b_study, n_sim=30, level=0.9, seed=0, offprog_sd=0.0, frac_sd=0.0,
-                   shrink=False, se_study=None):
+                   shrink=False, se_study=None, diff_study=None, raw_sd_study=None):
     """Simulation calibration of gls_unmix (see module doc). shrink: shrink_deviations applied in every simulated
     cohort as on the study (b_study must then be the shrunk study estimate). se_study (C, P): the study's GLS
     standard errors; where their median exceeds the simulated cohorts' the error quantile is scaled up by the
@@ -120,7 +127,7 @@ def gls_calibrated(cal, pi, T, B, G, b_study, n_sim=30, level=0.9, seed=0, offpr
     from .realloc import reallocate, em_fractions
     rng = np.random.default_rng(seed + 101)
     scale = np.clip(np.abs(b_study).max(0), 0.05, 1.0)        # planted sizes U(-scale, scale) per program
-    est, true, ses = [], [], []
+    est, true, ses, diffs, raw_sds = [], [], [], [], []
     for _ in range(n_sim):
         Y, pt, Bk, beta = um.simulate_cohort(cal, pi, T, rng, scale, offprog_sd=offprog_sd)
         pf = perturb_fractions(em_fractions(np.asarray(Y, float), np.asarray(Bk, float)), frac_sd, rng)
@@ -130,19 +137,38 @@ def gls_calibrated(cal, pi, T, B, G, b_study, n_sim=30, level=0.9, seed=0, offpr
         if shrink:
             b = shrink_deviations(b, se, pf.mean(0))
         est.append(b); true.append(beta); ses.append(se)
+        if diff_study is not None:
+            raw = np.asarray(raw)
+            diffs.append(raw[np.asarray(T) == 1].mean(0) - raw[np.asarray(T) == 0].mean(0))
+            raw_sds.append(_within_arm_sd(raw, T))
     est, true = np.array(est), np.array(true)
-    k = np.clip((est * true).sum(0) / np.maximum((est ** 2).sum(0), 1e-12), 0.0, 1.5)
-    q = np.quantile(np.abs(true - k[None] * est), level, axis=0)
     ratio = 1.0
     if se_study is not None:
         ratio = float(max(1.0, np.median(se_study) / np.median(ses)))
-        q = q * ratio
+    if raw_sd_study is not None and diff_study is not None:   # stacking: the noise both estimators share
+        ratio = float(max(1.0, np.median(raw_sd_study) / np.median(raw_sds)))
+    if diff_study is not None:
+        # stacking: per (type, program) the least-squares combination of GLS and the reallocated contrast that
+        # best predicts the planted effect over the simulated cohorts; leave-one-out residual quantile
+        X = np.stack([est, np.array(diffs)], -1)                               # (S, C, P, 2)
+        XtX = np.einsum("scpi,scpj->cpij", X, X) + 1e-10 * np.eye(2)
+        Xty = np.einsum("scpi,scp->cpi", X, true)
+        coef = np.linalg.solve(XtX, Xty[..., None])[..., 0]                    # (C, P, 2)
+        Hinv = np.linalg.inv(XtX)
+        h = np.einsum("scpi,cpij,scpj->scp", X, Hinv, X)
+        res = (true - np.einsum("scpi,cpi->scp", X, coef)) / np.clip(1 - h, 0.05, None)
+        q = np.quantile(np.abs(res), level, axis=0) * ratio
+        eff = coef[..., 0] * b_study + coef[..., 1] * diff_study
+        return eff, eff - q, eff + q, coef, dict(noise_ratio=ratio, weight_gls=coef[..., 0].tolist(),
+                                                 weight_diff=coef[..., 1].tolist())
+    k = np.clip((est * true).sum(0) / np.maximum((est ** 2).sum(0), 1e-12), 0.0, 1.5)
+    q = np.quantile(np.abs(true - k[None] * est), level, axis=0) * ratio
     eff = k * b_study
     return eff, eff - q, eff + q, k, dict(noise_ratio=ratio)
 
 
 def v4_effects(Y, fractions, B, G, T, calibration, groups=None, level=0.9, seed=0, n_sim=30, frac_sd=0.0,
-               min_effect=0.0, shrink=False, noise_anchor=False):
+               min_effect=0.0, shrink=False, noise_anchor=False, stack=False, raw_noise=False):
     """The v4 estimator on one study. frac_sd: number, or "estimate" (estimate_frac_sd; for fractions that did
     not come from this bulk). min_effect: effect floor for calls (|effect| >= min_effect and the interval
     excludes 0). Returns dict(effects, lo, hi, calls, shared, deviation, k, tau, frac_sd, ...)."""
@@ -162,7 +188,10 @@ def v4_effects(Y, fractions, B, G, T, calibration, groups=None, level=0.9, seed=
     bs = shrink_deviations(b, se, pi.mean(0)) if shrink else b
     eff, lo, hi, k, ci = gls_calibrated(calibration, pi, T, B, G, bs, n_sim=n_sim, level=level, seed=seed,
                                         offprog_sd=tau, frac_sd=float(frac_sd), shrink=shrink,
-                                        se_study=se if noise_anchor else None)
+                                        se_study=se if noise_anchor and not raw_noise else None,
+                                        diff_study=(np.asarray(raw)[T == 1].mean(0) - np.asarray(raw)[T == 0].mean(0))
+                                        if stack else None,
+                                        raw_sd_study=_within_arm_sd(raw, T) if stack and raw_noise else None)
     info.update(ci)
     w = pi.mean(0) / pi.mean(0).sum()
     mu = w @ eff

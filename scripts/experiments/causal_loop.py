@@ -88,7 +88,13 @@ ESTIMATORS = {"diff": dict(estimator="diff"),
               "v4_pair": dict(estimator="v4", paired=True),
               # + shrunk type deviations (calibrated as shrunk) and the study-vs-simulation noise ratio
               "v4s": dict(estimator="v4", v4_kw=dict(shrink=True, noise_anchor=True)),
-              "v4s_pair": dict(estimator="v4", paired=True, v4_kw=dict(shrink=True, noise_anchor=True))}
+              "v4s_pair": dict(estimator="v4", paired=True, v4_kw=dict(shrink=True, noise_anchor=True)),
+              # stacked: simulation-fitted combination of GLS and the reallocated contrast per (type, program)
+              "v4k": dict(estimator="v4", v4_kw=dict(stack=True, noise_anchor=True)),
+              "v4k_pair": dict(estimator="v4", paired=True, v4_kw=dict(stack=True, noise_anchor=True)),
+              # + noise ratio on the within-arm noise of the reallocated activity (shared by both estimators)
+              "v4k2": dict(estimator="v4", v4_kw=dict(stack=True, noise_anchor=True, raw_noise=True)),
+              "v4k2_pair": dict(estimator="v4", paired=True, v4_kw=dict(stack=True, noise_anchor=True, raw_noise=True))}
 
 # the defaults changed at freeze v2 (sim_widen "abs", choose "width_guard"): every older estimator keeps the
 # settings it was run with (freeze v1 defaults sim_widen=True, choose="rmse")

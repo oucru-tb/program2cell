@@ -290,3 +290,40 @@ input; F3 EPIC-unmix and F5 robust neural posterior estimation are large builds;
 through the mixing operator) is the principled form of idea 1, which was rejected at 7 programs; F7 and idea 6
 (conformal on COMBAT) need calls on COMBAT, which v2 does not make; ideas 5, 11, 12, 13 and 15 are long-term
 or need data not in hand; 8, 14 and 16 are reporting.
+
+## 9. Parse diagnosis and stacking (2026-11-05, splits 20–22)
+
+**Where v4 loses Parse** (parse_ifnb s20, against McFarland):
+
+| | v2 | Reallocated contrast (no unmixing) | GLS raw | v4 |
+|---|---|---|---|---|
+| Parse IFN-β r, all pairs / shared μ | 0.95 / 0.99 | 0.88 / 0.98 | 0.22 / 0.71 | 0.33 / 0.87 |
+| McFarland r, all pairs / shared μ | 0.93 / 0.99 | 0.78 / 0.98 | 0.93 / 0.99 | 0.95 / 0.99 |
+
+- On Parse the reallocated contrast is already close to the truth: little leakage to undo. GLS unmixing is
+  noise there: estimates about 3 times too large (mean |β| 0.18 vs 0.06), standard errors 6 times McFarland's
+  (0.10 vs 0.016), and the calibration sets the slope k ≈ 0 on 41% of pairs. Not the off-program τ (without
+  it r 0.31).
+- On McFarland the contrast leaks (0.78) and GLS repairs it (0.93).
+
+**Fix: stacking** (`gls_calibrated(diff_study=...)`, `v4_kw=dict(stack=True)`, estimator `v4k`): in every
+simulated cohort both GLS and the reallocated contrast are computed; per (type, program) the least-squares
+combination predicting the planted effect is fitted over the cohorts, with leave-one-out residual quantiles
+for the interval. No routing on realised widths: the weights come from simulations of this design.
+
+| | Coverage | r | Within-program r | False calls | Power | Width |
+|---|---|---|---|---|---|---|
+| v2 | 0.99 | 0.85 | 0.53 | 0.01 | 0.31 | 0.33 |
+| v4k (stacked + GLS-se noise ratio) | 0.99 | 0.74 | 0.68 | 0.01 | 0.30 | 0.61 |
+
+(8 datasets, splits 20–22: Kang, Zhang, Parse IFN-β / TNF-α / GM-CSF, McFarland idasanutlin, Tahoe RMC-6236 /
+trametinib.)
+
+- Better than v2: Kang r 0.94 (0.91); Tahoe RMC-6236 r 0.88, within 0.67, power 0.78 (0.75 / 0.23 / 0.69);
+  Tahoe trametinib r 0.91 (0.78); McFarland within-program r 0.66 (0.44), power 0.66 (0.55).
+- Parse recovered most of the way: r 0.57–0.80 (v4 0.13–0.30; v2 0.79–0.93), but intervals 2–6 times v2's.
+- Zhang (truth ≈ null): coverage 0.99, false calls 0.01 (v4 0.80 / 0.18).
+- Still worse than v2: Tahoe trametinib power 0.69 (0.88); Parse widths.
+- Noise ratio on the raw within-arm noise instead of GLS standard errors (`v4k2`): Parse wider (1.37),
+  Zhang false calls 0.11. Rejected. It shows the Parse width is a real study-vs-simulation noise mismatch
+  (Parse's within-arm noise exceeds the simulated cohorts'), not a GLS artefact.
