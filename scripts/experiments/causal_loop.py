@@ -97,7 +97,17 @@ ESTIMATORS = {"diff": dict(estimator="diff"),
               "v4k2_pair": dict(estimator="v4", paired=True, v4_kw=dict(stack=True, noise_anchor=True, raw_noise=True)),
               # + tree-structured shrinkage (myeloid / lymphoid) as a third stacked estimator (modelling review)
               "v4kt": dict(estimator="v4", v4_kw=dict(stack=True, noise_anchor=True, tree=True)),
-              "v4kt_pair": dict(estimator="v4", paired=True, v4_kw=dict(stack=True, noise_anchor=True, tree=True))}
+              "v4kt_pair": dict(estimator="v4", paired=True, v4_kw=dict(stack=True, noise_anchor=True, tree=True)),
+              # overnight 2026-11-05: noise-matched simulated cohorts (no interval scaling) and a ridge-GLS third
+              # stacked estimator (60 cohorts)
+              "v4kn": dict(estimator="v4", v4_kw=dict(stack=True, noise_match=True)),
+              "v4kn_pair": dict(estimator="v4", paired=True, v4_kw=dict(stack=True, noise_match=True)),
+              "v4kr": dict(estimator="v4", v4_kw=dict(stack=True, noise_anchor=True, ridge_stack=True, n_sim=60)),
+              "v4kr_pair": dict(estimator="v4", paired=True, v4_kw=dict(stack=True, noise_anchor=True, ridge_stack=True,
+                                                                        n_sim=60)),
+              "v4knr": dict(estimator="v4", v4_kw=dict(stack=True, noise_match=True, ridge_stack=True, n_sim=60)),
+              "v4knr_pair": dict(estimator="v4", paired=True, v4_kw=dict(stack=True, noise_match=True, ridge_stack=True,
+                                                                         n_sim=60))}
 
 # the defaults changed at freeze v2 (sim_widen "abs", choose "width_guard"): every older estimator keeps the
 # settings it was run with (freeze v1 defaults sim_widen=True, choose="rmse")

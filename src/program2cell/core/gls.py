@@ -23,9 +23,10 @@ import numpy as np
 FRAC_SD_REAL_BULK = dict(raw=1.0, platform_corrected=0.8)
 
 
-def gls_unmix(raw, A, T, groups=None):
+def gls_unmix(raw, A, T, groups=None, ridge=0.0):
     """raw (N, C, P) reallocated activity, A (N, C, P, C, P) leakage operators, T (N,) 0/1, groups (N,) or None
-    -> (beta (C, P), se (C, P), residual scale s2)."""
+    -> (beta (C, P), se (C, P), residual scale s2). ridge > 0: penalty ridge * mean(diag X'X) on the effect
+    coefficients (between GLS and no unmixing)."""
     N, C, P = raw.shape
     K = C * P
     y = np.asarray(raw, float).reshape(N, K)
@@ -45,8 +46,15 @@ def gls_unmix(raw, A, T, groups=None):
             Y[m] -= Y[m].mean(0)
     X = (X / sd[None, :, None]).reshape(-1, X.shape[2])
     Y = (Y / sd[None, :]).reshape(-1)
-    coef, *_ = np.linalg.lstsq(X, Y, rcond=None)
-    M = np.linalg.pinv(X.T @ X)
+    if ridge:
+        XtX = X.T @ X
+        R = np.zeros(X.shape[1])
+        R[-K:] = ridge * np.mean(np.diag(XtX))
+        M = np.linalg.pinv(XtX + np.diag(R))
+        coef = M @ (X.T @ Y)
+    else:
+        coef, *_ = np.linalg.lstsq(X, Y, rcond=None)
+        M = np.linalg.pinv(X.T @ X)
     resid = Y - X @ coef
     s2 = float(resid @ resid / max(len(Y) - X.shape[1], 1))
     b = coef[-K:].reshape(C, P)
@@ -97,9 +105,15 @@ def estimate_frac_sd(cal, pi, Y, T, B, G, b_study, offprog_sd=0.0, n_sim=8, seed
     return s, dict(m_study=m_study, m_grid=m.tolist())
 
 
-def _within_arm_sd(raw, T):
-    """Within-arm sd of reallocated activity raw (N, C, P) per (type, program)."""
-    raw, T = np.asarray(raw, float), np.asarray(T)
+def _within_arm_sd(raw, T, groups=None):
+    """Within-arm sd of reallocated activity raw (N, C, P) per (type, program); groups: donor means removed
+    first (the noise a paired analysis sees)."""
+    raw, T = np.asarray(raw, float).copy(), np.asarray(T)
+    if groups is not None:
+        g = np.asarray(groups).astype(str)
+        for u in np.unique(g):
+            m = g == u
+            raw[m] -= raw[m].mean(0)
     res = np.concatenate([raw[T == t] - raw[T == t].mean(0) for t in (0, 1)])
     return np.sqrt((res ** 2).sum(0) / max(len(T) - 2, 1))
 
@@ -155,7 +169,7 @@ def shrink_tree(b, se, w, groups):
 
 def gls_calibrated(cal, pi, T, B, G, b_study, n_sim=30, level=0.9, seed=0, offprog_sd=0.0, frac_sd=0.0,
                    shrink=False, se_study=None, diff_study=None, raw_sd_study=None, tree_groups=None,
-                   tree_study=None):
+                   tree_study=None, noise_match=False, ridge_study=None, ridge=0.1):
     """Simulation calibration of gls_unmix (see module doc). shrink: shrink_deviations applied in every simulated
     cohort as on the study (b_study must then be the shrunk study estimate). se_study (C, P): the study's GLS
     standard errors; where their median exceeds the simulated cohorts' the error quantile is scaled up by the
@@ -165,13 +179,20 @@ def gls_calibrated(cal, pi, T, B, G, b_study, n_sim=30, level=0.9, seed=0, offpr
     from .realloc import reallocate, em_fractions
     rng = np.random.default_rng(seed + 101)
     scale = np.clip(np.abs(b_study).max(0), 0.05, 1.0)        # planted sizes U(-scale, scale) per program
-    est, true, ses, diffs, raw_sds, trees = [], [], [], [], [], []
+    est, true, ses, diffs, raw_sds, trees, ridges = [], [], [], [], [], [], []
     for _ in range(n_sim):
         Y, pt, Bk, beta = um.simulate_cohort(cal, pi, T, rng, scale, offprog_sd=offprog_sd)
         pf = perturb_fractions(em_fractions(np.asarray(Y, float), np.asarray(Bk, float)), frac_sd, rng)
-        raw = reallocate(Y, pf, Bk, G)
+        raw = np.asarray(reallocate(Y, pf, Bk, G))
         A = um.leakage_operator(pf, Bk, G, diagonal=False)
-        b, se, _ = gls_unmix(np.asarray(raw), np.asarray(A), T, None)
+        if noise_match and raw_sd_study is not None:
+            # noise-matched cohort: independent per-sample noise added to the reallocated activity until its
+            # within-arm sd matches the study's (per type and program)
+            extra = np.sqrt(np.clip(raw_sd_study ** 2 - _within_arm_sd(raw, T) ** 2, 0, None))
+            raw = raw + rng.normal(size=raw.shape) * extra[None]
+        b, se, _ = gls_unmix(raw, np.asarray(A), T, None)
+        if ridge_study is not None:
+            ridges.append(gls_unmix(raw, np.asarray(A), T, None, ridge=ridge)[0])
         if shrink:
             b = shrink_deviations(b, se, pf.mean(0))
         est.append(b); true.append(beta); ses.append(se)
@@ -185,12 +206,12 @@ def gls_calibrated(cal, pi, T, B, G, b_study, n_sim=30, level=0.9, seed=0, offpr
     ratio = 1.0
     if se_study is not None:
         ratio = float(max(1.0, np.median(se_study) / np.median(ses)))
-    if raw_sd_study is not None and diff_study is not None:   # stacking: the noise both estimators share
+    if raw_sd_study is not None and diff_study is not None and not noise_match:   # the noise both estimators share
         ratio = float(max(1.0, np.median(raw_sd_study) / np.median(raw_sds)))
     if diff_study is not None:
         # stacking: per (type, program) the least-squares combination of GLS and the reallocated contrast that
         # best predicts the planted effect over the simulated cohorts; leave-one-out residual quantile
-        cols = [est, np.array(diffs)] + ([np.array(trees)] if tree_study is not None else [])
+        cols = [est, np.array(diffs)] + ([np.array(trees)] if tree_study is not None else []) +                ([np.array(ridges)] if ridge_study is not None else [])
         X = np.stack(cols, -1)                                                 # (S, C, P, K)
         XtX = np.einsum("scpi,scpj->cpij", X, X) + 1e-10 * np.eye(X.shape[-1])
         Xty = np.einsum("scpi,scp->cpi", X, true)
@@ -200,8 +221,12 @@ def gls_calibrated(cal, pi, T, B, G, b_study, n_sim=30, level=0.9, seed=0, offpr
         res = (true - np.einsum("scpi,cpi->scp", X, coef)) / np.clip(1 - h, 0.05, None)
         q = np.quantile(np.abs(res), level, axis=0) * ratio
         eff = coef[..., 0] * b_study + coef[..., 1] * diff_study
+        j = 2
         if tree_study is not None:
-            eff = eff + coef[..., 2] * tree_study
+            eff = eff + coef[..., j] * tree_study
+            j += 1
+        if ridge_study is not None:
+            eff = eff + coef[..., j] * ridge_study
         return eff, eff - q, eff + q, coef, dict(noise_ratio=ratio, weight_gls=coef[..., 0].tolist(),
                                                  weight_diff=coef[..., 1].tolist(),
                                                  weight_tree=coef[..., 2].tolist() if tree_study is not None else None)
@@ -213,7 +238,7 @@ def gls_calibrated(cal, pi, T, B, G, b_study, n_sim=30, level=0.9, seed=0, offpr
 
 def v4_effects(Y, fractions, B, G, T, calibration, groups=None, level=0.9, seed=0, n_sim=30, frac_sd=0.0,
                min_effect=0.0, shrink=False, noise_anchor=False, stack=False, raw_noise=False, tree=False,
-               cell_types=None):
+               cell_types=None, noise_match=False, ridge_stack=False, ridge=0.1):
     """The v4 estimator on one study. frac_sd: number, or "estimate" (estimate_frac_sd; for fractions that did
     not come from this bulk). min_effect: effect floor for calls (|effect| >= min_effect and the interval
     excludes 0). Returns dict(effects, lo, hi, calls, shared, deviation, k, tau, frac_sd, ...)."""
@@ -237,7 +262,10 @@ def v4_effects(Y, fractions, B, G, T, calibration, groups=None, level=0.9, seed=
                                         se_study=se if noise_anchor and not raw_noise else None,
                                         diff_study=(np.asarray(raw)[T == 1].mean(0) - np.asarray(raw)[T == 0].mean(0))
                                         if stack else None,
-                                        raw_sd_study=_within_arm_sd(raw, T) if stack and raw_noise else None,
+                                        raw_sd_study=_within_arm_sd(raw, T, groups) if stack and (raw_noise or noise_match)
+                                        else None, noise_match=noise_match, ridge=ridge,
+                                        ridge_study=gls_unmix(np.asarray(raw), np.asarray(A), T, groups, ridge=ridge)[0]
+                                        if stack and ridge_stack else None,
                                         tree_groups=tg, tree_study=shrink_tree(b, se, pi.mean(0), tg) if tg is not None
                                         else None)
     info.update(ci)
