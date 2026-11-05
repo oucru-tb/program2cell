@@ -81,7 +81,14 @@ ESTIMATORS = {"diff": dict(estimator="diff"),
               "auto_v3partial": dict(estimator="auto", unmix_kw=dict(pool="partial")),
               "direct": dict(estimator="direct", direct_kw=dict(n_boot=40)),
               "direct_nb": dict(estimator="direct", direct_kw=dict(n_boot=40, weights="nb")),
-              "direct_pair": dict(estimator="direct", paired=True, direct_kw=dict(n_boot=40))}
+              "direct_pair": dict(estimator="direct", paired=True, direct_kw=dict(n_boot=40)),
+              # v4 development (2026-11-05, docs/v4_plan.md sections 4-7): GLS unmixing, off-program and
+              # fraction-error calibration (core.gls); assembled bulk: frac_sd 0; paired designs: v4_pair
+              "v4": dict(estimator="v4"),
+              "v4_pair": dict(estimator="v4", paired=True),
+              # + shrunk type deviations (calibrated as shrunk) and the study-vs-simulation noise ratio
+              "v4s": dict(estimator="v4", v4_kw=dict(shrink=True, noise_anchor=True)),
+              "v4s_pair": dict(estimator="v4", paired=True, v4_kw=dict(shrink=True, noise_anchor=True))}
 
 # the defaults changed at freeze v2 (sim_widen "abs", choose "width_guard"): every older estimator keeps the
 # settings it was run with (freeze v1 defaults sim_widen=True, choose="rmse")

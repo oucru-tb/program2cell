@@ -218,3 +218,75 @@ design no longer separates the types, and no interval can recover a ranking the 
 - Sensitivity: on McFarland, an overestimate of 0.2–0.3 costs 0.1–0.15 power and raises false calls to
   0.10–0.17 on two of three splits (the slope k inflates the effects). An underestimate costs coverage.
   Neither direction is free.
+
+## 8. v4 estimator in the package, first comparison, and more idea-register tests (2026-11-05)
+
+**v4 in program2cell** (`core/gls.py`, `program_deconvolution(estimator="v4", v4_kw=...)`; opt-in, not frozen):
+GLS unmixing, off-program τ and stated fraction noise in the calibration, shared response μ and deviations in
+`info["v4"]`. About 1 minute per study, against several minutes for v2.
+
+**v4 vs v2, 13 datasets, splits 20–29** (`v4_compare.py`; Tahoe gemcitabine 7 splits):
+
+| | Coverage | r | Within-program r | False calls | Power | Width |
+|---|---|---|---|---|---|---|
+| v2 | 0.98 | 0.78 | 0.62 | 0.02 | 0.27 | 0.30 |
+| v4 | 0.95 | 0.47 | 0.30 | 0.04 | 0.26 | 0.48 |
+
+- Cell lines: v4 better or equal (McFarland idasanutlin within-program r 0.36 → 0.72, power 0.49 → 0.67;
+  Tahoe encorafenib power 0.22 → 0.50; Tahoe gemcitabine and RMC-6236 within-program r up); trametinib worse
+  (Tahoe power 0.79 → 0.45).
+- PBMC: v4 fails. Parse r 0.85–0.93 → 0.07–0.30 with intervals 2–3 times wider; Zhang (true effects ≤ 0.05)
+  coverage 0.75, false calls 0.23.
+
+**Two fixes, quick test (6 datasets, splits 20–22; estimator `v4s`):**
+- Study-vs-simulation noise ratio (intervals scaled up when the study's GLS standard errors exceed the
+  simulated cohorts'): Zhang coverage 0.80 → 0.93, false calls 0.18 → 0.06. **Keep.**
+- Shrinkage of deviations towards μ (method of moments, calibrated as shrunk): Parse unchanged (r 0.23 / 0.09).
+  Not the cause.
+
+**Idea 9, coarser functionals** (`coarse_functionals.py`, saved outputs; programs with max |β| ≥ 0.1):
+- v2 recovers the shared response μ almost everywhere (r ≥ 0.94 except Parse TNF-α 0.81 and Tahoe
+  gemcitabine), including Kang, where the per-type table is weaker (0.82).
+- v4's Parse failure is in μ itself (r 0.34–0.85 vs v2 0.81–0.99), so it is not a deviation problem.
+- Shared vs restricted (h = sd / (|μ| + sd)): v4 better on cell lines (Tahoe encorafenib r 0.54 → 0.92,
+  RMC-6236 0.89 → 0.96, trametinib 0.85 → 0.95).
+- Number of responding types: poor for both (mean error 1–3 types; conservative calls).
+- Decision: report μ and shared-vs-restricted alongside the per-type table (v3 reporting).
+
+**Idea 10 gate, footprint heterogeneity (R17)** (`footprint_heterogeneity.py`; single-cell truth side):
+mean pairwise r of per-type gene log fold changes over a program's genes, responding programs.
+- PBMC cytokines share one footprint: Parse IFN-β 0.51–0.81, TNF-α 0.66–0.76, Kang 0.38–0.85 (JAK-STAT
+  0.81–0.85).
+- Cell lines do not: McFarland 0.09–0.37, Tahoe 0.38–0.64.
+- So type-specific footprints do not explain v4's Parse failure. They are a cell-line issue (where v4 already
+  does well). Idea 10 stays gated; its target is cell lines.
+- Open: the Parse cause. A broad shared cytokine response moves the reallocated activity of every program
+  (NF-κB and TNF-α respond with weak weight agreement, 0.13–0.41), which GLS attributes through the leakage
+  operator while v2's calibrated reallocation absorbs it per type. To test next: v4 μ with and without the
+  off-program τ, and GLS on Parse with v2's calibrated slopes.
+
+**F6, per-sample fit score as a missing-type detector** (`missing_type_score.py`, COMBAT, split 20 reference):
+- Drop-one-type on single-cell pseudobulk: the score rises with the dropped type's true read fraction
+  (Spearman 0.45–0.88 for 6 of 7 types; B cells 0.22).
+- COMBAT real whole-blood bulk, 131 specimens with CyTOF: Spearman of the score with the granulocyte
+  frequency (neutrophil + eosinophil + basophil; absent from the PBMC reference) **0.72**. Control, the same
+  specimens' single-cell pseudobulk (no granulocytes): 0.18.
+- **Adopt** as a per-sample report next to the self-tests (cheap; validated on real data with an
+  independent measurement).
+
+**Self-tests on COMBAT real bulk** (`combat_selftest.py`, v2, sepsis, splits 20–21):
+
+| Bulk | Null-program calls | Marker leakage calls | Leaked \|effect\| | Real-program calls |
+|---|---|---|---|---|
+| Single-cell pseudobulk | 0–0.02 | 0 | 0.06–0.08 | 0 |
+| Real whole blood | 0–0.02 | 0 | 0.15 | 0 |
+| Real, self-offset | 0–0.04 | 0 | 0.17–0.21 | 1 |
+
+v2 makes no false calls on real bulk, but it also makes essentially no calls: its intervals absorb a leaked
+effect size twice that of the pseudobulk. Safe, no power on this contrast.
+
+**Not tested, with reasons:** F1/F2 (fraction uncertainty) is covered by section 7's stated fraction-noise
+input; F3 EPIC-unmix and F5 robust neural posterior estimation are large builds; F4 (tensor decomposition
+through the mixing operator) is the principled form of idea 1, which was rejected at 7 programs; F7 and idea 6
+(conformal on COMBAT) need calls on COMBAT, which v2 does not make; ideas 5, 11, 12, 13 and 15 are long-term
+or need data not in hand; 8, 14 and 16 are reporting.

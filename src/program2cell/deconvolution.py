@@ -64,7 +64,7 @@ UNMIX_DEFAULTS = dict(pev=True, misfit=True, choose="width_guard")
 def program_deconvolution(inputs, calibration, fractions=None, fraction_draws=None, engine=None, frac_fn=None,
                           treatment=None, effect_interval="lk", own=True, level=0.9, n_draws=50, seed=0,
                           covariates=None, groups=None, estimator="auto", decompose=False, n_sim=10, direct_kw=None,
-                          sim_widen="abs", unmix_kw=None, **fit_kw):
+                          sim_widen="abs", unmix_kw=None, v4_kw=None, **fit_kw):
     """Per-sample per-cell-type program activity and treatment effects from bulk counts and fractions.
 
     inputs: prepared inputs (program2cell.prepare_inputs): Y, B, Gmat, cell_types, programs, T.
@@ -112,6 +112,11 @@ def program_deconvolution(inputs, calibration, fractions=None, fraction_draws=No
     keeps the calibrated result for a type whose unmixed effect lies outside its calibrated interval.
     estimator 'direct' (core.direct): maximum likelihood of the treatment effects on the bulk counts given the
     fractions (no reallocation), cluster-bootstrap intervals; direct_kw go to direct_effects (e.g. lam).
+    estimator 'v4' (core.gls; development, opt-in, not frozen): GLS unmixing with each sample's leakage
+    operator, simulation-calibrated with the study's off-program response and a stated per-sample fraction
+    error; v4_kw go to core.gls.v4_effects: frac_sd (0 for assembled bulk with PALM-lite fractions;
+    core.gls.FRAC_SD_REAL_BULK for real bulk; "estimate" for fractions from elsewhere), min_effect (call
+    floor), n_sim. out.info["v4"] holds the shared response and type deviations.
     """
     Y, B, G = inputs.Y, inputs.B, inputs.Gmat
     info = {}
@@ -153,9 +158,11 @@ def program_deconvolution(inputs, calibration, fractions=None, fraction_draws=No
     if T is not None and len(np.unique(np.asarray(T))) == 2:
         from . import causal
         mode = estimator
-        if estimator in ("diff", "unmix", "auto", "direct") and (covariates is not None or groups is not None):
+        if mode == "v4" and covariates is not None:
+            raise ValueError("estimator 'v4' takes groups, not covariates")
+        if estimator in ("diff", "unmix", "auto", "direct", "v4") and (covariates is not None or groups is not None):
             estimator = "ols"
-        elif estimator in ("unmix", "auto", "direct"):
+        elif estimator in ("unmix", "auto", "direct", "v4"):
             estimator = "diff"
         w = causal.estimator_weights(T, covariates, groups, estimator)
         eff, iv, parts = cal.effects(raw, dh_draws=raw_draws, interval=effect_interval, weights=w)
@@ -167,16 +174,25 @@ def program_deconvolution(inputs, calibration, fractions=None, fraction_draws=No
                                **(direct_kw or {}))
             eff, iv = d["effects"], (d["lo"], d["hi"])
             out.info["direct"] = dict(n_units=d["n_units"])
+        if mode == "v4":
+            from .core.gls import v4_effects
+            v = v4_effects(Y, fractions, B, G, T, calibration, groups=groups, level=level, seed=seed,
+                           **(v4_kw or {}))
+            eff, iv = v["effects"], (v["lo"], v["hi"])
+            out.info["v4"] = {k: (x.tolist() if isinstance(x, np.ndarray) else x) for k, x in v.items()
+                              if k not in ("effects", "lo", "hi")}
         if mode in ("unmix", "auto"):
             eff, iv = _unmix_effects(out, inputs, calibration, fractions, fraction_draws, raw, raw_draws, T,
                                      covariates, groups, level, seed, n_sim, mode, eff, iv, sim_widen,
                                      **{**UNMIX_DEFAULTS, **(unmix_kw or {})})
         out.effects, out.effects_interval = eff, iv
         out.calls = (iv[0] > 0) | (iv[1] < 0)
+        if mode == "v4":
+            out.calls = np.asarray(out.info["v4"]["calls"], bool)
         out.robustness = causal.robustness_value(eff, iv[0], iv[1], causal.degrees_of_freedom(T, covariates, groups),
                                                  level=level)
         out.info["effect_variance_parts"] = {k: float(np.mean(v)) for k, v in parts.items()}
-        out.info["estimator"] = estimator if mode not in ("unmix", "auto", "direct") else mode
+        out.info["estimator"] = estimator if mode not in ("unmix", "auto", "direct", "v4") else mode
         if decompose:
             out.decomposition = causal.decompose(fractions, act, B, G, T, covariates, groups, estimator,
                                                  level=level, fraction_draws=fraction_draws, seed=seed)
