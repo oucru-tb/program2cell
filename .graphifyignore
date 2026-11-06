@@ -1,0 +1,8 @@
+# graphify: index the code and docs, not results or data
+benchmarks/
+data/
+notebooks/
+notebook.ipynb
+*.h5ad
+docs/figures/
+hpc/*.log
