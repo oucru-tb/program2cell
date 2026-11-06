@@ -107,7 +107,10 @@ ESTIMATORS = {"diff": dict(estimator="diff"),
                                                                         n_sim=60)),
               "v4knr": dict(estimator="v4", v4_kw=dict(stack=True, noise_match=True, ridge_stack=True, n_sim=60)),
               "v4knr_pair": dict(estimator="v4", paired=True, v4_kw=dict(stack=True, noise_match=True, ridge_stack=True,
-                                                                         n_sim=60))}
+                                                                         n_sim=60)),
+              # 2026-11-06 (docs/v4_plan.md section 12): v4 stacked where core.gls.gate_statistics passes, else v2
+              "v4g": dict(estimator="v4gated"),
+              "v4g_pair": dict(estimator="v4gated", paired=True)}
 
 # the defaults changed at freeze v2 (sim_widen "abs", choose "width_guard"): every older estimator keeps the
 # settings it was run with (freeze v1 defaults sim_widen=True, choose="rmse")
@@ -188,6 +191,7 @@ def run(datasets, splits, names):
                          pooled=",".join(r.info.get("unmix", {}).get("pooled", [])),
                          guard=r.info.get("unmix", {}).get("guard"), condition=r.info.get("unmix", {}).get("condition"),
                          p_het=r.info.get("unmix", {}).get("p_heterogeneity"),
+                         gate=r.info.get("gate"),
                          arrays=dict(effects=r.effects.tolist(), lo=lo.tolist(), hi=hi.tolist(),
                                      calls=r.calls.tolist(), beta=beta.tolist(), cell_types=list(inp.cell_types),
                                      programs=list(inp.programs)))

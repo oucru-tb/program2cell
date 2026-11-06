@@ -1,0 +1,12 @@
+sepsis (n splits 10): clear cells 6.4 / 49, sd(beta) 0.076
+  truth reliability  r 1.00  within 1.00  slope 1.00
+  transfer sc_B      program r 1.00 slope 1.00 | gene r 0.99 slope 0.98
+  transfer real      program r 0.36 slope 0.34 | gene r 0.64 slope 1.02
+  transfer real_off  program r 0.78 slope 1.97 | gene r 0.65 slope 1.09
+  pooled clear cells (|beta_A| >= 0.1, n 64): r 1.00, sign agreement 1.00
+severe (n splits 10): clear cells 3.2 / 49, sd(beta) 0.055
+  truth reliability  r 1.00  within 1.00  slope 1.00
+  transfer sc_B      program r 1.00 slope 1.00 | gene r 0.98 slope 0.98
+  transfer real      program r 0.25 slope 0.18 | gene r 0.70 slope 0.91
+  transfer real_off  program r 0.58 slope 0.60 | gene r 0.71 slope 0.94
+  pooled clear cells (|beta_A| >= 0.1, n 32): r 1.00, sign agreement 1.00

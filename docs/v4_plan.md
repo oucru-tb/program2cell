@@ -441,3 +441,80 @@ No variant beats v2 overall. The result splits by system:
 
 v3 (v2 estimator + self-tests, F6, noise ratio, μ/shared-restricted report, fraction-noise input) is
 unaffected and remains ready to freeze on the user's go-ahead (held-out 30–39).
+
+## 12. Gated v4, external-fraction floor, and scoring on real bulk (2026-11-06)
+
+**Gate from the inputs** (`v4_gate.py` → `benchmarks/dev/v4_gate_2026-11-06.txt`; development splits 20–29,
+saved v4k / v4k_pair and auto_v2 results). Section 11's split by system was read off the truth. Two statistics from the
+two estimators' outputs alone (`core.gls.gate_statistics`):
+- heterogeneity: median over programs of Q_p / (C − 1), Q_p = Σ_c ((e_cp − m_p) / se_cp)², se from v4's interval.
+  Parse ≤ 0.11 on every split, Kang / Zhang 0.02–0.45, Tahoe 0.09–0.77, McFarland 0.47–1.67;
+- agreement: r between v4's and v2's effect tables. Zhang, where v4 fails, ≤ 0.35 on every split; every other
+  split ≥ 0.50 where heterogeneity passes.
+
+v4 where heterogeneity ≥ 0.2 and agreement ≥ 0.4, else v2 (means over 13 datasets):
+
+| | v4 used | cov | r | within r | null calls | power | width |
+|---|---|---|---|---|---|---|---|
+| v2 | 0/130 | 0.982 | 0.785 | 0.620 | 0.017 | 0.269 | 0.304 |
+| v4k | 130/130 | 0.982 | 0.725 | 0.462 | 0.023 | 0.284 | 0.541 |
+| gated | 53/130 | 0.982 | 0.821 | 0.663 | 0.023 | 0.310 | 0.298 |
+
+- Flat across thresholds: heterogeneity 0.15–0.25 gives r 0.81–0.83; agreement 0.3–0.5 gives the same choices.
+- v4 is chosen on every McFarland and Tahoe enc split, 9/10 gem, 6/10 rmc, 5/10 tram, 3/10 Kang, never on Parse or Zhang.
+- Without the agreement rule, two Zhang splits pass (r 0.84 → 0.67). The agreement rule rests on Zhang alone.
+- McFarland trades: within r on trametinib 0.79 → 0.62, null calls 0.05–0.08 → 0.09–0.10.
+- **Chosen on these splits.** The gain counts only on held-out splits (40–49), with the thresholds fixed now.
+
+**In the package (opt-in, not frozen):** `estimator="v4gated"` runs auto and v4 (stacked, noise anchor), applies
+the gate, returns the chosen result with `info["gate"]` (core.gls.GATE_HETEROGENEITY = 0.2, GATE_AGREEMENT = 0.4;
+causal_loop `v4g`, `v4g_pair`). Checked on Tahoe rmc / tram and Parse IFN-β splits: the package's statistics and
+choices match the offline ones. Runtime is v2 plus v4k (about 7 min per Tahoe study).
+
+**External-fraction floor:** `frac_sd="estimate"` now reports max(estimate, FRAC_SD_EXTERNAL_FLOOR = 0.35). The
+estimator cannot tell s below ~0.35 from 0 (0.07–0.36 with no per-sample error, section 7), and COMBAT CyTOF
+fractions gave 0.00 on split 24 (section 11). The raw estimate stays in `frac_sd_info["estimate"]`.
+
+**Scoring on real bulk** (`combat_ceiling.py` → `benchmarks/dev/combat_ceiling/`; splits 20–29).
+Reference numbers before any deconvolution:
+
+| | sepsis vs HV | severe vs HV |
+|---|---|---|
+| clear cells (\|β\| ≥ 0.1) of 49, sd(β) | 6.4, 0.076 | 3.2, 0.055 |
+| truth split-half reliability r | 1.00 | 1.00 |
+| gene-level LFC transfer, real raw: r (slope) | 0.64 (1.02) | 0.70 (0.91) |
+| gene-level, offset-corrected | 0.65 (1.09) | 0.71 (0.94) |
+| bulk program-level transfer, real raw | 0.36 (0.34) | 0.25 (0.18) |
+| bulk program-level, offset-corrected | 0.78 (1.97) | 0.58 (0.60) |
+
+- The truth is not the bottleneck. The halves are thinned from the same cells, so only counting noise differs,
+  and it is negligible. The donor-sampling noise is shared by bulk and truth, and the estimand is these specimens' effect.
+- The platform keeps gene-level changes at r 0.64–0.71 with the scale intact. Program-level scores lose more,
+  and their scale moves between 0.18 and 1.97, by platform correction and contrast. So **coverage and RMSE on
+  real bulk measure the platform, not the method.**
+- Severe vs healthy has smaller effects than sepsis, so it is not a better target.
+
+v2 on COMBAT sepsis rescored (splits 20–29; `combat_real` results):
+
+| bulk | r | within-program r | slope | cov | calls / split | wrong-sign calls |
+|---|---|---|---|---|---|---|
+| pseudobulk | 0.63 | 0.76 | 0.48 | 0.98 | 0.6 | 0.1 |
+| real, raw | 0.08 | 0.50 | 0.07 | 0.97 | 0.0 | 0.0 |
+| real, offset-corrected | 0.49 | 0.61 | 0.72 | 1.00 | 0.5 | 0.0 |
+| real, self-offset | 0.32 | 0.33 | 0.46 | 0.99 | 1.1 | 0.0 |
+
+- On raw real bulk the overall r collapses, but within-program r keeps 0.50 (66% of the pseudobulk value):
+  which type responds survives, and a per-program platform shift destroys the overall r.
+  "r ≈ 0.1 on real bulk" (section 11) overstated the failure.
+- Offset correction keeps 80% of the pseudobulk within-program r; self-offset keeps 43%.
+
+**Real-bulk scoring rules, adopted:**
+- Primary: within-program r, null calls and wrong-sign calls (scale-free).
+- Secondary: overall r, with slope reported next to it.
+- Context: retention, i.e. within-program r on real bulk / on pseudobulk of the same specimens; gene-level
+  platform transfer as the ceiling.
+- Coverage reported but marked scale-dependent. A truth mapped to the bulk scale (per-gene platform slopes
+  from other donors' pairs) only if real-bulk coverage becomes a paper claim.
+
+**Next:** v2, v4k and v4gated on offset-corrected and self-offset COMBAT bulk, scored by these rules. Then the
+freeze decisions (user): v3 (held-out 30–39), gated v4 (held-out 40–49).

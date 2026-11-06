@@ -117,7 +117,25 @@ def program_deconvolution(inputs, calibration, fractions=None, fraction_draws=No
     error; v4_kw go to core.gls.v4_effects: frac_sd (0 for assembled bulk with PALM-lite fractions;
     core.gls.FRAC_SD_REAL_BULK for real bulk; "estimate" for fractions from elsewhere), min_effect (call
     floor), n_sim. out.info["v4"] holds the shared response and type deviations.
+    estimator 'v4gated' (development, opt-in, not frozen; docs/v4_plan.md section 12): runs 'auto' and 'v4'
+    (stacked, v4_kw defaults stack=True, noise_anchor=True) and returns v4 where core.gls.gate_statistics passes
+    (type effects heterogeneous beyond their intervals and agreeing with v2), else auto; out.info["gate"].
     """
+    if estimator == "v4gated":
+        kw = dict(inputs=inputs, calibration=calibration, fractions=fractions, fraction_draws=fraction_draws,
+                  engine=engine, frac_fn=frac_fn, treatment=treatment, effect_interval=effect_interval, own=own,
+                  level=level, n_draws=n_draws, seed=seed, covariates=covariates, groups=groups,
+                  decompose=decompose, n_sim=n_sim, direct_kw=direct_kw, sim_widen=sim_widen, unmix_kw=unmix_kw)
+        r2 = program_deconvolution(estimator="auto", **kw, **fit_kw)
+        if r2.effects is None:
+            return r2
+        r4 = program_deconvolution(estimator="v4", v4_kw={**dict(stack=True, noise_anchor=True), **(v4_kw or {})},
+                                   **{**kw, "fractions": r2.fractions, "fraction_draws": None, "engine": None})
+        from .core.gls import gate_statistics
+        g = gate_statistics(r4.effects, *r4.effects_interval, r2.effects, level=level)
+        out = r4 if g["use_v4"] else r2
+        out.info["gate"] = dict(g, chosen="v4" if g["use_v4"] else "auto")
+        return out
     Y, B, G = inputs.Y, inputs.B, inputs.Gmat
     info = {}
     if engine == "palm":

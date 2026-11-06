@@ -21,6 +21,13 @@ import numpy as np
 
 # COMBAT sepsis whole-blood bulk, PALM-lite vs single-cell read fractions, splits 20-24 (combat_fracnoise.py)
 FRAC_SD_REAL_BULK = dict(raw=1.0, platform_corrected=0.8)
+# estimate_frac_sd cannot tell s below ~0.35 from 0 (dev splits 20-22: 0.07-0.36 with no per-sample error), and
+# fractions from elsewhere always carry some error: the estimate is floored here (COMBAT CyTOF gave 0.00-0.74)
+FRAC_SD_EXTERNAL_FLOOR = 0.35
+# v4gated (docs/v4_plan.md section 12): v4 stacked where its type effects are heterogeneous beyond their own
+# intervals (median over programs of Q / (C - 1)) and it agrees with v2 (r of the effect tables); else v2
+GATE_HETEROGENEITY = 0.2
+GATE_AGREEMENT = 0.4
 
 
 def gls_unmix(raw, A, T, groups=None, ridge=0.0):
@@ -238,9 +245,10 @@ def gls_calibrated(cal, pi, T, B, G, b_study, n_sim=30, level=0.9, seed=0, offpr
 
 def v4_effects(Y, fractions, B, G, T, calibration, groups=None, level=0.9, seed=0, n_sim=30, frac_sd=0.0,
                min_effect=0.0, shrink=False, noise_anchor=False, stack=False, raw_noise=False, tree=False,
-               cell_types=None, noise_match=False, ridge_stack=False, ridge=0.1):
-    """The v4 estimator on one study. frac_sd: number, or "estimate" (estimate_frac_sd; for fractions that did
-    not come from this bulk). min_effect: effect floor for calls (|effect| >= min_effect and the interval
+               cell_types=None, noise_match=False, ridge_stack=False, ridge=0.1,
+               frac_sd_floor=FRAC_SD_EXTERNAL_FLOOR):
+    """The v4 estimator on one study. frac_sd: number, or "estimate" (estimate_frac_sd, floored at
+    frac_sd_floor; for fractions that did not come from this bulk). min_effect: effect floor for calls (|effect| >= min_effect and the interval
     excludes 0). Returns dict(effects, lo, hi, calls, shared, deviation, k, tau, frac_sd, ...)."""
     from . import unmix as um
     from .realloc import reallocate
@@ -255,6 +263,8 @@ def v4_effects(Y, fractions, B, G, T, calibration, groups=None, level=0.9, seed=
         if frac_sd != "estimate":
             raise ValueError("frac_sd: a number or 'estimate'")
         frac_sd, info = estimate_frac_sd(calibration, pi, Y, T, B, G, b, offprog_sd=tau, seed=seed)
+        info["estimate"] = frac_sd
+        frac_sd = max(frac_sd, frac_sd_floor)
     bs = shrink_deviations(b, se, pi.mean(0)) if shrink else b
     tg = lineage_groups(cell_types) if (stack and tree) else None
     eff, lo, hi, k, ci = gls_calibrated(calibration, pi, T, B, G, bs, n_sim=n_sim, level=level, seed=seed,
@@ -274,3 +284,20 @@ def v4_effects(Y, fractions, B, G, T, calibration, groups=None, level=0.9, seed=
     calls = ((lo > 0) | (hi < 0)) & (np.abs(eff) >= min_effect)
     return dict(effects=eff, lo=lo, hi=hi, calls=calls, shared=mu, deviation=eff - mu[None], k=k, gls=b,
                 gls_se=se, resid_scale=s2, tau=tau, frac_sd=float(frac_sd), frac_sd_info=info)
+
+
+def gate_statistics(eff4, lo4, hi4, eff2, level=0.9):
+    """v4gated's gate from the two estimators' outputs (no truth): heterogeneity = median over programs of
+    Q_p / (C - 1), Q_p = sum_c ((e_cp - m_p) / se_cp)^2 with se from v4's interval and m_p the inverse-variance
+    mean (shared PBMC responses ~0.01-0.15, cell lines 0.15-1.7, dev splits 20-29); agreement = r between v4's
+    and v2's effect tables (Zhang, where v4 fails, <= 0.35; elsewhere >= 0.5 where heterogeneity passes).
+    Returns dict(heterogeneity, agreement, use_v4)."""
+    from scipy.stats import norm
+    e, lo, hi, e2 = (np.asarray(x, float) for x in (eff4, lo4, hi4, eff2))
+    se = np.clip((hi - lo) / (2 * norm.ppf(0.5 + level / 2)), 1e-6, None)
+    w = 1 / se ** 2
+    m = (w * e).sum(0) / w.sum(0)
+    het = float(np.median((((e - m) / se) ** 2).sum(0) / max(e.shape[0] - 1, 1)))
+    agree = float(np.corrcoef(e.ravel(), e2.ravel())[0, 1])
+    return dict(heterogeneity=het, agreement=agree,
+                use_v4=bool(het >= GATE_HETEROGENEITY and agree >= GATE_AGREEMENT))
