@@ -268,6 +268,8 @@ design limit predicts, and the unmix/calibrate choice varies between splits.
 
 ### 0.8 Planned: single-group cohorts (e.g. TB patients only, no comparison group)
 
+Paper section and held-out plan (splits 50-59): `docs/association_section_plan.md`.
+
 **Status:** development run done 2026-11-04 (splits 0–9; `scripts/experiments/single_group.py`, summary
 `benchmarks/dev/single_group_summary.txt`). Freeze v2 covers two-group effects only. **No path passes yet.**
 
