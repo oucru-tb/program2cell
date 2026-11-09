@@ -8,7 +8,7 @@ Estimators: v2 (auto, freeze v2 defaults), v4k (v4 stacked, noise anchor; frac_s
 FRAC_SD_REAL_BULK raw / platform_corrected for real bulk), v4gated = v4k or v2 by core.gls.gate_statistics
 (computed from the two runs; the same choice as estimator="v4gated", section 12).
 Usage: python combat_v4.py SPLITS -> benchmarks/dev/combat_v4/sepsis__s{split}.json
-       python combat_v4.py summary
+       python combat_v4.py summary [SPLITS]
 """
 import glob, json, os, sys, time
 import numpy as np, pandas as pd, scipy.sparse as sp
@@ -90,8 +90,11 @@ def run(splits, contrast="sepsis"):
         json.dump(out, open(f, "w"))
 
 
-def summary(contrast="sepsis"):
-    R = [json.load(open(f)) for f in sorted(glob.glob(os.path.join(OUT, "%s__s*.json" % contrast)))]
+def summary(contrast="sepsis", splits=None):
+    fs = sorted(glob.glob(os.path.join(OUT, "%s__s*.json" % contrast)))
+    if splits is not None:                                      # e.g. 40-49 (held-out v4) apart from 20-29 (development)
+        fs = [f for f in fs if int(os.path.basename(f).split("__s")[1].split(".")[0]) in splits]
+    R = [json.load(open(f)) for f in fs]
     print("COMBAT %s, %d splits; per-split means (calls are counts of 49)" % (contrast, len(R)))
     print("%-16s %-8s %7s %6s %6s %6s %5s %5s %6s %5s %6s %10s" % (
         "bulk", "est", "within", "r", "slope", "calls", "null", "wrong", "rightbig", "cov", "width", "retention"))
@@ -107,6 +110,6 @@ def summary(contrast="sepsis"):
 
 if __name__ == "__main__":
     if sys.argv[1] == "summary":
-        summary()
+        summary(splits=cl.db._splits(sys.argv[2]) if len(sys.argv) > 2 else None)
     else:
         run(cl.db._splits(sys.argv[1]))

@@ -63,7 +63,7 @@ UNMIX_DEFAULTS = dict(pev=True, misfit=True, choose="width_guard")
 
 def program_deconvolution(inputs, calibration, fractions=None, fraction_draws=None, engine=None, frac_fn=None,
                           treatment=None, effect_interval="lk", own=True, level=0.9, n_draws=50, seed=0,
-                          covariates=None, groups=None, estimator="auto", decompose=False, n_sim=10, direct_kw=None,
+                          covariates=None, groups=None, estimator="v4gated", decompose=False, n_sim=10, direct_kw=None,
                           sim_widen="abs", unmix_kw=None, v4_kw=None, **fit_kw):
     """Per-sample per-cell-type program activity and treatment effects from bulk counts and fractions.
 
@@ -93,8 +93,10 @@ def program_deconvolution(inputs, calibration, fractions=None, fraction_draws=No
     plus the study's contrast noise in quadrature, so well-separated types are not widened like poorly separated ones;
     "replace": the simulated-error interval alone, i.e. the study's own (group-bootstrap) contrast standard error
     times the simulated studentised error quantile of rescaled reallocation, which carries its leakage bias).
-    Default (the causal setting, freeze v2 2026-11-03, method_spec 4.8): estimator="auto", sim_widen="abs" and
-    UNMIX_DEFAULTS (pev=True, misfit=True, choose="width_guard"). Freeze v1: sim_widen=True, choose="rmse".
+    Default (freeze v4 2026-11-09, method_spec "Method freeze v4"): estimator="v4gated", which runs the freeze v2
+    setting and v4 stacked and returns v4 only where core.gls.gate_statistics passes. Freeze v2 (2026-11-03,
+    method_spec 4.8): estimator="auto", sim_widen="abs" and UNMIX_DEFAULTS (pev=True, misfit=True,
+    choose="width_guard"); it stays reachable as estimator="auto". Freeze v1: sim_widen=True, choose="rmse".
     estimator="diff" is the fast setting (seconds instead of minutes).
     unmix_kw ('unmix', 'auto'): updates UNMIX_DEFAULTS; pev=True adds the prediction-error variance of the shrunk type deviations;
     separate=True / "program" gives the REML penalty groups (core.unmix._fit_joint); misfit=True measures the
@@ -112,12 +114,12 @@ def program_deconvolution(inputs, calibration, fractions=None, fraction_draws=No
     keeps the calibrated result for a type whose unmixed effect lies outside its calibrated interval.
     estimator 'direct' (core.direct): maximum likelihood of the treatment effects on the bulk counts given the
     fractions (no reallocation), cluster-bootstrap intervals; direct_kw go to direct_effects (e.g. lam).
-    estimator 'v4' (core.gls; development, opt-in, not frozen): GLS unmixing with each sample's leakage
+    estimator 'v4' (core.gls; v4gated's second estimator, not a default on its own): GLS unmixing with each sample's leakage
     operator, simulation-calibrated with the study's off-program response and a stated per-sample fraction
     error; v4_kw go to core.gls.v4_effects: frac_sd (0 for assembled bulk with PALM-lite fractions;
     core.gls.FRAC_SD_REAL_BULK for real bulk; "estimate" for fractions from elsewhere), min_effect (call
     floor), n_sim. out.info["v4"] holds the shared response and type deviations.
-    estimator 'v4gated' (development, opt-in, not frozen; docs/v4_plan.md section 12): runs 'auto' and 'v4'
+    estimator 'v4gated' (the default since freeze v4; docs/v4_plan.md section 12): runs 'auto' and 'v4'
     (stacked, v4_kw defaults stack=True, noise_anchor=True) and returns v4 where core.gls.gate_statistics passes
     (type effects heterogeneous beyond their intervals and agreeing with v2), else auto; out.info["gate"].
     """

@@ -122,7 +122,8 @@ def _run_one(dsn, split, bulk_name, b, Y, table, prog, z, test_donors, cal_kw):
     truth = b.truth(inp)["delta"]
     cal = pb.calibration_from_table(table, test_donors, inp.cell_types, inp.genes, inp.Gmat, seed=split, **cal_kw)
     t0 = time.time()
-    r = pb.program_deconvolution(inp, cal, engine="lite", treatment=np.zeros(len(z)), seed=split)
+    r = pb.program_deconvolution(inp, cal, engine="lite", treatment=np.zeros(len(z)), seed=split,
+                                 estimator="auto")
     ests = {"palm": (r.activity, r.activity_interval[0], r.activity_interval[1], time.time() - t0)}
     if "palm_unmix" in todo:
         t0 = time.time()

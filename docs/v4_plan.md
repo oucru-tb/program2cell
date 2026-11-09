@@ -569,3 +569,11 @@ calls.
 1. v3 (v2 estimator plus self-tests, F6 missing-type score, noise ratio, μ / shared-vs-restricted report,
    fraction-noise input, section 12 scoring). Pre-register the decision rule, then run v2 and v3 once on 30–39.
 2. Gated v4 (`estimator="v4gated"`, thresholds 0.2 / 0.4, external-fraction floor 0.35). Held-out 40–49.
+
+## 14. Decision 2026-11-09: no v3 freeze; freeze gated v4
+
+The user dropped the v3 freeze and moved straight to gated v4. This is the "one combined freeze" alternative of
+section 0, without the v3 routing change: the v2 arm inside the gate keeps its width_guard route. Protocol and
+pre-registered decision rule: docs/method_spec.md, "Method freeze v4" (tag `method-freeze-v4`); held-out splits
+40–49 (`heldout_v4_chain.sh`, `heldout_v4_compare.py`). Splits 30–39 stay unused. Before the tag, `v4g_pair` was
+checked on Kang and Zhang development splits 20–29 (the gate in section 12 had paired v4 against unpaired v2).

@@ -14,6 +14,60 @@ see `benchmarking.md`.*
 
 ---
 
+## Method freeze v4 (2026-11-09; git tag `method-freeze-v4`)
+
+**There is no v3 freeze.** The user decided on 2026-11-09 to drop the planned v3 (correctness and scoring) freeze
+and freeze gated v4 directly. The v3 additions stay in the package as opt-in reporting and are not part of
+what this freeze claims: self-tests, the F6 missing-type score, μ and shared-vs-restricted output, and the
+real-bulk scoring rules. Splits 30–39 stay unused, in reserve. Evidence: docs/v4_plan.md sections 8–13.
+
+**What changed from v2:** only the default effect estimator.
+
+| Step | v2 | v4 |
+|---|---|---|
+| Fractions, activity, calibration | as v2 | unchanged |
+| Effects | `estimator="auto"` (width_guard route) | `estimator="v4gated"`. It runs `auto` (freeze v2, unchanged) and `v4` (GLS unmixing stacked with the reallocated contrast per (type, program), with simulation-fitted weights and the study-vs-simulation noise ratio). It returns v4 where `core.gls.gate_statistics` passes: heterogeneity (median over programs of Q_p / (C − 1)) ≥ 0.2 **and** agreement (r between the v4 and v2 effect tables) ≥ 0.4. Otherwise it returns v2. |
+| Fraction noise in v4's calibration | — | 0 for assembled bulk with PALM-lite fractions; `FRAC_SD_REAL_BULK` (raw 1.0, platform-corrected 0.8) for real bulk; external fractions: estimate floored at 0.35 |
+| Paired designs | `groups` not used by `auto_v2` on Kang and Zhang | `groups` = donors on Kang and Zhang (`v4g_pair`), passed to both arms of the gate |
+
+`estimator="auto"` remains available and reproduces freeze v2.
+
+**Held-out protocol (fixed before any v4 held-out number exists):**
+- **Splits:** 40–49 of every dataset. They have never been run. Splits 20–29 were v4 development, and 30–39
+  are unused.
+- **Datasets and comparators:** as freeze v2 (`scripts/experiments/heldout_v4_chain.sh`, lanes a–d: the same
+  13 datasets, PALM fractions, CIBERSORT, InstaPrism, TOAST, TCA and cellGeometry where affordable, PALM's module
+  on comparator fractions). COMBAT sepsis vs healthy uses `combat_v4.py`: single-cell, raw, offset-corrected and
+  self-offset bulk; v2, v4k and gated v4.
+- **PALM effects:** gated v4 (`v4g`; `v4g_pair` on Kang and Zhang) **and** freeze v2 (`auto_v2`) on the same
+  splits, so the comparison is out of sample for both. `diff` is kept as a reference.
+- **Pre-registered decision rule** (`scripts/experiments/heldout_v4_compare.py`, committed with this tag):
+  - Scores: coverage, r, within-program r, null-call rate, power and width per dataset × split. Differences
+    are gated v4 − v2. Means are taken over splits, then over the 13 datasets with equal weight. CIs are 95%
+    two-stage cluster bootstrap (datasets, then splits within each), 4000 draws, seed 0.
+  - S1: on every dataset, gated v4 has coverage ≥ 0.85 and null-call rate ≤ 0.10.
+  - S2: the coverage difference has lower CI ≥ −0.03, and the null-call difference has upper CI ≤ +0.02.
+  - S3: on COMBAT raw and offset-corrected bulk, gated v4 makes no more than 0.2 wrong-sign calls per split
+    beyond v2.
+  - E (primary): mean difference in r. "Superior" if the lower CI > 0. "Non-inferior" if the mean > 0 and the
+    lower CI > −0.02. Otherwise "not shown". The development value (splits 20–29, chosen on them) was +0.036.
+  - Outcome: if S1–S3 pass and E is superior or non-inferior, gated v4 is the Paper 1 method, with the claim
+    worded by E. Otherwise freeze v2 stays the Paper 1 method and gated v4 is reported as secondary.
+  - Secondary, reported with no decision attached: within-program r, power and width; cell lines vs PBMC; gate
+    choices per dataset against development (v4 expected on McFarland and Tahoe, never on Parse or Zhang);
+    on Kang and Zhang, paired freeze v2 (`auto_v2_pair`, the v2 arm inside `v4g_pair`). This separates the
+    effect of pairing from v4. On development splits 20–29, `v4g_pair` (paired v2 arm) gave r 0.91 on Kang,
+    against 0.83 for the offline gate with the unpaired v2 arm. On Zhang it gave 0.82 vs 0.84, with null calls
+    0.012 vs 0.004. The choices were the same on all 20 splits, so the difference is the paired v2 arm.
+  - Multiplicity: one primary endpoint, tested once on splits 40–49. The v2 held-out splits (20–29) were not
+    reused as test data.
+- **Reporting:**
+  - `heldout_v4_compare.py`, `causal_loop.py summary heldout4`, `practice_vs_palm.py summary heldout4` (with
+    PALM_EST=v4g) and `combat_v4.py summary 40-49`;
+  - every dataset and every metric, pass or fail;
+  - nothing is rerun or retuned after the results are seen.
+- **Result:** pending.
+
 ## Method freeze v2 (2026-11-03; git tag `method-freeze-v2`)
 
 **What changed from v1:** one change to how `estimator="auto"` picks the route per program, plus the

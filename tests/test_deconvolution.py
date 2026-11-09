@@ -98,9 +98,15 @@ def test_program_deconvolution_unmix_localises(estimator):
     kw = {} if estimator is None else dict(estimator=estimator, unmix_kw=dict(pev=False, misfit=False))
     res = pb.program_deconvolution(inp, cal, fractions=s["pi"], n_sim=3, **kw)
     beta = pb.core.contrast(s["T"])(s["delta"])
-    if estimator is None:                                                # default: the causal setting
-        assert res.info["unmix"]["tau"] is not None and res.info["unmix"]["misfit_sd"] is not None
-        estimator = "auto"
+    if estimator is None:                                                # default (freeze v4): gated v4
+        g = res.info["gate"]
+        assert g["chosen"] in ("v4", "auto") and set(g) >= {"heterogeneity", "agreement", "use_v4"}
+        if g["chosen"] == "v4":
+            assert "v4" in res.info
+        else:
+            assert res.info["unmix"]["tau"] is not None and res.info["unmix"]["misfit_sd"] is not None
+        assert res.calls[0, 0] and abs(res.effects[0, 0] - beta[0, 0]) < 0.3
+        return
     assert res.info["estimator"] == estimator and "unmix" in res.info
     assert res.calls[0, 0] and abs(res.effects[0, 0] - beta[0, 0]) < 0.3
     if estimator == "unmix":                                             # the leak into types 1, 2 is removed

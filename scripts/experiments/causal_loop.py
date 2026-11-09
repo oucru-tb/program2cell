@@ -13,7 +13,7 @@ Datasets and known answers:
 Truth: the treatment contrast of the thinned held-out half's activity (dev_bench). Fractions: the PALM
 posterior of the PROGENy-7 fit when it exists, else PALM-lite (recorded).
 One json per (dataset, split, estimator) in benchmarks/dev/causal_loop/. Restart-safe.
-Usage: python causal_loop.py run DATASETS SPLITS [ESTIMATORS]   |   python causal_loop.py summary [heldout]
+Usage: python causal_loop.py run DATASETS SPLITS [ESTIMATORS]   |   python causal_loop.py summary [heldout|heldout2|heldout4]
 """
 import glob, json, os, sys, time
 import numpy as np, pandas as pd
@@ -75,6 +75,8 @@ ESTIMATORS = {"diff": dict(estimator="diff"),
               "auto_wg": dict(estimator="auto", sim_widen="abs", unmix_kw=dict(pev=True, misfit=True, choose="width_guard")),
               # freeze v2 (2026-11-03): program_deconvolution defaults = auto_wg
               "auto_v2": dict(estimator="auto"),
+              # freeze v4 (2026-11-09): freeze v2 with groups = donors, the v2 arm inside v4g_pair (secondary reference)
+              "auto_v2_pair": dict(estimator="auto", paired=True),
               # v3 development (2026-11-04, docs/v3_plan.md item 9): pool the types to the shared-response fit where
               # their deviations are not distinguishable (Wald test, alpha 0.1); else as auto_v2
               "auto_v3pool": dict(estimator="auto", unmix_kw=dict(pool=True)),
@@ -115,7 +117,7 @@ ESTIMATORS = {"diff": dict(estimator="diff"),
 # the defaults changed at freeze v2 (sim_widen "abs", choose "width_guard"): every older estimator keeps the
 # settings it was run with (freeze v1 defaults sim_widen=True, choose="rmse")
 for _n, _kw in ESTIMATORS.items():
-    if _kw.get("estimator") in ("auto", "unmix") and _n != "auto_v2" and not _n.startswith("auto_v3"):
+    if _kw.get("estimator") in ("auto", "unmix") and not _n.startswith("auto_v2") and not _n.startswith("auto_v3"):
         _kw.setdefault("sim_widen", True)
         _kw["unmix_kw"] = {"choose": "rmse", **_kw.get("unmix_kw", {})}
 
@@ -205,9 +207,12 @@ def run(datasets, splits, names):
 
 
 def _split_set(df, heldout):
-    """Development splits (< 10), held-out v1 (10-19; heldout=True) or held-out v2 (>= 20; heldout="v2")."""
+    """Development splits (< 10), held-out v1 (10-19; heldout=True), held-out v2 (20-29; heldout="v2") or held-out
+    v4 (40-49; heldout="v4"). Splits 20-29 were v4 development after the v2 held-out run; 30-39 are unused."""
     if heldout == "v2":
-        return df[df.split >= 20]
+        return df[(df.split >= 20) & (df.split < 30)]
+    if heldout == "v4":
+        return df[(df.split >= 40) & (df.split < 50)]
     return df[(df.split >= db.HELDOUT_FROM) & (df.split < 20)] if heldout else df[df.split < db.HELDOUT_FROM]
 
 
@@ -223,7 +228,7 @@ def summary(heldout=False):
         rows.append(s)
     df = pd.DataFrame(rows)
     df = _split_set(df, heldout)
-    print("== %s splits: %s" % ({True: "held-out v1", "v2": "held-out v2"}.get(heldout, "development"), sorted(df.split.unique())))
+    print("== %s splits: %s" % ({True: "held-out v1", "v2": "held-out v2", "v4": "held-out v4"}.get(heldout, "development"), sorted(df.split.unique())))
     cols = [c for c in ("cov", "r", "r_t", "rmse", "width", "calls", "fpr_null", "auroc", "tpr", "tpr_t", "fpr", "cov_known")
             if c in df]
     t = df.groupby(["dataset", "estimator"], sort=False)[cols].mean()
@@ -242,7 +247,7 @@ def summary(heldout=False):
 
 if __name__ == "__main__":
     if sys.argv[1] == "summary":
-        summary(heldout={"heldout": True, "heldout2": "v2"}.get(sys.argv[2], False) if len(sys.argv) > 2 else False)
+        summary(heldout={"heldout": True, "heldout2": "v2", "heldout4": "v4"}.get(sys.argv[2], False) if len(sys.argv) > 2 else False)
     else:
         names = sys.argv[4].split(",") if len(sys.argv) > 4 else list(ESTIMATORS)
         run(sys.argv[2].split(","), db._splits(sys.argv[3]), names)

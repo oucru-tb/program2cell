@@ -154,8 +154,13 @@ def run(datasets, splits, only=None):
 
 
 def _palm_rows():
+    """PALM_EST rows; where a paired-design row PALM_EST + "_pair" exists for the same dataset and split (Kang,
+    Zhang under freeze v4: groups = donors), it replaces the unpaired one."""
     rows = []
-    for f in glob.glob(os.path.join(cl.OUT, "*__%s.json" % PALM_EST)):
+    files = {os.path.basename(f).rsplit("__", 1)[0]: f for f in glob.glob(os.path.join(cl.OUT, "*__%s.json" % PALM_EST))}
+    files.update({os.path.basename(f).rsplit("__", 1)[0]: f
+                  for f in glob.glob(os.path.join(cl.OUT, "*__%s_pair.json" % PALM_EST))})
+    for f in files.values():
         s = json.load(open(f))
         a = s.pop("arrays")
         s.update(cl.score(*(np.asarray(a[k], float) for k in ("effects", "lo", "hi")), np.asarray(a["calls"], bool),
@@ -197,4 +202,4 @@ if __name__ == "__main__":
     if sys.argv[1] == "run":
         run(sys.argv[2].split(","), cl.db._splits(sys.argv[3]), sys.argv[4].split(",") if len(sys.argv) > 4 else None)
     else:
-        summary(heldout={"heldout": True, "heldout2": "v2"}.get(sys.argv[2], False) if len(sys.argv) > 2 else False)
+        summary(heldout={"heldout": True, "heldout2": "v2", "heldout4": "v4"}.get(sys.argv[2], False) if len(sys.argv) > 2 else False)
