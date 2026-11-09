@@ -4,6 +4,8 @@
 # v4 default (causal_loop v4g; v4g_pair on the paired designs Kang and Zhang) and freeze v2 (auto_v2) on the same
 # splits, so the pre-registered comparison (heldout_v4_compare.py) is out of sample for both. COMBAT: combat_v4.py.
 #   LANE=a|b|c|d bash heldout_v4_chain.sh      (lanes run in parallel; restart-safe: finished files are skipped)
+#   LANE=e: transport check (amendment 2026-11-09): 9 perturbations never run in development, PALM effects only
+#   (v4g, auto_v2; PALM-lite fractions), no comparators; heldout_v4_compare.py transport.
 E=/c/Users/duy.pham/AppData/Local/miniforge3/envs/program2cell
 export PATH="$E:$E/Library/mingw-w64/bin:$E/Library/usr/bin:$E/Library/bin:$E/Scripts:$E/bin:$PATH"
 export PALM_RSCRIPT='C:\Users\duy.pham\AppData\Local\miniforge3\envs\palm-r\Lib\R\bin\x64\Rscript.exe'
@@ -19,6 +21,15 @@ case $LANE in
   c) DS="kang tahoe_rmc tahoe_enc tahoe_tram tahoe_gem"; CFG='{}'; COMP="cibersort,instaprism" ;;
   d) DS="zhang parse_ifng parse_ifnb parse_gmcsf parse_il4 parse_tnf"; CFG='{}'; COMP="cibersort,instaprism" ;;
 esac
+if [ "$LANE" = e ]; then
+  export OMP_NUM_THREADS=2 MKL_NUM_THREADS=2 OPENBLAS_NUM_THREADS=2
+  echo "START $(date) lane e transport (freeze tag: $(git describe --tags --always 2>/dev/null))" >> $LOG
+  for ds in parse_ifna parse_il10 parse_il1b parse_il6 tahoe_afa tahoe_alp tahoe_bor tahoe_evr tahoe_ptx; do
+    python scripts/experiments/causal_loop.py run $ds $SPLITS v4g,auto_v2 >> $LOG 2>&1
+  done
+  echo "DONE $(date)" >> $LOG
+  exit 0
+fi
 echo "START $(date) lane $LANE (freeze tag: $(git describe --tags --always 2>/dev/null), PALM_EST=$PALM_EST)" >> $LOG
 for ds in $DS; do
   cfg=$CFG; comp=$COMP; est="v4g,auto_v2,diff"

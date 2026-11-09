@@ -11,12 +11,22 @@ Decision rule:
   S2 mean difference: coverage lower CI >= -0.03; null-call rate upper CI <= +0.02.
   S3 COMBAT real bulk (raw and offset-corrected, combat_v4.py): gated v4 wrong-sign calls per split <= v2's + 0.2.
   E  primary, mean difference in r: "superior" if the lower CI > 0; "non-inferior" if the mean > 0 and the lower
-     CI > -0.02; else "not shown".
+     CI > -NI_MARGIN; else "not shown". NI_MARGIN = 0.03 (amendment 2026-11-09, before any split 40-49 result:
+     0.5 x the pooled within-dataset SD of the per-split r difference on development splits 20-29, 0.5 x 0.055,
+     rounded to 0.03; it replaces an unanchored 0.02).
   Outcome: S1-S3 pass and E superior or non-inferior -> gated v4 is the Paper 1 method, claim worded by E.
            Otherwise freeze v2 stays the Paper 1 method and gated v4 is reported as secondary. No retuning either way.
 Secondary (reported, no decision): within_r, power, width; cell lines (McFarland, Tahoe) vs PBMC (Kang, Zhang,
 Parse); gate choices per dataset against development (v4 expected on McFarland and Tahoe, never on Parse or Zhang);
 on Kang and Zhang, paired freeze v2 (auto_v2_pair, the v2 arm inside v4g_pair) to separate the effect of pairing.
+Sensitivity (amendment 2026-11-09, descriptive): the 13 datasets come from 5 studies (Kang, Zhang, McFarland,
+Tahoe, Parse) that share donors and references within a study, so the dataset-level CI is optimistic. Reported:
+the mean difference per study, the study-weighted mean, and an exact one-sided sign-flip p over the 5 studies
+(2^5 sign patterns; a study with difference 0 cannot contribute, so the smallest p is 1 / 2^(nonzero studies)).
+Transport check (amendment 2026-11-09, descriptive, no decision): `python heldout_v4_compare.py transport` scores
+the same comparison on 9 perturbations never run in development: Parse IFN-a, IL-10, IL-1b and IL-6, and Tahoe
+afatinib, alpelisib, bortezomib, everolimus and paclitaxel (splits 40-49, heldout_v4_chain.sh lane e). These are new
+perturbations of studies already in the benchmark, not new studies.
 
 Usage: python heldout_v4_compare.py [SPLITS]     (default 40-49; 20-29 runs the same code on development splits)
 """
@@ -32,8 +42,12 @@ L = os.path.join(ROOT, "benchmarks", "dev", "causal_loop")
 CELL = ["mcf_ida", "mcf_tram", "tahoe_enc", "tahoe_gem", "tahoe_rmc", "tahoe_tram"]
 PBMC = ["kang", "zhang", "parse_gmcsf", "parse_ifnb", "parse_ifng", "parse_il4", "parse_tnf"]
 DS = CELL + PBMC
+TRANSPORT = ["parse_ifna", "parse_il10", "parse_il1b", "parse_il6",
+             "tahoe_afa", "tahoe_alp", "tahoe_bor", "tahoe_evr", "tahoe_ptx"]
+STUDY = {d: ("mcfarland" if d.startswith("mcf") else d.split("_")[0]) for d in DS + TRANSPORT}
 K = ["cov", "r", "within_r", "null_calls", "power", "width"]
 N_BOOT, SEED = 4000, 0
+NI_MARGIN = 0.03
 
 
 def _load(d, s, est):
@@ -46,9 +60,9 @@ def _load(d, s, est):
     return np.array([np.nan if sc[k] is None else sc[k] for k in K]), j.get("gate")
 
 
-def collect(splits):
+def collect(splits, datasets=DS):
     v4, v2, gates, missing = {}, {}, {}, []
-    for d in DS:
+    for d in datasets:
         e4 = "v4g_pair" if d in ("kang", "zhang") else "v4g"
         for s in splits:
             a, g = _load(d, s, e4)
@@ -74,6 +88,49 @@ def boot(ds, v4, v2, rng):
         pick = rng.choice(ds, len(ds), replace=True)
         out[i] = np.nanmean([np.nanmean(diff[d][rng.integers(0, len(diff[d]), len(diff[d]))], 0) for d in pick], 0)
     return out
+
+
+def study_level(ds, v4, v2):
+    """Per-study mean r difference (mean over the study's datasets), study-weighted mean, exact one-sided sign-flip
+    p over studies."""
+    import itertools
+    per = {}
+    for d in ds:
+        per.setdefault(STUDY[d], []).append(np.nanmean(v4[d][:, 1] - v2[d][:, 1]))
+    st = {k: float(np.mean(v)) for k, v in per.items()}
+    x = np.array(list(st.values()))
+    obs = x.mean()
+    flips = [np.mean(x * np.array(s)) for s in itertools.product((1, -1), repeat=len(x))]
+    p = np.mean([f >= obs - 1e-12 for f in flips])
+    print("\nsensitivity: study level (r difference; descriptive)")
+    print("  " + "  ".join("%s %+.3f (%d)" % (k, v, len(per[k])) for k, v in st.items()))
+    print("  study-weighted mean %+.3f; exact one-sided sign-flip p %.3f over %d studies (%d nonzero)" % (
+        obs, p, len(x), int((np.abs(x) > 1e-9).sum())))
+
+
+def transport(splits):
+    v4, v2, gates, missing = collect(splits, TRANSPORT)
+    ds = [d for d in TRANSPORT if d in v4]
+    print("Transport check (descriptive, no decision), splits %d-%d: perturbations never run in development" % (
+        min(splits), max(splits)))
+    if missing:
+        print("MISSING (%d): %s" % (len(missing), ", ".join(missing)))
+    print("\nper dataset (dataset means)      %s" % "  ".join("%9s" % k for k in K))
+    for d in ds:
+        a, b = np.nanmean(v4[d], 0), np.nanmean(v2[d], 0)
+        safe = a[0] >= 0.85 and a[3] <= 0.10
+        print("  %-12s v2    %s" % (d, "  ".join("%9.3f" % x for x in b)))
+        print("  %-12s v4g   %s   v4 on %d/%d%s" % ("", "  ".join("%9.3f" % x for x in a), sum(gates[d]), len(gates[d]),
+                                                  "" if safe else "   below S1 targets"))
+    if ds:
+        rng = np.random.default_rng(SEED)
+        m = mean_over(ds, v4) - mean_over(ds, v2)
+        bt = boot(ds, v4, v2, rng)
+        lo, hi = np.nanpercentile(bt, 2.5, 0), np.nanpercentile(bt, 97.5, 0)
+        print("\nmean difference v4 - v2 (%d datasets) [95%% cluster bootstrap CI; datasets within 2 studies]" % len(ds))
+        for k, x, l, h in zip(K, m, lo, hi):
+            print("  %-10s %+.3f [%+.3f, %+.3f]" % (k, x, l, h))
+        study_level(ds, v4, v2)
 
 
 def main(splits):
@@ -103,9 +160,10 @@ def main(splits):
         print("\nmean difference v4 - v2, %s (%d datasets) [95%% cluster bootstrap CI]" % (lab, len(sub)))
         for k, x, l, h in zip(K, m, lo, hi):
             print("  %-10s %+.3f [%+.3f, %+.3f]" % (k, x, l, h))
+    study_level(ds, v4, v2)
     m, lo, hi = res["all"]
     s2 = lo[0] >= -0.03 and hi[3] <= 0.02
-    e = "superior" if lo[1] > 0 else "non-inferior" if (m[1] > 0 and lo[1] > -0.02) else "not shown"
+    e = "superior" if lo[1] > 0 else "non-inferior" if (m[1] > 0 and lo[1] > -NI_MARGIN) else "not shown"
     s3, s3txt = None, "COMBAT not run"
     fs = [f for f in glob.glob(os.path.join(cv.OUT, "sepsis__s*.json"))
           if int(os.path.basename(f).split("__s")[1].split(".")[0]) in splits]
@@ -139,4 +197,7 @@ def main(splits):
 
 
 if __name__ == "__main__":
-    main(cv.cl.db._splits(sys.argv[1]) if len(sys.argv) > 1 else list(range(40, 50)))
+    if len(sys.argv) > 1 and sys.argv[1] == "transport":
+        transport(cv.cl.db._splits(sys.argv[2]) if len(sys.argv) > 2 else list(range(40, 50)))
+    else:
+        main(cv.cl.db._splits(sys.argv[1]) if len(sys.argv) > 1 else list(range(40, 50)))

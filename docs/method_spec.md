@@ -50,7 +50,7 @@ real-bulk scoring rules. Splits 30–39 stay unused, in reserve. Evidence: docs/
   - S3: on COMBAT raw and offset-corrected bulk, gated v4 makes no more than 0.2 wrong-sign calls per split
     beyond v2.
   - E (primary): mean difference in r. "Superior" if the lower CI > 0. "Non-inferior" if the mean > 0 and the
-    lower CI > −0.02. Otherwise "not shown". The development value (splits 20–29, chosen on them) was +0.036.
+    lower CI > −0.03. Otherwise "not shown". The development value (splits 20–29, chosen on them) was +0.036.
   - Outcome: if S1–S3 pass and E is superior or non-inferior, gated v4 is the Paper 1 method, with the claim
     worded by E. Otherwise freeze v2 stays the Paper 1 method and gated v4 is reported as secondary.
   - Secondary, reported with no decision attached: within-program r, power and width; cell lines vs PBMC; gate
@@ -66,6 +66,24 @@ real-bulk scoring rules. Splits 30–39 stay unused, in reserve. Evidence: docs/
     PALM_EST=v4g) and `combat_v4.py summary 40-49`;
   - every dataset and every metric, pass or fail;
   - nothing is rerun or retuned after the results are seen.
+- **Amendment (2026-11-09, after the tag and lane launch, before any split 40–49 result existed; commit after
+  `method-freeze-v4`).** It follows a methods review of the protocol. The method and the S1–S3 criteria are
+  unchanged.
+  1. *Non-inferiority margin anchored:* 0.02 was not justified. The new margin is 0.03: half the pooled
+     within-dataset SD of the per-split r difference on development splits 20–29 (0.5 × 0.055 = 0.027,
+     rounded). A loss smaller than half of one split's typical fluctuation counts as negligible. This loosens
+     the margin.
+  2. *Study-level sensitivity (descriptive):* the 13 datasets come from 5 studies, and datasets within a study
+     share donors and references, so the dataset-level CI is optimistic. Reported: the mean difference per
+     study, the study-weighted mean, and an exact one-sided sign-flip p over the 5 studies. On development
+     splits the differences were Kang +0.015, Zhang 0, McFarland −0.031, Tahoe +0.128 and Parse 0. Two
+     studies at exactly 0 cannot contribute, so the smallest attainable p is 1/8. This analysis cannot reach
+     significance by construction and is reported to show that the gain depends on Tahoe.
+  3. *Transport check (descriptive, no decision; lane e):* 9 perturbations never run in development: Parse
+     IFN-α, IL-10, IL-1β and IL-6, and Tahoe afatinib, alpelisib, bortezomib, everolimus and paclitaxel, on
+     splits 40–49 with `v4g` and `auto_v2`. These are new perturbations of two benchmark studies, not new
+     studies. No unused independent study is available, so transport to a new laboratory, platform or tissue
+     stays untested.
 - **Result:** pending.
 
 ## Method freeze v2 (2026-11-03; git tag `method-freeze-v2`)
