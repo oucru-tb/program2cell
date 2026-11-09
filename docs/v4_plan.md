@@ -1,4 +1,4 @@
-# Method v3 (narrowed) and v4: plan after the Quantitative Core review (draft, 2026-11-05)
+# Method v3 (narrowed) and v4: plan after the Quantitative Core review (draft, 2026-11-05; updated 2026-11-09)
 
 Inputs: `palm_v3_methods_review.md` and `palm_v3_idea_register.md` (Quantitative Core, 2026-11-05), written
 against the "PALM Open Problems" status report of the same date. Each claim was checked against the code
@@ -518,3 +518,54 @@ v2 on COMBAT sepsis rescored (splits 20–29; `combat_real` results):
 
 **Next:** v2, v4k and v4gated on offset-corrected and self-offset COMBAT bulk, scored by these rules. Then the
 freeze decisions (user): v3 (held-out 30–39), gated v4 (held-out 40–49).
+
+## 13. v2, v4k and gated v4 on COMBAT real bulk (2026-11-06, splits 20–29)
+
+`combat_v4.py` → `benchmarks/dev/combat_v4/` (`summary.txt`). Sepsis vs healthy; four bulks for the same
+specimens. v4k used fraction noise 0 on pseudobulk and `FRAC_SD_REAL_BULK` on real bulk; gate thresholds as
+fixed in section 12. Development splits only. Calls are counts of 49 (type, program) pairs per split.
+
+| bulk | est | within r | r | slope | calls | null | wrong sign | width | retention |
+|---|---|---|---|---|---|---|---|---|---|
+| pseudobulk | v2 | **0.76** | 0.63 | 0.48 | 0.6 | 0.2 | 0.1 | 0.41 | 1.00 |
+| | v4k | 0.58 | 0.54 | 0.38 | 0.1 | 0.0 | 0.0 | 0.69 | — |
+| real, raw | v2 | **0.50** | 0.08 | 0.06 | 0.0 | 0.0 | 0.0 | 0.60 | 0.66 |
+| | v4k | 0.18 | 0.05 | 0.23 | 1.4 | **1.0** | **0.5** | 2.31 | 0.31 |
+| real, offset-corrected | v2 | **0.56** | 0.40 | 0.60 | 0.5 | 0.0 | 0.0 | 0.87 | 0.74 |
+| | v4k | 0.47 | 0.51 | 0.67 | 0.3 | 0.1 | 0.0 | 1.23 | 0.81 |
+| real, self-offset | v2 | 0.31 | 0.27 | 0.40 | 1.8 | 0.3 | 0.3 | 0.69 | 0.41 |
+| | v4k | **0.53** | 0.50 | 0.65 | 1.7 | 0.3 | 0.1 | 1.38 | 0.92 |
+
+Retention is within-program r divided by the same estimator's value on pseudobulk.
+
+**The gate chooses v2 on 39 of 40 (split, bulk) runs.** The one exception is self-offset on one split, where it
+does no better than v2 (0.30). Heterogeneity is below 0.2 on 37 of 40 runs (range 0.01–0.45). Sepsis acts
+through one shared blood response, the same pattern as Parse and Zhang (section 8). On two raw-bulk runs
+heterogeneity passed (0.45, 0.22), and the agreement rule blocked v4 (agreement 0.11, 0.28). This is the first
+case outside Zhang where the agreement rule matters, and raw bulk is the setting where v4k makes wrong-sign
+calls.
+
+- **Raw real bulk: the gate is what keeps the result safe.** Here v4k makes about one null call and 0.5
+  wrong-sign calls per split, with uninformative intervals (2.3). Gated v4 equals v2: no calls, within r 0.50.
+- **Offset-corrected bulk is the best real-bulk setting for v2 and for gated v4:** within r 0.56, 74% of the
+  pseudobulk value, with 0.5 calls per split, all correct in sign and none null. v4k is close on within r
+  (0.47) and better on overall r (0.51 vs 0.40), but its intervals are wider.
+- **Self-offset bulk is the one setting where v4k beats v2** (within r 0.53 vs 0.31). The gate gives this up.
+  It was found after seeing the results and rests on one dataset, so the thresholds stay as they are. If it
+  holds, it becomes a v5 candidate: the gate input would be the bulk mode, which is known before the outcome.
+- Pseudobulk: v2 is ahead (0.76 vs 0.58), as on Parse.
+
+**Decisions:**
+- Gate thresholds are unchanged (0.2 / 0.4). COMBAT agrees with the development reading: v4 helps where
+  footprints differ by type and the design is well conditioned, and v2 is right for shared PBMC or whole-blood
+  responses.
+- Real whole-blood bulk: the recommended default is offset-corrected bulk (platform offsets from other donors'
+  pairs) with v2 or gated v4. Report within-program r, null calls and wrong-sign calls per section 12's rules.
+  Calls stay rare (about 0.5 of 49 per split), so expect to report direction and ranking, with few type-level
+  calls.
+- Nothing held-out was touched.
+
+**Next: the freeze decisions (user).**
+1. v3 (v2 estimator plus self-tests, F6 missing-type score, noise ratio, μ / shared-vs-restricted report,
+   fraction-noise input, section 12 scoring). Pre-register the decision rule, then run v2 and v3 once on 30–39.
+2. Gated v4 (`estimator="v4gated"`, thresholds 0.2 / 0.4, external-fraction floor 0.35). Held-out 40–49.
