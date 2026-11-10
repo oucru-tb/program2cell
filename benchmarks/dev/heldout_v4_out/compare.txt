@@ -1,0 +1,76 @@
+C:\Users\duy.pham\Documents\dev\program2cell\scripts\experiments\heldout_v4_compare.py:145: RuntimeWarning: Mean of empty slice
+  a, b = np.nanmean(v4[d], 0), np.nanmean(v2[d], 0)
+C:\Users\duy.pham\Documents\dev\program2cell\scripts\experiments\heldout_v4_compare.py:80: RuntimeWarning: Mean of empty slice
+  return np.nanmean([np.nanmean(x[d], 0) for d in ds], 0)
+C:\Users\duy.pham\Documents\dev\program2cell\scripts\experiments\heldout_v4_compare.py:89: RuntimeWarning: Mean of empty slice
+  out[i] = np.nanmean([np.nanmean(diff[d][rng.integers(0, len(diff[d]), len(diff[d]))], 0) for d in pick], 0)
+C:\Users\duy.pham\Documents\dev\program2cell\scripts\experiments\heldout_v4_compare.py:185: RuntimeWarning: Mean of empty slice
+  d, row(np.nanmean(v2[d], 0)), row(np.nanmean(p, 0)), row(np.nanmean(v4[d], 0))))
+Freeze v4 comparison, splits 40-49: gated v4 (v4g / v4g_pair) vs freeze v2 (auto_v2)
+
+per dataset (dataset means)            cov          r   within_r  null_calls      power      width
+  mcf_ida      v2        0.940      0.903      0.354      0.041      0.441      0.248
+               v4g       0.912      0.856      0.662      0.121      0.450      0.245   v4 on 10/10   S1 FAIL
+  mcf_tram     v2        0.957      0.912      0.716      0.060      0.776      0.176
+               v4g       0.919      0.897      0.593      0.107      0.829      0.150   v4 on 10/10   S1 FAIL
+  tahoe_enc    v2        0.940      0.433      0.070      0.021      0.033      0.205
+               v4g       0.973      0.607      0.397      0.025      0.517      0.199   v4 on 10/10
+  tahoe_gem    v2        0.930      0.510      0.490      0.037      0.000      0.141
+               v4g       0.970      0.729      0.796      0.059      0.250      0.137   v4 on 10/10
+  tahoe_rmc    v2        0.981      0.733      0.336      0.014      0.740      0.302
+               v4g       0.994      0.840      0.613      0.008      0.716      0.290   v4 on 8/10
+  tahoe_tram   v2        0.984      0.851      0.684      0.006      0.770      0.300
+               v4g       0.989      0.880      0.620      0.006      0.704      0.321   v4 on 5/10
+  kang         v2        0.993      0.826      0.714      0.000      0.263      0.706
+               v4g       0.996      0.848      0.735      0.000      0.143      0.790   v4 on 0/10
+  zhang        v2        0.996      0.700        nan      0.005      0.000      0.121
+               v4g       0.993      0.607        nan      0.012      0.000      0.137   v4 on 1/10
+  parse_gmcsf  v2        0.996      0.826      0.941      0.000      0.100      0.240
+               v4g       0.996      0.826      0.941      0.000      0.100      0.240   v4 on 0/10
+  parse_ifnb   v2        1.000      0.919      0.909      0.000      0.060      0.453
+               v4g       1.000      0.919      0.909      0.000      0.060      0.453   v4 on 0/10
+  parse_ifng   v2        1.000      0.868      0.967      0.000      0.025      0.305
+               v4g       1.000      0.868      0.967      0.000      0.025      0.305   v4 on 0/10
+  parse_il4    v2        1.000      0.779      0.694      0.000      0.050      0.465
+               v4g       1.000      0.779      0.694      0.000      0.050      0.465   v4 on 0/10
+  parse_tnf    v2        1.000      0.886        nan      0.000      0.100      0.137
+               v4g       1.000      0.886        nan      0.000      0.100      0.137   v4 on 0/10
+
+mean difference v4 - v2, all (13 datasets) [95% cluster bootstrap CI]
+  cov        +0.002 [-0.010, +0.014]
+  r          +0.030 [-0.012, +0.081]
+  within_r   +0.096 [-0.005, +0.215]
+  null_calls +0.012 [+0.000, +0.027]
+  power      +0.045 [-0.027, +0.145]
+  width      +0.005 [-0.006, +0.022]
+
+mean difference v4 - v2, cell lines (6 datasets) [95% cluster bootstrap CI]
+  cov        +0.004 [-0.022, +0.027]
+  r          +0.078 [+0.001, +0.157]
+  within_r   +0.172 [+0.007, +0.324]
+  null_calls +0.024 [+0.001, +0.053]
+  power      +0.117 [-0.022, +0.295]
+  width      -0.005 [-0.016, +0.008]
+
+mean difference v4 - v2, PBMC (7 datasets) [95% cluster bootstrap CI]
+  cov        +0.000 [-0.003, +0.003]
+  r          -0.010 [-0.044, +0.011]
+  within_r   +0.004 [+0.000, +0.019]
+  null_calls +0.001 [+0.000, +0.004]
+  power      -0.017 [-0.054, +0.000]
+  width      +0.014 [-0.000, +0.039]
+
+sensitivity: study level (r difference; descriptive)
+  mcfarland -0.031 (2)  tahoe +0.132 (4)  kang +0.022 (1)  zhang -0.093 (1)  parse +0.000 (5)
+  study-weighted mean +0.006; exact one-sided sign-flip p 0.438 over 5 studies (4 nonzero)
+
+secondary: pairing on Kang and Zhang (dataset means; r, within_r, null_calls)
+  kang   auto_v2 0.826 0.714 0.000 | auto_v2_pair 0.848 0.735 0.000 | v4g_pair 0.848 0.735 0.000
+  zhang  auto_v2 0.700 nan 0.005 | auto_v2_pair 0.638 nan 0.008 | v4g_pair 0.607 nan 0.012
+
+DECISION (pre-registered)
+  S1 every dataset coverage >= 0.85, null calls <= 0.10: FAIL
+  S2 coverage lower CI -0.010 >= -0.03, null-call upper CI +0.027 <= +0.02: FAIL
+  S3 wrong-sign calls per split, v4gated vs v2 (10 splits): real 0.0 vs 0.0; real_offset 0.0 vs 0.0: pass
+  E  r difference +0.030 [-0.012, +0.081]: non-inferior
+  OUTCOME: freeze v2 stays the Paper 1 method; gated v4 reported as secondary

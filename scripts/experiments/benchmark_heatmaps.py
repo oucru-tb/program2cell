@@ -163,7 +163,7 @@ def funky(table, groups, info, name, title=None, palm_rows=("PALM",), note=None,
 
 
 # ---- 1. which cells changed --------------------------------------------------------------------------------
-def calling(splits=(0, 1, 2)):
+def calling(splits=(0, 1, 2), name="bench_calling", split_note="Development splits 0–2."):
     rows = [r for f in glob.glob(os.path.join(pv.OUT, "*.json")) for r in json.load(open(f))]
     df = pd.DataFrame(rows)
     df = df[df.split.isin(splits)]
@@ -207,13 +207,13 @@ def calling(splits=(0, 1, 2)):
     info["Calibrated ranges"] = ["yes" if m.startswith("PALM") else "no" for m in T.index]
     print(T.round(3).to_string())
     fixed = {c: ((0.5, 1) if c == "auroc" else (0, 1)) for c in T.columns}
-    funky(T, groups, info, "bench_calling", fixed=fixed, title="Which cell types changed? Calling cell-type pathway changes",
+    funky(T, groups, info, name, fixed=fixed, title="Which cell types changed? Calling cell-type pathway changes",
           note="Negative control: unchanged cell type × pathway pairs flagged (fewer is better). Positive control: "
                "real changes in the drug's pathway (|true| ≥ 0.1) found with the right sign.\nEffect accuracy: "
                "correlation of the estimated with the true change; responder AUROC ranks the 3 p53-intact lines "
                "(idasanutlin).\nHonest ranges: share of 90% ranges containing the true change (tools: t-test "
                "interval; the standard workflow gives none). Tools: BH q < 0.1; PALM: 90% range.\nBars scaled per column (longest = best); "
-               "1–3 = rank. Development splits 0–2. \"PALM with X fractions\": PALM's effect step on another "
+               "1–3 = rank. " + split_note + " \"PALM with X fractions\": PALM's effect step on another "
                "tool's proportions.")
 
 

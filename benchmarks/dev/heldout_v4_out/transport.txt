@@ -1,0 +1,40 @@
+C:\Users\duy.pham\Documents\dev\program2cell\scripts\experiments\heldout_v4_compare.py:120: RuntimeWarning: Mean of empty slice
+  a, b = np.nanmean(v4[d], 0), np.nanmean(v2[d], 0)
+C:\Users\duy.pham\Documents\dev\program2cell\scripts\experiments\heldout_v4_compare.py:80: RuntimeWarning: Mean of empty slice
+  return np.nanmean([np.nanmean(x[d], 0) for d in ds], 0)
+C:\Users\duy.pham\Documents\dev\program2cell\scripts\experiments\heldout_v4_compare.py:89: RuntimeWarning: Mean of empty slice
+  out[i] = np.nanmean([np.nanmean(diff[d][rng.integers(0, len(diff[d]), len(diff[d]))], 0) for d in pick], 0)
+Transport check (descriptive, no decision), splits 40-49: perturbations never run in development
+MISSING (1): parse_il10 s41
+
+per dataset (dataset means)            cov          r   within_r  null_calls      power      width
+  parse_ifna   v2        0.990      0.759        nan      0.015      0.100      0.162
+               v4g       0.990      0.759        nan      0.015      0.100      0.162   v4 on 0/10
+  parse_il10   v2        0.993      0.747        nan      0.000      0.000      0.298
+               v4g       0.993      0.747        nan      0.000      0.000      0.298   v4 on 0/9
+  parse_il1b   v2        1.000      0.750      0.968      0.000      0.050      0.217
+               v4g       1.000      0.750      0.968      0.000      0.050      0.217   v4 on 0/10
+  parse_il6    v2        1.000      0.748        nan      0.006      0.000      0.113
+               v4g       1.000      0.748        nan      0.006      0.000      0.113   v4 on 0/10
+  tahoe_afa    v2        0.990      0.678      0.740      0.016      0.554      0.248
+               v4g       0.989      0.831      0.846      0.013      0.525      0.239   v4 on 10/10
+  tahoe_alp    v2        0.973      0.808      0.800      0.036      0.712      0.203
+               v4g       0.968      0.875      0.827      0.046      0.723      0.183   v4 on 10/10
+  tahoe_bor    v2        0.990      0.552      0.586      0.007      0.104      0.449
+               v4g       0.990      0.552      0.586      0.007      0.104      0.449   v4 on 0/10
+  tahoe_evr    v2        0.956      0.495        nan      0.085      0.000      0.126
+               v4g       0.967      0.569        nan      0.082      0.000      0.125   v4 on 6/10
+  tahoe_ptx    v2        0.952      0.590      0.524      0.047      0.579      0.204
+               v4g       0.984      0.768      0.722      0.063      0.845      0.176   v4 on 10/10
+
+mean difference v4 - v2 (9 datasets) [95% cluster bootstrap CI; datasets within 2 studies]
+  cov        +0.004 [-0.002, +0.013]
+  r          +0.052 [+0.012, +0.101]
+  within_r   +0.066 [+0.000, +0.160]
+  null_calls +0.002 [-0.003, +0.010]
+  power      +0.028 [-0.012, +0.103]
+  width      -0.006 [-0.014, -0.000]
+
+sensitivity: study level (r difference; descriptive)
+  parse +0.000 (4)  tahoe +0.094 (5)
+  study-weighted mean +0.047; exact one-sided sign-flip p 0.500 over 2 studies (1 nonzero)

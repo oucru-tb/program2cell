@@ -180,6 +180,12 @@ def run(datasets, splits, names):
             if not todo:
                 continue
             pb, inp, T, beta, truth, src, fsrc, cal, donors = _setup(dsn, split)
+            if not ((T == 1).any() and (T == 0).any()):
+                # e.g. parse_il10: only Donor4 has IL-10 samples, so a split whose test donors exclude it has no
+                # treated arm; not evaluable, skipped (no json), reported as such
+                print("[%s] %s s%d SKIPPED: no %s samples" % (time.strftime("%H:%M"), dsn, split,
+                                                           "treated" if not (T == 1).any() else "control"), flush=True)
+                continue
             for name in todo:
                 kw = dict(ESTIMATORS[name])
                 if kw.pop("paired", False):

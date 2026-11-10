@@ -84,7 +84,10 @@ real-bulk scoring rules. Splits 30–39 stay unused, in reserve. Evidence: docs/
      splits 40–49 with `v4g` and `auto_v2`. These are new perturbations of two benchmark studies, not new
      studies. No unused independent study is available, so transport to a new laboratory, platform or tissue
      stays untested.
-- **Result:** pending.
+- **Result (2026-11-10, `docs/heldout_v4_results.md`):** S1 FAIL (gated v4 null calls 0.121 on McFarland
+  idasanutlin, 0.107 on trametinib), S2 FAIL (null-call difference upper CI +0.027), S3 pass, E non-inferior
+  (r +0.030 [−0.012, +0.081]). **Outcome: freeze v2 (`estimator="auto"`) stays the Paper 1 method; gated v4 is
+  reported as secondary.** The package default (`v4gated`) is to be set back to `auto` (pending).
 
 ## Method freeze v2 (2026-11-03; git tag `method-freeze-v2`)
 
