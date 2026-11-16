@@ -14,6 +14,68 @@ see `benchmarking.md`.*
 
 ---
 
+## Method freeze v5 (2026-11-16; git tag `method-freeze-v5`)
+
+User decision 2026-11-16: confirm the v5 candidate on the reserved held-out splits 30–39 before writing Paper 1
+Results. Evidence: `docs/weak_points_plan_2026-11-12.md` §4b (E6 `sized_fx`).
+
+**What changed from v2:** only the reported calibrated interval. Estimates, routes (unmixed vs calibrated), the
+guard and the unmixed intervals are those of freeze v2.
+
+| Step | v2 | v5 |
+|---|---|---|
+| Fractions, activity, calibration, routing, guard | as v2 | unchanged |
+| Calibrated-route interval | max(conformal, √(q_abs² + (t·se_r)²)), q_abs = 90% quantile of the absolute simulated leakage error over all design-check cohorts | the same with q_abs from the design-check cohorts whose largest planted \|β\| per program is ≤ the study's largest calibrated \|effect\| for that program (at least the 3 smallest cohorts); `sim_widen="sized"` |
+| Package default | `estimator="auto"` (v4gated from 2026-11-09, failed) | `estimator="v5"` |
+
+`estimator="auto"` remains available and reproduces freeze v2. Opt-in strict calls (`calls="bh"`) are not part of
+the freeze.
+
+**Checks made before the freeze (development splits 20–29 only):**
+- Offline (`v5_sims_offline.py`, 130 runs): power 0.269 → 0.316 (+0.047 [+0.017, +0.081]), null calls +0.002
+  [+0.001, +0.005], coverage 0.982 → 0.970 (worst dataset 0.91), every dataset passes S1. Package `estimator="v5"`
+  reproduces the offline values to 1e-10 (Kang and McFarland split 20).
+- Further improvements tried and not adopted (2026-11-16, offline, no new fits):
+  - matching on the *true* effect size instead of the estimated one gives the same quantile (Kang 0.194 vs
+    0.196; McFarland idasanutlin 0.100 vs 0.111), so size matching is at its ceiling;
+  - pattern matching (keep cohorts as heterogeneous as the study): real worst-type relative errors (0.85–1.21)
+    match the simulated mixed patterns (≈ 1.1), and the estimated heterogeneity is biased low (McFarland 0.30
+    vs true 0.40), so it would under-cover;
+  - paired designs (`groups` = donors on Kang and Zhang): on held-out 40–49 paired v2 had lower Kang power
+    (0.143 vs 0.263) and wider intervals.
+
+**Held-out protocol (fixed before any split 30–39 result exists):**
+- **Splits:** 30–39 of every dataset; never run (no output files exist for them on 2026-11-16). Splits 20–29
+  were v4 and v5 development; 40–49 were the v4 held-out run.
+- **Datasets:** the 13 datasets of freeze v2 (`scripts/experiments/heldout_v5_chain.sh`, lanes a–d): PALM
+  fractions (joint NB fit on McFarland, Kang and Zhang; PALM-lite elsewhere), CIBERSORT and InstaPrism for
+  `practice_vs_palm.py`. TOAST, TCA and cellGeometry are not rerun (compared on held-out 20–29 and 40–49).
+  COMBAT sepsis vs healthy: `combat_v5.py` (single-cell, raw, offset-corrected and self-offset bulk; v2 and v5).
+- **PALM effects:** `v5` and `auto_v2` on the same splits (unpaired on Kang and Zhang, as in freeze v2);
+  `diff` as a reference.
+- **Pre-registered decision rule** (`scripts/experiments/heldout_v5_compare.py`, committed with this tag):
+  - Scores per dataset × split (`fraction_error.score`); differences v5 − v2; means over splits, then over the
+    13 datasets with equal weight; 95% two-stage cluster bootstrap CI (datasets, then splits), 4000 draws, seed 0.
+  - C0: v5 and v2 effects identical on every run (max |difference| ≤ 1e-8); otherwise a deviation, no decision.
+  - S1: on every dataset, v5 coverage ≥ 0.85 and null-call rate ≤ 0.10.
+  - S2: coverage difference lower CI ≥ −0.03 and null-call difference upper CI ≤ +0.02.
+  - S3: on COMBAT raw and offset-corrected bulk, v5 makes no more than 0.2 wrong-sign calls per split beyond v2.
+  - E (primary): mean difference in power (calls with the right sign among \|β\| ≥ 0.1). "Superior" if the lower
+    CI > 0; otherwise "not shown". No non-inferiority claim: with equal estimates, v5 is adopted only for more
+    power. Development value +0.047 [+0.017, +0.081] (chosen on those splits, so optimistic).
+  - Outcome: C0 and S1–S3 pass and E superior → v5 is the Paper 1 method. Otherwise freeze v2 stays the Paper 1
+    method, the package default is set back to `auto`, and v5 is reported as secondary.
+  - Secondary, no decision: width, r and within-program r (equal by construction), cell lines vs PBMC,
+    study-level power difference with an exact sign-flip p over the 5 studies (descriptive; the dataset-level CI
+    is optimistic because datasets share donors within a study).
+  - Transport (descriptive, lane e): 9 perturbations never used in v5 development (Parse IFN-α, IL-10, IL-1β,
+    IL-6; Tahoe afatinib, alpelisib, bortezomib, everolimus, paclitaxel), splits 30–39, `v5` and `auto_v2`;
+    `heldout_v5_compare.py transport`.
+  - Multiplicity: one primary endpoint, tested once on splits 30–39.
+- **Reporting:** `heldout_v5_compare.py`, `causal_loop.py summary heldout5`, `practice_vs_palm.py summary
+  heldout5` (PALM_EST=v5), `combat_v5.py summary 30-39`; every dataset and metric, pass or fail; results in
+  `docs/heldout_v5_results.md`; nothing is rerun or retuned after results are seen.
+
 ## Method freeze v4 (2026-11-09; git tag `method-freeze-v4`)
 
 **There is no v3 freeze.** The user decided on 2026-11-09 to drop the planned v3 (correctness and scoring) freeze
@@ -87,7 +149,8 @@ real-bulk scoring rules. Splits 30–39 stay unused, in reserve. Evidence: docs/
 - **Result (2026-11-10, `docs/heldout_v4_results.md`):** S1 FAIL (gated v4 null calls 0.121 on McFarland
   idasanutlin, 0.107 on trametinib), S2 FAIL (null-call difference upper CI +0.027), S3 pass, E non-inferior
   (r +0.030 [−0.012, +0.081]). **Outcome: freeze v2 (`estimator="auto"`) stays the Paper 1 method; gated v4 is
-  reported as secondary.** The package default (`v4gated`) is to be set back to `auto` (pending).
+  reported as secondary.** The package default (`v4gated`) was replaced at freeze v5 (2026-11-16) by `v5`;
+  it returns to `auto` if v5 fails its held-out rule.
 
 ## Method freeze v2 (2026-11-03; git tag `method-freeze-v2`)
 

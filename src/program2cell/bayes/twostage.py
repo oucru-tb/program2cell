@@ -161,12 +161,19 @@ def sample_summaries(Y, L, B, G, theta, m=None, eta0=None, sd_eta=3.0, sd_delta=
         else:
             V = A * (phi if likelihood == "quasi" else 1.0)
         V = V + jnp.diag(1.0 - free)             # keep V invertible when the eta block is held fixed
-        VA = jnp.linalg.solve(V, A)                                        # V^-1 A
-        Lam = A.T @ VA
-        h = VA.T @ (g + A @ x)
+        if D == C and not sandwich:
+            # composition only: A is rank C-1 (softmax shift), so solve(V, A) with V = A can be singular;
+            # without a sandwich A' V^-1 A reduces to A / s exactly (s = phi for quasi, else 1)
+            s = phi if likelihood == "quasi" else 1.0
+            Lam, h = A / s, (g + A @ x) / s
+        else:
+            VA = jnp.linalg.solve(V, A)                                    # V^-1 A
+            Lam = A.T @ VA
+            h = VA.T @ (g + A @ x)
         Am = 0.5 * (A + A.T) / (phi if likelihood == "quasi" else 1.0)     # model-based information
         dd = jnp.arange(C, D)
-        infl = jnp.median(jnp.diag(jnp.linalg.pinv(Lam))[dd] / jnp.diag(jnp.linalg.pinv(Am))[dd])
+        infl = (jnp.median(jnp.diag(jnp.linalg.pinv(Lam))[dd] / jnp.diag(jnp.linalg.pinv(Am))[dd]) if D > C
+                else jnp.ones((), Lam.dtype))                       # no programs (composition-only summary)
         # convergence: size of the Newton step that would still be taken (scale-free, unlike the raw score)
         nstep = jnp.max(jnp.abs(jnp.linalg.solve(A + jnp.diag(prec * free + (1.0 - free)),
                                                  (g - prec * x) * free)))
@@ -201,6 +208,48 @@ def _two_step_summaries(Y, L, B, G, theta, m, eta0, sd_eta, sd_delta, iters, lik
     x = b["x_hat"].at[:, :C].set(eta_hat)
     return dict(x_hat=x, Lam=Lam, h=h, grad_norm=jnp.maximum(a["grad_norm"], b["grad_norm"]), phi=b["phi"],
                 inflation=b["inflation"])
+
+
+def _smi_summaries(Y, L, B, G, theta, m, eta0, sd_eta, sd_delta, iters, likelihood, sandwich, blocks, smi_eta):
+    """Semi-modular stage 1 (Carmona & Nicholls 2020), development option. Two modules share the fractions eta:
+    module 1 is composition only (delta = 0), module 2 the full model (eta and delta). The information about
+    eta is the geometric interpolation of the two Gaussian summaries,
+        Lam_eta = (1 - smi_eta) Lam_0 + smi_eta Lam_m,   h_eta likewise,
+    with Lam_0 from the composition-only fit and Lam_m the full fit's marginal information for eta (delta
+    integrated out). Delta is then summarised given the resulting eta (fix_eta), as in _two_step_summaries:
+    the effects use the full likelihood given the fractions (the SMI 'theta given phi' step).
+    smi_eta = 1 gives _two_step_summaries; smi_eta = 0 is the cut with composition-only fractions."""
+    C = B.shape[0]
+    a = sample_summaries(Y, L, B, G, theta, m, eta0, sd_eta, sd_delta, iters, "nb")
+    La, ha = a["Lam"], a["h"]
+    Lee, Led, Ldd = La[:, :C, :C], La[:, :C, C:], La[:, C:, C:]
+    K = jnp.swapaxes(jnp.linalg.solve(Ldd, jnp.swapaxes(Led, 1, 2)), 1, 2)
+    Lm = Lee - K @ jnp.swapaxes(Led, 1, 2)
+    hm = ha[:, :C] - jnp.einsum("nij,nj->ni", K, ha[:, C:])
+    z = sample_summaries(Y, L, B, jnp.zeros((0, G.shape[1]), G.dtype), theta, m, eta0, sd_eta, sd_delta, iters,
+                         "nb")                                          # composition only: no programs
+    L0, h0 = z["Lam"][:, :C, :C], z["h"][:, :C]
+    Le = smi_eta * Lm + (1.0 - smi_eta) * L0
+    he = smi_eta * hm + (1.0 - smi_eta) * h0
+    w, V = jnp.linalg.eigh(0.5 * (Le + jnp.swapaxes(Le, 1, 2)))
+    Le = (V * jnp.clip(w, 0)[:, None, :]) @ jnp.swapaxes(V, 1, 2)
+    # eta: precision-weighted blend of the two modules' modes (each precision includes the eta prior), so
+    # smi_eta = 1 gives the full NB mode (as _two_step_summaries) and smi_eta = 0 the composition-only mode
+    Pp = sd_eta ** -2.0 * jnp.eye(C)
+    Pa, P0 = Lm + Pp, L0 + Pp
+    xa, x0 = a["x_hat"][:, :C], z["x_hat"][:, :C]
+    rhs = smi_eta * jnp.einsum("nij,nj->ni", Pa, xa) + (1.0 - smi_eta) * jnp.einsum("nij,nj->ni", P0, x0)
+    eta_hat = jnp.linalg.solve(smi_eta * Pa + (1.0 - smi_eta) * P0, rhs[..., None])[..., 0]
+    if smi_eta in (0.0, 1.0):       # endpoints exact: the delta fit given eta is sensitive to float32 noise
+        eta_hat = xa if smi_eta == 1.0 else x0
+    b = sample_summaries(Y, L, B, G, theta, m, eta_hat, sd_eta, sd_delta, iters, likelihood, sandwich, blocks,
+                         fix_eta=True)
+    Lam = b["Lam"].at[:, :C, :C].set(Le)
+    h = b["h"].at[:, :C].set(he)
+    x = b["x_hat"].at[:, :C].set(eta_hat)
+    return dict(x_hat=x, Lam=Lam, h=h, grad_norm=jnp.maximum(jnp.maximum(a["grad_norm"], z["grad_norm"]),
+                                                              b["grad_norm"]),
+                phi=b["phi"], inflation=b["inflation"])
 
 
 # ---- stage 2: population model on the summaries ----------------------------------------------------
@@ -354,14 +403,15 @@ def fit_fast(Y, L, T, B, G, X=None, groups=None, activity="independent", use_m=T
              num_samples=500, chains=2, seed=0, target_accept=0.9, chain_method="auto", svi_steps=2000,
              sd_eta=3.0, sd_delta=1.0, stage1_iters=80, progress_bar=False, likelihood="nb", sigma_m="auto",
              sandwich=False, n_blocks=100, stage2="nuts", vi_steps=5000, vi_particles=4,
-             delta_given_eta=False):
+             delta_given_eta=False, smi_eta=None):
     """Two-stage fit (see module docstring). Same inputs as bayes.fit.fit; returns a draws dict with
     the same keys (pi, delta, kappa, beta, a, gamma, dec, convergence, ...) plus `stage1`
     (summary quality) and `timing` (seconds per stage).
 
     delta_given_eta=True splits stage 1 in two: fractions (eta) from the NB likelihood, summarised by their
     marginal information (delta integrated out), then delta with eta held at the NB estimate, using
-    `likelihood`/`sandwich`. Estimating eta and delta jointly lets program shifts trade off against
+    `likelihood`/`sandwich`. smi_eta in [0, 1] (development option, not used by the frozen method) replaces
+    that split by semi-modular inference: see _smi_summaries. Estimating eta and delta jointly lets program shifts trade off against
     composition (program genes are often cell-type markers), which made per-sample delta 2-4x too
     dispersed on PBMC/OneK1K; holding the fractions fixed is what the naive two-step estimator does.
 
@@ -396,7 +446,12 @@ def fit_fast(Y, L, T, B, G, X=None, groups=None, activity="independent", use_m=T
     pi0 = np.clip(nnls_fractions(np.asarray(Yj), np.asarray(Bj)), 1e-3, None)
     eta0 = jnp.asarray(np.log(pi0 / pi0.sum(1, keepdims=True)), fdt)
     blocks = gene_blocks(np.asarray(Bj), np.asarray(Gj), n_blocks, seed) if sandwich else None
-    if not delta_given_eta:
+    if smi_eta is not None:
+        if not 0.0 <= smi_eta <= 1.0:
+            raise ValueError("smi_eta must be in [0, 1]")
+        st1 = _smi_summaries(Yj, Lj, Bj, Gj, theta, m, eta0, sd_eta, sd_delta, stage1_iters, likelihood,
+                             sandwich, blocks, float(smi_eta))
+    elif not delta_given_eta:
         st1 = sample_summaries(Yj, Lj, Bj, Gj, theta, m, eta0, sd_eta, sd_delta, stage1_iters, likelihood,
                                sandwich, blocks)
     else:

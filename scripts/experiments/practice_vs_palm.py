@@ -202,4 +202,4 @@ if __name__ == "__main__":
     if sys.argv[1] == "run":
         run(sys.argv[2].split(","), cl.db._splits(sys.argv[3]), sys.argv[4].split(",") if len(sys.argv) > 4 else None)
     else:
-        summary(heldout={"heldout": True, "heldout2": "v2", "heldout4": "v4"}.get(sys.argv[2], False) if len(sys.argv) > 2 else False)
+        summary(heldout={"heldout": True, "heldout2": "v2", "heldout4": "v4", "heldout5": "v5"}.get(sys.argv[2], False) if len(sys.argv) > 2 else False)

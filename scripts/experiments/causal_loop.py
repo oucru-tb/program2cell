@@ -13,7 +13,7 @@ Datasets and known answers:
 Truth: the treatment contrast of the thinned held-out half's activity (dev_bench). Fractions: the PALM
 posterior of the PROGENy-7 fit when it exists, else PALM-lite (recorded).
 One json per (dataset, split, estimator) in benchmarks/dev/causal_loop/. Restart-safe.
-Usage: python causal_loop.py run DATASETS SPLITS [ESTIMATORS]   |   python causal_loop.py summary [heldout|heldout2|heldout4]
+Usage: python causal_loop.py run DATASETS SPLITS [ESTIMATORS]   |   python causal_loop.py summary [heldout|heldout2|heldout4|heldout5]
 """
 import glob, json, os, sys, time
 import numpy as np, pandas as pd
@@ -77,6 +77,27 @@ ESTIMATORS = {"diff": dict(estimator="diff"),
               "auto_v2": dict(estimator="auto"),
               # freeze v4 (2026-11-09): freeze v2 with groups = donors, the v2 arm inside v4g_pair (secondary reference)
               "auto_v2_pair": dict(estimator="auto", paired=True),
+              # development 2026-11-11 (docs/improvement_research_2026-11.md): freeze v2 unchanged, intermediate
+              # parts of both routes saved to <ds>__s<k>__auto_v2_parts.npz for offline variants
+              "auto_v2_parts": dict(estimator="auto", unmix_kw=dict(keep_parts=True)),
+              # as auto_v2_parts plus the design check's per-cohort simulation errors (v5_bias_offline.py)
+              "auto_v2_sims": dict(estimator="auto", unmix_kw=dict(keep_parts=True)),
+              # plan E6c (2026-11-12): calibrated route reports the size-matched simulated error; routing as v2
+              "auto_v5s": dict(estimator="auto", sim_widen="sized"),
+              # freeze v5 (2026-11-16, method_spec "Method freeze v5"): the package entry point, = auto_v5s
+              "v5": dict(estimator="v5"),
+              # plan W2 / E7 (2026-11-12): Student-t deviation prior (nu = 1, Cauchy; nu = 4), routing as v2
+              "auto_v5t1": dict(estimator="auto", unmix_kw=dict(robust_nu=1.0)),
+              "auto_v5t4": dict(estimator="auto", unmix_kw=dict(robust_nu=4.0)),
+              # plan E22 (2026-11-12): sized + unmixed route widened to the simulated unmixed error, with simulated
+              # responses that are not exactly beta G (per-type weight jitter weight_sd); u0 = widening only (control)
+              "auto_v5u0": dict(estimator="auto", sim_widen="sized", unmix_kw=dict(unmix_widen=True)),
+              "auto_v5u05": dict(estimator="auto", sim_widen="sized", unmix_kw=dict(unmix_widen=True, weight_sd=0.5)),
+              "auto_v5u10": dict(estimator="auto", sim_widen="sized", unmix_kw=dict(unmix_widen=True, weight_sd=1.0)),
+              # plan E23 (2026-11-12): freeze v2 with the design check's cohorts simulated with realistic responses
+              # (per-type weight jitter), parts and per-cohort errors saved (npz) for offline exposure-based widening
+              "auto_v5j05_sims": dict(estimator="auto", n_sim=20, unmix_kw=dict(keep_parts=True, weight_sd=0.5)),
+              "auto_v5j10_sims": dict(estimator="auto", n_sim=20, unmix_kw=dict(keep_parts=True, weight_sd=1.0)),
               # v3 development (2026-11-04, docs/v3_plan.md item 9): pool the types to the shared-response fit where
               # their deviations are not distinguishable (Wald test, alpha 0.1); else as auto_v2
               "auto_v3pool": dict(estimator="auto", unmix_kw=dict(pool=True)),
@@ -117,7 +138,7 @@ ESTIMATORS = {"diff": dict(estimator="diff"),
 # the defaults changed at freeze v2 (sim_widen "abs", choose "width_guard"): every older estimator keeps the
 # settings it was run with (freeze v1 defaults sim_widen=True, choose="rmse")
 for _n, _kw in ESTIMATORS.items():
-    if _kw.get("estimator") in ("auto", "unmix") and not _n.startswith("auto_v2") and not _n.startswith("auto_v3"):
+    if _kw.get("estimator") in ("auto", "unmix") and not _n.startswith(("auto_v2", "auto_v3", "auto_v5")):
         _kw.setdefault("sim_widen", True)
         _kw["unmix_kw"] = {"choose": "rmse", **_kw.get("unmix_kw", {})}
 
@@ -203,6 +224,12 @@ def run(datasets, splits, names):
                          arrays=dict(effects=r.effects.tolist(), lo=lo.tolist(), hi=hi.tolist(),
                                      calls=r.calls.tolist(), beta=beta.tolist(), cell_types=list(inp.cell_types),
                                      programs=list(inp.programs)))
+                parts = r.info.get("parts")
+                if parts is not None:
+                    np.savez_compressed(os.path.join(OUT, "%s__s%d__%s.npz" % (dsn, split, name)),
+                                        **{k: np.asarray(v, float) for k, v in parts.items() if v is not None},
+                                        beta=beta, T=T, fractions=np.asarray(r.fractions, float))
+                    r.info.pop("parts")
                 with open(os.path.join(OUT, "%s__s%d__%s.json" % (dsn, split, name)), "w") as fh:
                     json.dump(s, fh, default=float)
                 print("[%s] %s s%d %-9s cov %.2f r %.3f %s(%.0fs)" % (
@@ -214,7 +241,10 @@ def run(datasets, splits, names):
 
 def _split_set(df, heldout):
     """Development splits (< 10), held-out v1 (10-19; heldout=True), held-out v2 (20-29; heldout="v2") or held-out
-    v4 (40-49; heldout="v4"). Splits 20-29 were v4 development after the v2 held-out run; 30-39 are unused."""
+    v4 (40-49; heldout="v4") or held-out v5 (30-39; heldout="v5"). Splits 20-29 were v4/v5 development after the
+    v2 held-out run."""
+    if heldout == "v5":
+        return df[(df.split >= 30) & (df.split < 40)]
     if heldout == "v2":
         return df[(df.split >= 20) & (df.split < 30)]
     if heldout == "v4":
@@ -253,7 +283,7 @@ def summary(heldout=False):
 
 if __name__ == "__main__":
     if sys.argv[1] == "summary":
-        summary(heldout={"heldout": True, "heldout2": "v2", "heldout4": "v4"}.get(sys.argv[2], False) if len(sys.argv) > 2 else False)
+        summary(heldout={"heldout": True, "heldout2": "v2", "heldout4": "v4", "heldout5": "v5"}.get(sys.argv[2], False) if len(sys.argv) > 2 else False)
     else:
         names = sys.argv[4].split(",") if len(sys.argv) > 4 else list(ESTIMATORS)
         run(sys.argv[2].split(","), db._splits(sys.argv[3]), names)

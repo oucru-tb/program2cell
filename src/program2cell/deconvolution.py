@@ -63,8 +63,8 @@ UNMIX_DEFAULTS = dict(pev=True, misfit=True, choose="width_guard")
 
 def program_deconvolution(inputs, calibration, fractions=None, fraction_draws=None, engine=None, frac_fn=None,
                           treatment=None, effect_interval="lk", own=True, level=0.9, n_draws=50, seed=0,
-                          covariates=None, groups=None, estimator="v4gated", decompose=False, n_sim=10, direct_kw=None,
-                          sim_widen="abs", unmix_kw=None, v4_kw=None, **fit_kw):
+                          covariates=None, groups=None, estimator="v5", decompose=False, n_sim=10, direct_kw=None,
+                          sim_widen="abs", unmix_kw=None, v4_kw=None, calls="interval", fdr=0.10, **fit_kw):
     """Per-sample per-cell-type program activity and treatment effects from bulk counts and fractions.
 
     inputs: prepared inputs (program2cell.prepare_inputs): Y, B, Gmat, cell_types, programs, T.
@@ -93,8 +93,10 @@ def program_deconvolution(inputs, calibration, fractions=None, fraction_draws=No
     plus the study's contrast noise in quadrature, so well-separated types are not widened like poorly separated ones;
     "replace": the simulated-error interval alone, i.e. the study's own (group-bootstrap) contrast standard error
     times the simulated studentised error quantile of rescaled reallocation, which carries its leakage bias).
-    Default (freeze v4 2026-11-09, method_spec "Method freeze v4"): estimator="v4gated", which runs the freeze v2
-    setting and v4 stacked and returns v4 only where core.gls.gate_statistics passes. Freeze v2 (2026-11-03,
+    Default (freeze v5 2026-11-16, method_spec "Method freeze v5"; confirmed or rejected on held-out splits 30-39):
+    estimator="v5", freeze v2 with the size-matched calibrated interval (see 'v5' below); if v5 fails its held-out
+    rule the default returns to "auto". Freeze v4 (2026-11-09; failed held-out 40-49): estimator="v4gated", which
+    runs the freeze v2 setting and v4 stacked and returns v4 only where core.gls.gate_statistics passes. Freeze v2 (2026-11-03,
     method_spec 4.8): estimator="auto", sim_widen="abs" and UNMIX_DEFAULTS (pev=True, misfit=True,
     choose="width_guard"); it stays reachable as estimator="auto". Freeze v1: sim_widen=True, choose="rmse".
     estimator="diff" is the fast setting (seconds instead of minutes).
@@ -119,10 +121,39 @@ def program_deconvolution(inputs, calibration, fractions=None, fraction_draws=No
     error; v4_kw go to core.gls.v4_effects: frac_sd (0 for assembled bulk with PALM-lite fractions;
     core.gls.FRAC_SD_REAL_BULK for real bulk; "estimate" for fractions from elsewhere), min_effect (call
     floor), n_sim. out.info["v4"] holds the shared response and type deviations.
-    estimator 'v4gated' (the default since freeze v4; docs/v4_plan.md section 12): runs 'auto' and 'v4'
+    estimator 'v4gated' (freeze v4 default 2026-11-09 to 11-16, failed held-out; docs/v4_plan.md section 12): runs 'auto' and 'v4'
     (stacked, v4_kw defaults stack=True, noise_anchor=True) and returns v4 where core.gls.gate_statistics passes
     (type effects heterogeneous beyond their intervals and agreeing with v2), else auto; out.info["gate"].
+    estimator 'v5' (default since freeze v5 2026-11-16; docs/weak_points_plan_2026-11-12.md E6, section 4b):
+    freeze v2 ('auto') with sim_widen="sized": same estimates and routing, but the reported calibrated interval
+    uses the simulated error quantile of the design-check cohorts whose planted effects are no larger than this
+    study's (dev splits 20-29: power 0.269 -> 0.316, null calls +0.002, coverage 0.970, every dataset safe).
+    calls: "interval" (default) calls a pair whose interval excludes 0; "bh" (strict mode, plan E1) calls by
+    Benjamini-Hochberg over the study's pairs at `fdr`, with p = 2 Phi(-|effect| / s) and s = interval
+    half-width / normal level quantile (dev: FDP 0.108 -> 0.009, power -30%); q-values in out.info["qvalues"].
     """
+    if calls not in ("interval", "bh"):
+        raise ValueError("calls must be 'interval' or 'bh'")
+    if calls == "bh":
+        out = program_deconvolution(inputs, calibration, fractions, fraction_draws, engine, frac_fn, treatment,
+                                    effect_interval, own, level, n_draws, seed, covariates, groups, estimator,
+                                    decompose, n_sim, direct_kw, sim_widen, unmix_kw, v4_kw, **fit_kw)
+        if out.effects is not None:
+            from scipy.stats import norm
+            from .associate import _bh
+            e, (lo, hi) = np.asarray(out.effects, float), out.effects_interval
+            s = np.clip((np.asarray(hi) - np.asarray(lo)) / (2 * norm.ppf(0.5 + level / 2)), 1e-12, None)
+            qv = _bh(2 * norm.sf(np.abs(e) / s).ravel()).reshape(e.shape)
+            out.calls = qv <= fdr
+            out.info.update(calls="bh", fdr=fdr, qvalues=qv.tolist())
+        return out
+    if estimator == "v5":
+        out = program_deconvolution(inputs, calibration, fractions, fraction_draws, engine, frac_fn, treatment,
+                                    effect_interval, own, level, n_draws, seed, covariates, groups, "auto",
+                                    decompose, n_sim, direct_kw, "sized", unmix_kw, v4_kw, **fit_kw)
+        if out.effects is not None:
+            out.info["estimator"] = "v5"
+        return out
     if estimator == "v4gated":
         kw = dict(inputs=inputs, calibration=calibration, fractions=fractions, fraction_draws=fraction_draws,
                   engine=engine, frac_fn=frac_fn, treatment=treatment, effect_interval=effect_interval, own=own,
@@ -238,7 +269,7 @@ def _tau2_upper(d, s2, alpha):
 def _unmix_effects(out, inputs, calibration, fractions, fraction_draws, raw, raw_draws, T, X, groups, level, seed,
                    n_sim, mode, eff_cal, iv_cal, sim_widen=True, pev=False, separate=False, misfit=False,
                    per_pair=False, plant="prior", shared=False, margin=0.1, choose="rmse", pool=False,
-                   pool_alpha=0.1):
+                   pool_alpha=0.1, keep_parts=False, robust_nu=None, weight_sd=0.0, unmix_widen=False):
     """Effects by unmixing (core.unmix) for every program ('unmix') or where the design check favours it
     ('auto'); the others keep the calibrated effects. Intervals: unmixed, bootstrap half-width widened to
     max(t, simulated studentised error quantile) standard errors; calibrated, the calibrated interval widened
@@ -267,11 +298,12 @@ def _unmix_effects(out, inputs, calibration, fractions, fraction_draws, raw, raw
     r = um.unmix_effects(raw, A, T, X, groups, level=level, dhat_draws=dd, A_draws=Ad, pi=fractions, B=B, G=G,
                          pi_draws=zd, seed=seed, pev=pev, separate=separate,
                          misfit_tau="auto" if misfit else None, Y=inputs.Y,
-                         shared_fit=shared or plant == "shared" or pool)
+                         shared_fit=shared or plant == "shared" or pool, robust_nu=robust_nu)
     chk = um.design_check(calibration, fractions, T, X, groups, n_sim=n_sim, level=level, seed=seed,
                           effect_hint=r["effects"] if plant == "shared" else eff_cal,
                           offprog_sd=r["tau"] if misfit else 0.0, plant=plant,
-                          shared_hint=r.get("common") if plant == "shared" else None)
+                          shared_hint=r.get("common") if plant == "shared" else None, keep_sims=keep_parts,
+                          weight_sd=weight_sd)
     q = tdist.ppf(0.5 + level / 2, max(r["n_units"] - 1, 1))
     q = q if misfit else max(chk["z_q"], q)
     C, P = r["effects"].shape
@@ -305,7 +337,12 @@ def _unmix_effects(out, inputs, calibration, fractions, fraction_draws, raw, raw
             se_pool = np.sqrt(r["common_se"][None] ** 2 + mis ** 2 + tau2[None])
             eff_u = np.where(pooled[None], r["common"][None], r["effects"])
             se_u = np.where(pooled[None], se_pool, r["se"])
-    lo_u, hi_u = eff_u - q * se_u, eff_u + q * se_u
+    hw_u = q * se_u
+    if unmix_widen:                     # development (2026-11-12, plan E22): the unmixed route also widened to the
+        # simulated absolute unmixed error (per type and program), like the calibrated route; with weight_sd > 0 the
+        # simulated responses are not exactly beta G, so this carries the model-to-data gap of the leakage step
+        hw_u = np.maximum(hw_u, chk["q_abs_unmix_cp"])
+    lo_u, hi_u = eff_u - hw_u, eff_u + hw_u
     # conditioning of the unmixing design per program (v3 reporting item 4b): the leakage maps stacked over samples
     Ap = np.stack([A[:, :, p, :, p] for p in range(P)], 0) if A.ndim == 5 else np.moveaxis(A, 3, 0)
     cond = [float(np.linalg.cond(Ap[p].reshape(-1, C))) for p in range(P)]
@@ -314,15 +351,22 @@ def _unmix_effects(out, inputs, calibration, fractions, fraction_draws, raw, raw
     if sim_widen:
         se_r = np.abs(chk["slope"])[None] * um.contrast_se(raw, T, np.random.default_rng(seed), groups=groups)
         h_sim = chk["z_q_realloc"][None] * se_r
-        if sim_widen == "abs":              # leakage error in absolute units per type, plus this study's noise
+        if sim_widen in ("abs", "sized"):   # leakage error in absolute units per type, plus this study's noise
             q_t = tdist.ppf(0.5 + level / 2, max(r["n_units"] - 1, 1))
             h_sim = np.sqrt(chk["q_abs_realloc_cp"] ** 2 + (q_t * se_r) ** 2)
+        h_report = None
+        if sim_widen == "sized":            # development (2026-11-12, plan E6c "sized_fx"): routing and guard use
+            # the freeze v2 width below; the reported calibrated interval uses the error quantile of the cohorts
+            # whose planted effects are no larger than this study's (the prior plants up to 2x)
+            h_report = np.maximum(h, np.sqrt(chk["q_abs_sized_cp"] ** 2 + (q_t * se_r) ** 2))
         h = h_sim if sim_widen == "replace" else np.maximum(h, h_sim)
     guard = np.zeros((C, P), bool)
     if mode == "unmix":
         use = np.ones((C, P), bool)
     elif choose in ("width", "width_guard"):    # the narrower of the two simulation-calibrated intervals
-        hu = (hi_u - lo_u) / 2
+        hu = q * se_u                       # the route contest uses the freeze v2 unmixed width (unmix_widen only
+        # changes the reported interval: a widened unmixed interval in the contest moves programs to the calibrated
+        # route, which under-covers there; pilot 2026-11-12, McFarland split 20 coverage 0.98 -> 0.86)
         use = hu < h if per_pair else np.broadcast_to((hu.mean(0) < h.mean(0))[None], (C, P))
         if choose == "width_guard":         # a type whose unmixed effect falls outside its (valid, wide)
             # calibrated interval keeps the calibrated result: unmixing has failed for it (e.g. Kang NK NF-kB
@@ -333,7 +377,8 @@ def _unmix_effects(out, inputs, calibration, fractions, fraction_draws, raw, raw
     else:                                   # simulated RMSE, per program, or per (type, program) with per_pair
         use = chk["use_unmix_cp"] if per_pair else np.broadcast_to(chk["use_unmix"][None], (C, P))
     eff = np.where(use, eff_u, eff_cal)
-    iv = (np.where(use, lo_u, eff_cal - h), np.where(use, hi_u, eff_cal + h))
+    hr = h if (not sim_widen or h_report is None) else h_report
+    iv = (np.where(use, lo_u, eff_cal - hr), np.where(use, hi_u, eff_cal + hr))
     out.info["unmix"] = dict(programs=[p for p, u in zip(inputs.programs, use.any(0)) if u], pairs=use.tolist(),
                              rmse_unmix=chk["rmse_unmix"].tolist(), rmse_realloc=chk["rmse_realloc"].tolist(),
                              z_q=chk["z_q"], shrinkage=r["lam"][:, 1].tolist(), tau=r["tau"],
@@ -341,6 +386,18 @@ def _unmix_effects(out, inputs, calibration, fractions, fraction_draws, raw, raw
                              guard=guard.tolist(), condition=cond,
                              pooled=[p for p, u in zip(inputs.programs, pooled & use.any(0)) if u],
                              p_heterogeneity=p_het.tolist())
+    if keep_parts:      # development (2026-11-11, v5_parts_offline.py): both routes' parts, results unchanged
+        out.info["parts"] = dict(eff_u=eff_u, se_u=se_u, q_u=float(q), eff_cal=np.asarray(eff_cal),
+                                 h_cal=(np.asarray(iv_cal[1]) - np.asarray(iv_cal[0])) / 2,
+                                 h_sim=None if not sim_widen else np.asarray(h_sim), h=h, use=use, guard=guard,
+                                 boot=r.get("boot"), n_units=r["n_units"], z_q=chk["z_q"],
+                                 misfit_sd=r["misfit_sd"], se_r=se_r if sim_widen else None,
+                                 # within-program leakage of the study (mean over samples, [c, k, p]: how much of
+                                 # type k's shift in program p shows in type c's reallocated activity), plan E8/E23
+                                 leak=np.stack([A[:, :, p, :, p].mean(0) for p in range(P)], -1) if A.ndim == 5
+                                 else A.mean(0),
+                                 q_abs_cp=chk["q_abs_realloc_cp"],
+                                 **{"sim_" + k: v for k, v in chk.get("sims", {}).items()})
     if shared:
         out.info["shared_response"] = shared_response(r, eff, iv, use, q, tdist.ppf(0.5 + level / 2, max(r["n_units"] - 1, 1)),
                                                       inputs.cell_types, inputs.programs, margin)

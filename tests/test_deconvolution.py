@@ -98,13 +98,9 @@ def test_program_deconvolution_unmix_localises(estimator):
     kw = {} if estimator is None else dict(estimator=estimator, unmix_kw=dict(pev=False, misfit=False))
     res = pb.program_deconvolution(inp, cal, fractions=s["pi"], n_sim=3, **kw)
     beta = pb.core.contrast(s["T"])(s["delta"])
-    if estimator is None:                                                # default (freeze v4): gated v4
-        g = res.info["gate"]
-        assert g["chosen"] in ("v4", "auto") and set(g) >= {"heterogeneity", "agreement", "use_v4"}
-        if g["chosen"] == "v4":
-            assert "v4" in res.info
-        else:
-            assert res.info["unmix"]["tau"] is not None and res.info["unmix"]["misfit_sd"] is not None
+    if estimator is None:                                                # default (freeze v5): v2 + sized interval
+        assert res.info["estimator"] == "v5" and "unmix" in res.info
+        assert res.info["unmix"]["tau"] is not None and res.info["unmix"]["misfit_sd"] is not None
         assert res.calls[0, 0] and abs(res.effects[0, 0] - beta[0, 0]) < 0.3
         return
     assert res.info["estimator"] == estimator and "unmix" in res.info
@@ -112,6 +108,26 @@ def test_program_deconvolution_unmix_localises(estimator):
     if estimator == "unmix":                                             # the leak into types 1, 2 is removed
         raw = pb.core.contrast(s["T"])(res.raw_activity)
         assert np.abs(res.effects[1:, 0]).max() < np.abs(raw[1:, 0]).max()
+
+
+def test_program_deconvolution_v5_and_bh_calls():
+    s = _study(6, n_bulk=60, sd=0.1)
+    inp = s["inputs"]
+    cal = pb.build_calibration_set(s["ref_counts"], ["d%d" % i for i in range(40)], s["G"])
+    kw = dict(fractions=s["pi"], n_sim=3, unmix_kw=dict(pev=False, misfit=False))
+    r2 = pb.program_deconvolution(inp, cal, estimator="auto", **kw)
+    r5 = pb.program_deconvolution(inp, cal, estimator="v5", **kw)
+    assert r5.info["estimator"] == "v5"
+    # same estimates and routes as freeze v2; only the reported calibrated width may differ
+    assert np.allclose(r5.effects, r2.effects) and r5.info["unmix"]["pairs"] == r2.info["unmix"]["pairs"]
+    rb = pb.program_deconvolution(inp, cal, estimator="auto", calls="bh", fdr=0.10, **kw)
+    assert rb.info["calls"] == "bh" and np.allclose(rb.effects, r2.effects)
+    q = np.asarray(rb.info["qvalues"])
+    assert np.array_equal(rb.calls, q <= 0.10)
+    assert not (rb.calls & ~r2.calls).any()        # BH at 0.10 calls a subset of the 90% interval calls
+    assert rb.calls[0, 0]
+    with pytest.raises(ValueError):
+        pb.program_deconvolution(inp, cal, estimator="auto", calls="lfsr", **kw)
 
 
 def test_calibrator_rejects_unknown_interval():

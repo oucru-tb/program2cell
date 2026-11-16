@@ -709,12 +709,277 @@ def fig_power():
     save(fig, "2_4_design_power")
 
 
+# ---- 2.3b idasanutlin result after the evaluation design slide (held-out splits 40-49, freeze v2) -------------
+C_OK, C_MUT = "#e8913a", "#9aa3ae"          # slide colours: TP53 intact (orange circles), mutant (grey diamonds)
+
+
+def fig_ida_result(split=40, splits=range(40, 50)):
+    """Left: one held-out bulk set (split), p53 change per line: truth (black bar tick), InstaPrism + t-test and
+    PALM freeze v2 with 90% ranges, filled = flagged. Right: share of the 10 held-out sets in which each line is
+    flagged as p53-changed, per method (intact lines should be flagged, mutant lines never)."""
+    dsn, prog = "mcf_ida", "p53"
+    order = ["LNCAPCLONEFGC", "RCC10RGB", "SNU1079", "COLO680N", "BICR31", "TEN"]
+    flags = {m: np.zeros(len(order)) for m in ("insta", "palm")}
+    keep = None
+    for k in splits:
+        pb, inp, T, beta, truth, src, fsrc, cal, donors = cl._setup(dsn, k)
+        ct = list(inp.cell_types); j = list(inp.programs).index(prog); idx = [ct.index(c) for c in order]
+        e_i, lo_i, hi_i, c_i = practice(dsn, k, "instaprism", T, donors)
+        a = palm_arrays(dsn, k, "auto_v2")
+        flags["insta"] += np.asarray(c_i[idx, j], float)
+        flags["palm"] += np.asarray(a["calls"][idx, j], float)
+        if k == split:
+            keep = dict(b=beta[idx, j], ei=e_i[idx, j], li=lo_i[idx, j], hi_=hi_i[idx, j], ci=c_i[idx, j],
+                        ep=a["effects"][idx, j], lp=a["lo"][idx, j], hp=a["hi"][idx, j], cp=a["calls"][idx, j])
+    n = len(list(splits))
+    fig, (ax, bx) = plt.subplots(1, 2, figsize=(13.3, 6.4), gridspec_kw=dict(width_ratios=[1.55, 1], wspace=0.08))
+    y = np.arange(len(order))
+    ax.axvline(0, color="#888888", lw=1.1, zorder=0)
+    ax.axhspan(2.5, 5.6, color=C_LIGHT, zorder=-1)
+    for i in y:
+        for dy, e, lo, hi, call, col in ((-0.2, keep["ei"][i], keep["li"][i], keep["hi_"][i], keep["ci"][i], C_PRACT),
+                                         (0.2, keep["ep"][i], keep["lp"][i], keep["hp"][i], keep["cp"][i], C_PALM)):
+            ax.plot([lo, hi], [i + dy] * 2, color=col, lw=3.2, solid_capstyle="round", alpha=0.9)
+            ax.scatter(e, i + dy, s=85, color=col if call else "white", ec=col, lw=2.2, zorder=4)
+        ax.plot([keep["b"][i]] * 2, [i - 0.38, i + 0.38], color=C_TRUTH, lw=3.5, zorder=5, solid_capstyle="butt")
+    ax.set_yticks(y); ax.set_yticklabels([LINE[c] for c in order], fontsize=14)
+    for t, c in zip(ax.get_yticklabels(), order):
+        t.set_color("#b8641a" if c in P53_OK else "#5f6670")
+    for i, c in enumerate(order):     # slide markers left of the names
+        ax.scatter(-0.035, i, transform=ax.get_yaxis_transform(), clip_on=False, s=150,
+                   marker="o" if c in P53_OK else "D", color=C_OK if c in P53_OK else C_MUT)
+    ax.text(-0.27, 1, "TP53\nintact", transform=ax.get_yaxis_transform(), ha="right", va="center", fontsize=13,
+            color="#b8641a", fontweight="bold")
+    ax.text(-0.27, 4, "TP53\nmutant", transform=ax.get_yaxis_transform(), ha="right", va="center", fontsize=13,
+            color="#5f6670", fontweight="bold")
+    ax.invert_yaxis(); ax.tick_params(axis="y", length=0, pad=30); ax.spines["left"].set_visible(False)
+    ax.set_xlabel("change in p53 activity (treated − untreated)")
+    ax.set_title("One held-out bulk set", loc="left", fontsize=15, fontweight="bold")
+    # right: how often each line is flagged over the held-out sets
+    for dy, m, col in ((-0.2, "insta", C_PRACT), (0.2, "palm", C_PALM)):
+        v = flags[m] / n
+        bx.barh(y + dy, v, height=0.36, color=col, alpha=0.9)
+        for i in y:
+            bx.text(v[i] + 0.02, i + dy, "%d/%d" % (flags[m][i], n), va="center", fontsize=11.5, color="#444444")
+    bx.axhspan(2.5, 5.6, color=C_LIGHT, zorder=-1)
+    bx.set_ylim(ax.get_ylim()); bx.set_yticks([]); bx.spines["left"].set_visible(False)
+    bx.set_xlim(0, 1.18); bx.set_xticks([0, 0.5, 1]); bx.set_xticklabels(["0", "50%", "100%"])
+    bx.set_xlabel("held-out sets flagging p53 change")
+    bx.set_title("All %d held-out sets" % n, loc="left", fontsize=15, fontweight="bold")
+    handles = [plt.Line2D([], [], color=C_TRUTH, lw=3.5, marker="|", ms=16, mew=3.5, ls=""),
+               plt.Line2D([], [], marker="o", ms=9, color=C_PRACT, lw=3),
+               plt.Line2D([], [], marker="o", ms=9, color=C_PALM, lw=3),
+               plt.Line2D([], [], marker="o", ls="", ms=9, mfc="#777777", mec="#777777"),
+               plt.Line2D([], [], marker="o", ls="", ms=9, mfc="white", mec="#777777", mew=2)]
+    fig.legend(handles, ["true change (answer key)", "InstaPrism + t-test", "PALM", "flagged", "not flagged"],
+               loc="lower center", bbox_to_anchor=(0.5, 0.95), ncol=5, frameon=False, fontsize=13)
+    fig.text(0.5, -0.02, "Bars and dots: 90%% range and estimate. Held-out split %d (left), splits %d-%d (right); "
+             "PALM freeze v2." % (split, min(splits), max(splits)), ha="center", fontsize=11, color="#666666")
+    save(fig, "2_3b_idasanutlin_result")
+    return flags, keep
+
+
+def fig_ida_spearman(split=40, splits=range(40, 50)):
+    """As fig_ida_result with Spearman rho in place of the t-test: the same InstaPrism per-line PROGENy scores
+    (model__activity), rho of each line's score with treatment, BH q < 0.1 over all line x pathway pairs (GSVA is
+    not used: the held-out per-type expression files were not kept). rho has its own scale, so the
+    panels are: answer key (true change), the workflow's rho with a 90% Fisher-z range (split), and how often
+    each line is flagged over the held-out sets, workflow vs PALM freeze v2."""
+    from scipy import stats
+    import lab_workflow as lw
+    dsn, prog = "mcf_ida", "p53"
+    order = ["LNCAPCLONEFGC", "RCC10RGB", "SNU1079", "COLO680N", "BICR31", "TEN"]
+    flags = {m: np.zeros(len(order)) for m in ("lab", "palm")}
+    keep = None
+    for k in splits:
+        pb, inp, T, beta, truth, src, fsrc, cal, donors = cl._setup(dsn, k)
+        ct, pg = list(inp.cell_types), list(inp.programs)
+        j = pg.index(prog); idx = [ct.index(c) for c in order]
+        act = np.load(os.path.join(pv.DEV, dsn, "s%d__instaprism.npz" % k))["model__activity"]
+        rho, pval = np.zeros(beta.shape), np.ones(beta.shape)
+        for c in range(len(ct)):
+            for jj in range(len(pg)):
+                if np.isfinite(act[:, c, jj]).all() and act[:, c, jj].std() > 0:
+                    rho[c, jj], pval[c, jj] = stats.spearmanr(act[:, c, jj], T.astype(float))
+        calls = pv.bh(pval) < 0.1
+        a = palm_arrays(dsn, k, "auto_v2")
+        flags["lab"] += calls[idx, j]
+        flags["palm"] += np.asarray(a["calls"][idx, j], float)
+        if k == split:
+            n = len(T); zq = stats.norm.ppf(0.95) * np.sqrt(1.06 / (n - 3))
+            z = np.arctanh(np.clip(rho[idx, j], -0.999, 0.999))
+            keep = dict(b=beta[idx, j], r=rho[idx, j], lo=np.tanh(z - zq), hi=np.tanh(z + zq), c=calls[idx, j])
+    n_s = len(list(splits))
+    fig, (ax0, ax, bx) = plt.subplots(1, 3, figsize=(13.3, 6.4),
+                                      gridspec_kw=dict(width_ratios=[0.8, 1.1, 1], wspace=0.12))
+    y = np.arange(len(order))
+    for a_ in (ax0, ax, bx):
+        a_.axhspan(2.5, 5.6, color=C_LIGHT, zorder=-1)
+        a_.set_ylim(5.6, -0.6); a_.tick_params(axis="y", length=0); a_.spines["left"].set_visible(False)
+    ax0.barh(y, keep["b"], height=0.5, color=[C_OK if c in P53_OK else C_MUT for c in order])
+    ax0.axvline(0, color="#888888", lw=1.1)
+    ax0.set_yticks(y); ax0.set_yticklabels([LINE[c] for c in order], fontsize=14)
+    for t, c in zip(ax0.get_yticklabels(), order):
+        t.set_color("#b8641a" if c in P53_OK else "#5f6670")
+    ax0.set_xlabel("true p53 change")
+    ax0.set_title("Answer key", loc="left", fontsize=15, fontweight="bold", color=C_TRUTH)
+    ax.axvline(0, color="#888888", lw=1.1, zorder=0)
+    for i in y:
+        ax.plot([keep["lo"][i], keep["hi"][i]], [i, i], color=C_PRACT, lw=3.2, solid_capstyle="round", alpha=0.9)
+        ax.scatter(keep["r"][i], i, s=95, color=C_PRACT if keep["c"][i] else "white", ec=C_PRACT, lw=2.2, zorder=4)
+    ax.set_yticks([]); ax.set_xlim(-1, 1)
+    ax.set_xlabel("Spearman ρ, p53 score vs drug")
+    ax.set_title("InstaPrism + Spearman, one set", loc="left", fontsize=15, fontweight="bold", color=C_PRACT)
+    for dy, m, col in ((-0.2, "lab", C_PRACT), (0.2, "palm", C_PALM)):
+        v = flags[m] / n_s
+        bx.barh(y + dy, v, height=0.36, color=col, alpha=0.9)
+        for i in y:
+            bx.text(v[i] + 0.02, i + dy, "%d/%d" % (flags[m][i], n_s), va="center", fontsize=11.5, color="#444444")
+    bx.set_yticks([]); bx.set_xlim(0, 1.2); bx.set_xticks([0, 0.5, 1]); bx.set_xticklabels(["0", "50%", "100%"])
+    bx.set_xlabel("held-out sets flagging p53 change")
+    bx.set_title("All %d held-out sets" % n_s, loc="left", fontsize=15, fontweight="bold")
+    handles = [plt.Line2D([], [], marker="o", ms=9, color=C_PRACT, lw=3),
+               plt.Line2D([], [], marker="s", ls="", ms=11, color=C_PALM),
+               plt.Line2D([], [], marker="o", ls="", ms=9, mfc="#777777", mec="#777777"),
+               plt.Line2D([], [], marker="o", ls="", ms=9, mfc="white", mec="#777777", mew=2)]
+    fig.legend(handles, ["InstaPrism + Spearman", "PALM", "flagged (BH q < 0.1)", "not flagged"],
+               loc="lower center", bbox_to_anchor=(0.5, 0.95), ncol=4, frameon=False, fontsize=13)
+    fig.text(0.5, -0.02, "ρ range: 90%% Fisher-z interval. Held-out split %d (middle), splits %d-%d (right); "
+             "PALM freeze v2." % (split, min(splits), max(splits)), ha="center", fontsize=11, color="#666666")
+    save(fig, "2_3c_idasanutlin_spearman")
+    return flags, keep
+
+
+def fig_ida_fractions(split=40, splits=range(40, 50)):
+    """PALM freeze v2 with its own fractions vs the same PALM module on InstaPrism's fractions (insta_palm_v2.py):
+    left, one held-out set (truth, both estimates with 90% ranges, filled = flagged); right, how often each line
+    is flagged over the held-out sets."""
+    dsn, prog = "mcf_ida", "p53"
+    order = ["LNCAPCLONEFGC", "RCC10RGB", "SNU1079", "COLO680N", "BICR31", "TEN"]
+    flags = {m: np.zeros(len(order)) for m in ("insta", "palm")}
+    keep, n_s = None, 0
+    for k in splits:
+        fi = os.path.join(pv.OUT, "%s__s%d__instaprism__palm_v2.json" % (dsn, k))
+        if not os.path.exists(fi):
+            continue
+        ai = {kk: (np.asarray(v, float) if kk not in ("cell_types", "programs") else v)
+              for kk, v in json.load(open(fi))["arrays"].items()}
+        a = palm_arrays(dsn, k, "auto_v2")
+        ct, j = list(a["cell_types"]), list(a["programs"]).index(prog)
+        idx = [ct.index(c) for c in order]
+        flags["insta"] += ai["calls"][idx, j]; flags["palm"] += a["calls"][idx, j]; n_s += 1
+        if k == split:
+            keep = dict(b=a["beta"][idx, j], ei=ai["effects"][idx, j], li=ai["lo"][idx, j], hi_=ai["hi"][idx, j],
+                        ci=ai["calls"][idx, j], ep=a["effects"][idx, j], lp=a["lo"][idx, j], hp=a["hi"][idx, j],
+                        cp=a["calls"][idx, j])
+    C_INS = C_MONO
+    fig, (ax, bx) = plt.subplots(1, 2, figsize=(13.3, 6.4), gridspec_kw=dict(width_ratios=[1.55, 1], wspace=0.08))
+    y = np.arange(len(order))
+    ax.axvline(0, color="#888888", lw=1.1, zorder=0)
+    ax.axhspan(2.5, 5.6, color=C_LIGHT, zorder=-1)
+    for i in y:
+        for dy, e, lo, hi, call, col in ((-0.2, keep["ei"][i], keep["li"][i], keep["hi_"][i], keep["ci"][i], C_INS),
+                                         (0.2, keep["ep"][i], keep["lp"][i], keep["hp"][i], keep["cp"][i], C_PALM)):
+            ax.plot([lo, hi], [i + dy] * 2, color=col, lw=3.2, solid_capstyle="round", alpha=0.9)
+            ax.scatter(e, i + dy, s=85, color=col if call else "white", ec=col, lw=2.2, zorder=4)
+        ax.plot([keep["b"][i]] * 2, [i - 0.38, i + 0.38], color=C_TRUTH, lw=3.5, zorder=5, solid_capstyle="butt")
+    ax.set_yticks(y); ax.set_yticklabels([LINE[c] for c in order], fontsize=14)
+    for t, c in zip(ax.get_yticklabels(), order):
+        t.set_color("#b8641a" if c in P53_OK else "#5f6670")
+    for i, c in enumerate(order):
+        ax.scatter(-0.035, i, transform=ax.get_yaxis_transform(), clip_on=False, s=150,
+                   marker="o" if c in P53_OK else "D", color=C_OK if c in P53_OK else C_MUT)
+    ax.text(-0.27, 1, "TP53\nintact", transform=ax.get_yaxis_transform(), ha="right", va="center", fontsize=13,
+            color="#b8641a", fontweight="bold")
+    ax.text(-0.27, 4, "TP53\nmutant", transform=ax.get_yaxis_transform(), ha="right", va="center", fontsize=13,
+            color="#5f6670", fontweight="bold")
+    ax.invert_yaxis(); ax.tick_params(axis="y", length=0, pad=30); ax.spines["left"].set_visible(False)
+    ax.set_xlabel("change in p53 activity (treated − untreated)")
+    ax.set_title("One held-out bulk set", loc="left", fontsize=15, fontweight="bold")
+    for dy, m, col in ((-0.2, "insta", C_INS), (0.2, "palm", C_PALM)):
+        v = flags[m] / n_s
+        bx.barh(y + dy, v, height=0.36, color=col, alpha=0.9)
+        for i in y:
+            bx.text(v[i] + 0.02, i + dy, "%d/%d" % (flags[m][i], n_s), va="center", fontsize=11.5, color="#444444")
+    bx.axhspan(2.5, 5.6, color=C_LIGHT, zorder=-1)
+    bx.set_ylim(ax.get_ylim()); bx.set_yticks([]); bx.spines["left"].set_visible(False)
+    bx.set_xlim(0, 1.18); bx.set_xticks([0, 0.5, 1]); bx.set_xticklabels(["0", "50%", "100%"])
+    bx.set_xlabel("held-out sets flagging p53 change")
+    bx.set_title("All %d held-out sets" % n_s, loc="left", fontsize=15, fontweight="bold")
+    handles = [plt.Line2D([], [], color=C_TRUTH, lw=3.5, marker="|", ms=16, mew=3.5, ls=""),
+               plt.Line2D([], [], marker="o", ms=9, color=C_INS, lw=3),
+               plt.Line2D([], [], marker="o", ms=9, color=C_PALM, lw=3),
+               plt.Line2D([], [], marker="o", ls="", ms=9, mfc="#777777", mec="#777777"),
+               plt.Line2D([], [], marker="o", ls="", ms=9, mfc="white", mec="#777777", mew=2)]
+    fig.legend(handles, ["true change", "InstaPrism fractions + PALM", "PALM (own fractions)", "flagged",
+                         "not flagged"], loc="lower center", bbox_to_anchor=(0.5, 0.95), ncol=5, frameon=False,
+               fontsize=12.5)
+    fig.text(0.5, -0.02, "Bars and dots: 90%% range and estimate. Held-out split %d (left), splits %d-%d (right); "
+             "PALM freeze v2 in both." % (split, min(splits), max(splits)), ha="center", fontsize=11, color="#666666")
+    save(fig, "2_3d_idasanutlin_instaprism_palm")
+    return flags, keep
+
+
+
+def fig_ida_three(split=40, two=False):
+    """One held-out bulk set, p53 change per line: truth, InstaPrism + t-test, InstaPrism fractions + PALM
+    (insta_palm_v2.py) and PALM with its own fractions (freeze v2), each with its 90% range; filled = flagged."""
+    dsn, prog = "mcf_ida", "p53"
+    order = ["LNCAPCLONEFGC", "RCC10RGB", "SNU1079", "COLO680N", "BICR31", "TEN"]
+    pb, inp, T, beta, truth, src, fsrc, cal, donors = cl._setup(dsn, split)
+    ct = list(inp.cell_types); j = list(inp.programs).index(prog); idx = [ct.index(c) for c in order]
+    e_t, lo_t, hi_t, c_t = practice(dsn, split, "instaprism", T, donors)
+    ai = {kk: (np.asarray(v, float) if kk not in ("cell_types", "programs") else v) for kk, v in
+          json.load(open(os.path.join(pv.OUT, "%s__s%d__instaprism__palm_v2.json" % (dsn, split))))["arrays"].items()}
+    a = palm_arrays(dsn, split, "auto_v2")
+    assert list(ai["cell_types"]) == ct == list(a["cell_types"])
+    meths = [("InstaPrism + t-test", C_PRACT, e_t, lo_t, hi_t, c_t),
+             ("InstaPrism fractions + PALM", C_MONO, ai["effects"], ai["lo"], ai["hi"], ai["calls"]),
+             ("PALM", C_PALM, a["effects"], a["lo"], a["hi"], a["calls"])]
+    if two:                                 # PALM vs InstaPrism + t-test only
+        meths = [meths[0], meths[2]]
+    off = 0.26 if not two else 0.2
+    fig, ax = plt.subplots(figsize=(11.5, 7.0))
+    y = np.arange(len(order))
+    ax.axvline(0, color="#888888", lw=1.1, zorder=0)
+    ax.axhspan(2.5, 5.6, color=C_LIGHT, zorder=-1)
+    for k, (lab, col, e, lo, hi, cl_) in enumerate(meths):
+        dy = (k - (len(meths) - 1) / 2) * off
+        for r, i in enumerate(idx):
+            ax.plot([lo[i, j], hi[i, j]], [r + dy] * 2, color=col, lw=3.2, solid_capstyle="round", alpha=0.9)
+            ax.scatter(e[i, j], r + dy, s=80, color=col if cl_[i, j] else "white", ec=col, lw=2.2, zorder=4)
+    for r, i in enumerate(idx):
+        ax.plot([beta[i, j]] * 2, [r - 0.42, r + 0.42], color=C_TRUTH, lw=3.5, zorder=5, solid_capstyle="butt")
+    ax.set_yticks(y); ax.set_yticklabels([LINE[c] for c in order], fontsize=14)
+    for t, c in zip(ax.get_yticklabels(), order):
+        t.set_color("#b8641a" if c in P53_OK else "#5f6670")
+    for r, c in enumerate(order):
+        ax.scatter(-0.03, r, transform=ax.get_yaxis_transform(), clip_on=False, s=150,
+                   marker="o" if c in P53_OK else "D", color=C_OK if c in P53_OK else C_MUT)
+    ax.text(-0.22, 1, "TP53\nintact", transform=ax.get_yaxis_transform(), ha="right", va="center", fontsize=13,
+            color="#b8641a", fontweight="bold")
+    ax.text(-0.22, 4, "TP53\nmutant", transform=ax.get_yaxis_transform(), ha="right", va="center", fontsize=13,
+            color="#5f6670", fontweight="bold")
+    ax.set_ylim(5.6, -0.6); ax.tick_params(axis="y", length=0, pad=30); ax.spines["left"].set_visible(False)
+    ax.set_xlabel("change in p53 activity (treated − untreated)")
+    handles = [plt.Line2D([], [], color=C_TRUTH, lw=3.5, marker="|", ms=16, mew=3.5, ls="")] + \
+              [plt.Line2D([], [], marker="o", ms=9, color=m[1], lw=3) for m in meths] + \
+              [plt.Line2D([], [], marker="o", ls="", ms=9, mfc="#777777", mec="#777777"),
+               plt.Line2D([], [], marker="o", ls="", ms=9, mfc="white", mec="#777777", mew=2)]
+    fig.legend(handles, ["true change"] + [m[0] for m in meths] + ["flagged", "not flagged"],
+               loc="lower center", bbox_to_anchor=(0.5, 0.93), ncol=3 if not two else 5, frameon=False,
+               fontsize=13)
+    fig.text(0.5, -0.01, "Bars and dots: 90%% range and estimate. Held-out split %d; PALM freeze v2." % split,
+             ha="center", fontsize=11, color="#666666")
+    save(fig, "2_3f_idasanutlin_palm_vs_ttest" if two else "2_3e_idasanutlin_three_methods")
+
+
 if __name__ == "__main__":
     only = sys.argv[2].split(",") if len(sys.argv) > 2 else None
     figs = dict(concept=fig_concept, fractions=fig_fractions, false_flags=fig_false_flags, controls=fig_controls,
                 cases=fig_case_studies, scorecard=fig_scorecard,
                 heat=fig_heatmaps,
-                heat_lab=lambda: fig_heatmaps(competitor="lab"), attenuation=fig_attenuation, kang=fig_kang_limit, power=fig_power, answer_key=fig_answer_key, fair=fig_fair)
+                heat_lab=lambda: fig_heatmaps(competitor="lab"), attenuation=fig_attenuation, kang=fig_kang_limit, power=fig_power, answer_key=fig_answer_key, ida=fig_ida_result, ida_rho=fig_ida_spearman, ida_frac=fig_ida_fractions, ida3=fig_ida_three, ida2=lambda: fig_ida_three(two=True), fair=fig_fair)
     for k, f in figs.items():
         if only and k not in only:
             continue

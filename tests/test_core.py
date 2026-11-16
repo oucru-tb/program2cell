@@ -301,3 +301,28 @@ def test_fixed_eta_summaries():
     two = _two_step_summaries(Y, L, B_, G_, 50.0, None, eta, 3.0, 1.0, 80, "quasi", False, None)
     w = np.linalg.eigvalsh(np.asarray(two["Lam"]))
     assert (w.min(1) > -1e-6 * w.max(1)).all()             # PSD (zero only along the softmax shift)
+
+
+def test_smi_summaries_limits():
+    """Semi-modular stage 1 (development option): smi_eta = 1 reproduces the two-step summary; smi_eta = 0
+    gives composition-only information for eta and a finite delta summary given it."""
+    import jax.numpy as jnp
+    from program2cell import sim
+    from program2cell.core.data import gene_dispersion
+    from program2cell.bayes.twostage import _smi_summaries, _two_step_summaries
+    rng = np.random.default_rng(5)
+    B, G = sim.make_reference(rng, C=3, P=2, Gn=120, genes_per_prog=15)
+    s = sim.simulate_causal(rng, B, G, N=6)
+    Y, L = jnp.asarray(s["Y"], float), jnp.asarray(s["L"], float)
+    Bj, Gj = jnp.asarray(B, float), jnp.asarray(G, float)
+    th = jnp.asarray(gene_dispersion(np.asarray(Y)))
+    eta0 = jnp.log(jnp.full((6, 3), 1 / 3))
+    args = (Y, L, Bj, Gj, th, None, eta0, 3.0, 1.0, 60, "nb", False, None)
+    two = _two_step_summaries(*args)
+    one = _smi_summaries(*args, 1.0)
+    assert np.allclose(one["Lam"], two["Lam"], rtol=1e-4, atol=1e-4)
+    assert np.allclose(one["x_hat"][:, 3:], two["x_hat"][:, 3:], atol=1e-3)
+    zero = _smi_summaries(*args, 0.0)
+    assert np.all(np.isfinite(zero["Lam"])) and np.all(np.isfinite(zero["h"]))
+    pi0 = np.exp(zero["x_hat"][:, :3]); pi0 /= pi0.sum(1, keepdims=True)
+    assert np.sqrt(((pi0 - s["pi"]) ** 2).mean()) < 0.1
