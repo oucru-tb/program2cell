@@ -75,6 +75,14 @@ the freeze.
 - **Reporting:** `heldout_v5_compare.py`, `causal_loop.py summary heldout5`, `practice_vs_palm.py summary
   heldout5` (PALM_EST=v5), `combat_v5.py summary 30-39`; every dataset and metric, pass or fail; results in
   `docs/heldout_v5_results.md`; nothing is rerun or retuned after results are seen.
+- **Result (2026-11-17, `benchmarks/dev/heldout_v5_decision.txt`): v5 is the Paper 1 method and stays the package
+  default.** C0 pass (max |v5 − v2| = 0); S1 pass (lowest dataset coverage 0.897, highest null-call rate 0.074);
+  S2 pass (coverage difference lower CI −0.016, null-call difference upper CI +0.008); S3 pass (wrong-sign calls
+  per split 0.3 vs 0.1 real, 0.1 vs 0.0 real_offset); E superior, power +0.047 [+0.010, +0.097]. Secondary: PBMC
+  +0.084 [+0.024, +0.163], cell lines +0.004 [0.000, +0.013]; study-level sign-flip p 0.125 (3 of 5 studies
+  nonzero). Transport (9 datasets): power +0.036 [0.000, +0.106], coverage −0.011, null calls +0.002. Deviation:
+  an interim look at lanes a, b, e and part of c, d on 2026-11-17 08:50
+  (`benchmarks/dev/heldout_v5_interim_20261117_0850.txt`); the rule and code were not changed after it.
 
 ## Method freeze v4 (2026-11-09; git tag `method-freeze-v4`)
 

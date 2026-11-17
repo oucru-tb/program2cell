@@ -93,9 +93,9 @@ def program_deconvolution(inputs, calibration, fractions=None, fraction_draws=No
     plus the study's contrast noise in quadrature, so well-separated types are not widened like poorly separated ones;
     "replace": the simulated-error interval alone, i.e. the study's own (group-bootstrap) contrast standard error
     times the simulated studentised error quantile of rescaled reallocation, which carries its leakage bias).
-    Default (freeze v5 2026-11-16, method_spec "Method freeze v5"; confirmed or rejected on held-out splits 30-39):
-    estimator="v5", freeze v2 with the size-matched calibrated interval (see 'v5' below); if v5 fails its held-out
-    rule the default returns to "auto". Freeze v4 (2026-11-09; failed held-out 40-49): estimator="v4gated", which
+    Default (freeze v5 2026-11-16, method_spec "Method freeze v5"; passed held-out splits 30-39 on 2026-11-17, power
+    +0.047 [+0.010, +0.097] at equal safety, benchmarks/dev/heldout_v5_decision.txt): estimator="v5", freeze v2 with
+    the size-matched calibrated interval (see 'v5' below). Freeze v4 (2026-11-09; failed held-out 40-49): estimator="v4gated", which
     runs the freeze v2 setting and v4 stacked and returns v4 only where core.gls.gate_statistics passes. Freeze v2 (2026-11-03,
     method_spec 4.8): estimator="auto", sim_widen="abs" and UNMIX_DEFAULTS (pev=True, misfit=True,
     choose="width_guard"); it stays reachable as estimator="auto". Freeze v1: sim_widen=True, choose="rmse".

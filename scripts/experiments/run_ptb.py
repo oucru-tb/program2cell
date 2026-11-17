@@ -8,15 +8,15 @@ Inputs (build_ptb.py; reference: build_pbmc_ref.py or build_combat_neutro_ref.py
 No run correction (user decision 2026-11-10): every PTB sample is sequencing Run1 and every healthy sample Run2,
 so the PTB - Healthy effects include any Run1 vs Run2 technical difference. State this with every result.
 
-Recipe (combat_v4.py real_selfoffset): study platform correction (correct_platform), PALM-lite fractions, freeze v2
-(estimator "auto"; the held-out v4 decision 2026-11-10 kept v2 as the method; EST=v4gated runs gated v4 with
+Recipe (combat_v4.py real_selfoffset): study platform correction (correct_platform), PALM-lite fractions, freeze v5
+(estimator "v5", the method after held-out v5 passed 2026-11-17; EST=auto reruns freeze v2; EST=v4gated runs gated v4 with
 frac_sd = FRAC_SD_REAL_BULK["platform_corrected"]), decompose=True (cells changed vs more cells). Reference and
 calibration from all reference donors (none of them is in the bulk).
 OFFSET=anchored (2026-11-11, ptb_anchor.py; REF=combat only): platform offsets anchored on the healthy group having
 the mean whole-blood composition of COMBAT's healthy volunteers (CyTOF), in place of the study self-offsets.
 Output: results/ptb/<REF>[_<EST>][_<PROG>][_anchored]/ effects.csv, fractions.csv, info.json, effects_heatmap.png,
 effects_intervals.png
-Usage: [REF=l2|combat|broad] [EST=auto|v4gated] [PROG=progeny7|reactome_immune6|immune_response6|immune_response7]
+Usage: [REF=l2|combat|broad] [EST=v5|auto|v4gated] [PROG=progeny7|reactome_immune6|immune_response6|immune_response7]
        [OFFSET=self|anchored] python run_ptb.py
 """
 import json, os, sys, time
@@ -32,7 +32,8 @@ from program2cell.core.gls import FRAC_SD_REAL_BULK
 # REF=l2 (default, user decision 2026-11-10): celltype.l2 labels (17 types), specimen = donor, min_cells 1;
 # REF=broad: 8 broad types, specimen = donor::library; REF=combat: COMBAT healthy PBMC + GSE188288 neutrophils
 REF = os.environ.get("REF", "l2")
-EST_TAG = "" if os.environ.get("EST", "auto") == "auto" else "_" + os.environ["EST"]
+EST = os.environ.get("EST", "v5")                    # freeze v5 since 2026-11-17; EST=auto = freeze v2
+EST_TAG = "" if EST == "auto" else "_" + EST          # folders without a tag are the freeze v2 (auto) runs
 # PROG=progeny7 (default) or a program CSV in data/ (e.g. reactome_immune6: TLR, NLR, IFNb, TNF, BCR, TCR from
 # Reactome; build_reactome_programs.py; user choice 2026-11-10, not benchmarked)
 PROG = os.environ.get("PROG", "progeny7")
@@ -108,9 +109,9 @@ def main():
     inp = pb.prepare_inputs(Yc, ref, prog, treatment=pd.Series(T, index=Yc.columns), max_genes=1000)
     cal = pb.calibration_from_table(table, [], inp.cell_types, inp.genes, inp.Gmat, all_specimens=True, n_folds=3, min_cells=MIN_CELLS,
                                     seed=0)
-    # held-out v4 decision (2026-11-10, docs/heldout_v4_results.md): freeze v2 (estimator="auto") is the method;
-    # EST=v4gated reruns the secondary estimator
-    est = os.environ.get("EST", "auto")
+    # held-out v5 decision (2026-11-17, benchmarks/dev/heldout_v5_decision.txt): freeze v5 (estimator="v5") is the
+    # method; EST=auto reruns freeze v2 (the PTB runs before 2026-11-17), EST=v4gated the secondary estimator
+    est = EST
     kw = dict(v4_kw=dict(frac_sd=FRAC_SD_REAL_BULK["platform_corrected"])) if est == "v4gated" else {}
     r = pb.program_deconvolution(inp, cal, engine="lite", treatment=np.asarray(inp.T), estimator=est,
                                  decompose=True, seed=0, **kw)

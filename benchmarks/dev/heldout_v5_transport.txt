@@ -1,0 +1,41 @@
+C:\Users\duy.pham\Documents\dev\program2cell\scripts\experiments\heldout_v5_compare.py:111: RuntimeWarning: Mean of empty slice
+  x, y = np.nanmean(a[d], 0), np.nanmean(b[d], 0)
+C:\Users\duy.pham\Documents\dev\program2cell\scripts\experiments\heldout_v5_compare.py:79: RuntimeWarning: Mean of empty slice
+  return np.nanmean([np.nanmean(x[d], 0) for d in ds], 0)
+C:\Users\duy.pham\Documents\dev\program2cell\scripts\experiments\heldout_v5_compare.py:88: RuntimeWarning: Mean of empty slice
+  out[i] = np.nanmean([np.nanmean(diff[d][rng.integers(0, len(diff[d]), len(diff[d]))], 0) for d in pick], 0)
+Transport check (descriptive, no decision), splits 30-39
+MISSING or skipped (5): parse_il10 s31, parse_il10 s33, parse_il10 s35, parse_il10 s37, parse_il10 s39
+identity check: max |v5 - v2 effect| = 0.00e+00
+
+per dataset (dataset means)            cov          r   within_r  null_calls      power      width
+  parse_ifna   v2        0.973      0.778        nan      0.010      0.000      0.174
+               v5        0.973      0.778        nan      0.017      0.000      0.152
+  parse_il10   v2        0.996      0.760        nan      0.000      0.000      0.282
+               v5        0.992      0.760        nan      0.000      0.000      0.236
+  parse_il1b   v2        1.000      0.845        nan      0.000      0.100      0.275
+               v5        0.998      0.845        nan      0.003      0.325      0.216
+  parse_il6    v2        0.994      0.799        nan      0.011      0.000      0.152
+               v5        0.994      0.799        nan      0.019      0.100      0.136
+  tahoe_afa    v2        0.978      0.697      0.734      0.026      0.522      0.245
+               v5        0.957      0.697      0.734      0.026      0.522      0.221
+  tahoe_alp    v2        0.968      0.799      0.740      0.017      0.616      0.204
+               v5        0.943      0.799      0.740      0.017      0.616      0.183
+  tahoe_bor    v2        0.994      0.618      0.606      0.003      0.082      0.449
+               v5        0.983      0.618      0.606      0.003      0.082      0.384
+  tahoe_evr    v2        0.956      0.526        nan      0.067      0.000      0.126
+               v5        0.943      0.526        nan      0.067      0.000      0.115
+  tahoe_ptx    v2        0.943      0.602      0.589      0.053      0.563      0.202
+               v5        0.924      0.602      0.589      0.053      0.563      0.183
+
+mean difference v5 - v2, transport (9 datasets) [95% cluster bootstrap CI]
+  cov        -0.011 [-0.017, -0.004]
+  r          +0.000 [+0.000, +0.000]
+  within_r   +0.000 [+0.000, +0.000]
+  null_calls +0.002 [+0.000, +0.005]
+  power      +0.036 [+0.000, +0.106]
+  width      -0.031 [-0.045, -0.020]
+
+sensitivity: study level (power difference; descriptive)
+  parse +0.081 (4)  tahoe +0.000 (5)
+  study-weighted mean +0.041; exact one-sided sign-flip p 0.500 over 2 studies (1 nonzero)

@@ -1,0 +1,111 @@
+INTERIM LOOK (not in protocol), Tue Nov 17 08:50:10 SEAST 2026; lanes a,e done; b,c,d running
+C:\Users\duy.pham\Documents\dev\program2cell\scripts\experiments\heldout_v5_compare.py:111: RuntimeWarning: Mean of empty slice
+  x, y = np.nanmean(a[d], 0), np.nanmean(b[d], 0)
+C:\Users\duy.pham\Documents\dev\program2cell\scripts\experiments\heldout_v5_compare.py:79: RuntimeWarning: Mean of empty slice
+  return np.nanmean([np.nanmean(x[d], 0) for d in ds], 0)
+C:\Users\duy.pham\Documents\dev\program2cell\scripts\experiments\heldout_v5_compare.py:88: RuntimeWarning: Mean of empty slice
+  out[i] = np.nanmean([np.nanmean(diff[d][rng.integers(0, len(diff[d]), len(diff[d]))], 0) for d in pick], 0)
+Transport check (descriptive, no decision), splits 30-39
+MISSING or skipped (5): parse_il10 s31, parse_il10 s33, parse_il10 s35, parse_il10 s37, parse_il10 s39
+identity check: max |v5 - v2 effect| = 0.00e+00
+
+per dataset (dataset means)            cov          r   within_r  null_calls      power      width
+  parse_ifna   v2        0.973      0.778        nan      0.010      0.000      0.174
+               v5        0.973      0.778        nan      0.017      0.000      0.152
+  parse_il10   v2        0.996      0.760        nan      0.000      0.000      0.282
+               v5        0.992      0.760        nan      0.000      0.000      0.236
+  parse_il1b   v2        1.000      0.845        nan      0.000      0.100      0.275
+               v5        0.998      0.845        nan      0.003      0.325      0.216
+  parse_il6    v2        0.994      0.799        nan      0.011      0.000      0.152
+               v5        0.994      0.799        nan      0.019      0.100      0.136
+  tahoe_afa    v2        0.978      0.697      0.734      0.026      0.522      0.245
+               v5        0.957      0.697      0.734      0.026      0.522      0.221
+  tahoe_alp    v2        0.968      0.799      0.740      0.017      0.616      0.204
+               v5        0.943      0.799      0.740      0.017      0.616      0.183
+  tahoe_bor    v2        0.994      0.618      0.606      0.003      0.082      0.449
+               v5        0.983      0.618      0.606      0.003      0.082      0.384
+  tahoe_evr    v2        0.956      0.526        nan      0.067      0.000      0.126
+               v5        0.943      0.526        nan      0.067      0.000      0.115
+  tahoe_ptx    v2        0.943      0.602      0.589      0.053      0.563      0.202
+               v5        0.924      0.602      0.589      0.053      0.563      0.183
+
+mean difference v5 - v2, transport (9 datasets) [95% cluster bootstrap CI]
+  cov        -0.011 [-0.017, -0.004]
+  r          +0.000 [+0.000, +0.000]
+  within_r   +0.000 [+0.000, +0.000]
+  null_calls +0.002 [+0.000, +0.005]
+  power      +0.036 [+0.000, +0.106]
+  width      -0.031 [-0.045, -0.020]
+
+sensitivity: study level (power difference; descriptive)
+  parse +0.081 (4)  tahoe +0.000 (5)
+  study-weighted mean +0.041; exact one-sided sign-flip p 0.500 over 2 studies (1 nonzero)
+
+C:\Users\duy.pham\Documents\dev\program2cell\scripts\experiments\heldout_v5_compare.py:111: RuntimeWarning: Mean of empty slice
+  x, y = np.nanmean(a[d], 0), np.nanmean(b[d], 0)
+C:\Users\duy.pham\Documents\dev\program2cell\scripts\experiments\heldout_v5_compare.py:79: RuntimeWarning: Mean of empty slice
+  return np.nanmean([np.nanmean(x[d], 0) for d in ds], 0)
+C:\Users\duy.pham\Documents\dev\program2cell\scripts\experiments\heldout_v5_compare.py:88: RuntimeWarning: Mean of empty slice
+  out[i] = np.nanmean([np.nanmean(diff[d][rng.integers(0, len(diff[d]), len(diff[d]))], 0) for d in pick], 0)
+Freeze v5 comparison, splits 30-39: v5 vs freeze v2 (auto_v2)
+MISSING (36): mcf_tram s37, mcf_tram s38, mcf_tram s39, tahoe_gem s30, tahoe_gem s31, tahoe_gem s32, tahoe_gem s33, tahoe_gem s34, tahoe_gem s35, tahoe_gem s36, tahoe_gem s37, tahoe_gem s38, tahoe_gem s39, tahoe_tram s33, tahoe_tram s34, tahoe_tram s35, tahoe_tram s36, tahoe_tram s37, tahoe_tram s38, tahoe_tram s39, parse_il4 s34, parse_il4 s35, parse_il4 s36, parse_il4 s37, parse_il4 s38, parse_il4 s39, parse_tnf s30, parse_tnf s31, parse_tnf s32, parse_tnf s33, parse_tnf s34, parse_tnf s35, parse_tnf s36, parse_tnf s37, parse_tnf s38, parse_tnf s39
+
+per dataset (dataset means)            cov          r   within_r  null_calls      power      width
+  mcf_ida      v2        0.926      0.901      0.316      0.055      0.415      0.255
+               v5        0.898      0.901      0.316      0.055      0.437      0.218
+  mcf_tram     v2        0.952      0.920      0.833      0.084      0.777      0.179
+               v5        0.939      0.920      0.833      0.084      0.777      0.173
+  tahoe_enc    v2        0.946      0.444      0.115      0.028      0.267      0.198
+               v5        0.911      0.444      0.115      0.028      0.267      0.178
+  tahoe_rmc    v2        0.971      0.718      0.064      0.000      0.694      0.299
+               v5        0.967      0.718      0.064      0.000      0.694      0.270
+  tahoe_tram   v2        0.989      0.860      0.752      0.009      0.817      0.328
+               v5        0.989      0.860      0.752      0.009      0.817      0.299
+  kang         v2        0.993      0.874      0.738      0.000      0.224      0.716
+               v5        0.989      0.874      0.738      0.000      0.292      0.627
+  zhang        v2        0.993      0.817        nan      0.019      0.000      0.106
+               v5        0.993      0.817        nan      0.037      0.000      0.097
+  parse_gmcsf  v2        1.000      0.806      0.951      0.000      0.075      0.273
+               v5        1.000      0.806      0.951      0.004      0.298      0.226
+  parse_ifnb   v2        1.000      0.906      0.586      0.003      0.045      0.487
+               v5        1.000      0.906      0.586      0.003      0.105      0.373
+  parse_ifng   v2        1.000      0.892      0.940      0.000      0.000      0.306
+               v5        1.000      0.892      0.940      0.011      0.000      0.238
+  parse_il4    v2        1.000      0.761      0.360      0.000      0.000      0.376
+               v5        1.000      0.761      0.360      0.000      0.208      0.287
+
+mean difference v5 - v2, all (11 datasets) [95% cluster bootstrap CI]
+  cov        -0.008 [-0.016, -0.001]
+  r          +0.000 [+0.000, +0.000]
+  within_r   +0.000 [+0.000, +0.000]
+  null_calls +0.003 [+0.000, +0.007]
+  power      +0.053 [+0.009, +0.116]
+  width      -0.049 [-0.070, -0.029]
+
+mean difference v5 - v2, cell lines (5 datasets) [95% cluster bootstrap CI]
+  cov        -0.016 [-0.030, -0.004]
+  r          +0.000 [+0.000, +0.000]
+  within_r   +0.000 [+0.000, +0.000]
+  null_calls +0.000 [+0.000, +0.000]
+  power      +0.004 [+0.000, +0.016]
+  width      -0.024 [-0.035, -0.014]
+
+mean difference v5 - v2, PBMC (6 datasets) [95% cluster bootstrap CI]
+  cov        -0.001 [-0.003, +0.000]
+  r          +0.000 [+0.000, +0.000]
+  within_r   +0.000 [+0.000, +0.000]
+  null_calls +0.006 [+0.000, +0.013]
+  power      +0.093 [+0.020, +0.195]
+  width      -0.069 [-0.096, -0.041]
+
+sensitivity: study level (power difference; descriptive)
+  mcfarland +0.011 (2)  tahoe +0.000 (3)  kang +0.068 (1)  zhang +0.000 (1)  parse +0.123 (4)
+  study-weighted mean +0.041; exact one-sided sign-flip p 0.125 over 5 studies (3 nonzero)
+
+DECISION (pre-registered)
+  C0 estimates identical (max |v5 - v2| = 0.00e+00 <= 1e-8): pass
+  S1 every dataset coverage >= 0.85, null calls <= 0.10: pass
+  S2 coverage lower CI -0.016 >= -0.03, null-call upper CI +0.007 <= +0.02: pass
+  S3 COMBAT not run: PENDING
+  E  power difference +0.053 [+0.009, +0.116]: superior
+  OUTCOME: incomplete or deviation; no decision
