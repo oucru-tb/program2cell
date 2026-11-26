@@ -86,6 +86,10 @@ ESTIMATORS = {"diff": dict(estimator="diff"),
               "auto_v5s": dict(estimator="auto", sim_widen="sized"),
               # freeze v5 (2026-11-16, method_spec "Method freeze v5"): the package entry point, = auto_v5s
               "v5": dict(estimator="v5"),
+              # 2026-11-25 (PTB MDR vs DS null, user asked for a lower standard): freeze v5 at interval level 0.80 /
+              # 0.67 instead of 0.90; post-hoc sensitivity analysis on already used held-out splits, not a new freeze
+              "v5_l80": dict(estimator="v5", level=0.80),
+              "v5_l67": dict(estimator="v5", level=0.67),
               # plan W2 / E7 (2026-11-12): Student-t deviation prior (nu = 1, Cauchy; nu = 4), routing as v2
               "auto_v5t1": dict(estimator="auto", unmix_kw=dict(robust_nu=1.0)),
               "auto_v5t4": dict(estimator="auto", unmix_kw=dict(robust_nu=4.0)),

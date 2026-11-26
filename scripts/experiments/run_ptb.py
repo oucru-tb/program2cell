@@ -39,7 +39,19 @@ EST_TAG = "" if EST == "auto" else "_" + EST          # folders without a tag ar
 PROG = os.environ.get("PROG", "progeny7")
 PROG_TAG = "" if PROG == "progeny7" else "_" + PROG
 OFFSET = os.environ.get("OFFSET", "self")
-OUT = os.path.join(ROOT, "results", "ptb", "%s%s%s%s" % (REF, EST_TAG, PROG_TAG, "" if OFFSET == "self" else "_" + OFFSET))
+# CMP=cmp2 (Paper 1 application, user decision 2026-11-23): MDR_PTB (1) vs DS_PTB (0), 148 vs 148, all sequencing
+# Run1, so no run confounding; library batch (R1_b1 / R1_b3, both groups in both) as a covariate (COV=batch), which
+# routes freeze v5 to OLS weights (deconvolution.program_deconvolution: covariates -> estimator 'ols').
+CMP = {"cmp1": "cmp1_PTB_vs_Healthy", "cmp2": "cmp2_MDR_vs_DS"}[os.environ.get("CMP", "cmp1")]
+COV = os.environ.get("COV", "")                       # "" (none) or an obs column, one-hot encoded (drop first)
+CMP_TAG = "" if CMP.startswith("cmp1") else "_mdr_vs_ds" + ("_" + COV if COV else "")
+# LEVEL (2026-11-25, sensitivity analysis after the null MDR vs DS result): interval level; 0.90 is the frozen default.
+# Other levels are exploratory tiers, written to a folder tagged _l<level*100>; their held-out null-call rate is in
+# docs/ptb_sensitivity_2026-11-25.md (causal_loop v5_l80 / v5_l67)
+LEVEL = float(os.environ.get("LEVEL", "0.90"))
+LEVEL_TAG = "" if abs(LEVEL - 0.90) < 1e-9 else "_l%d" % round(LEVEL * 100)
+OUT = os.path.join(ROOT, "results", "ptb", "%s%s%s%s%s%s" % (REF, EST_TAG, PROG_TAG, "" if OFFSET == "self" else "_" + OFFSET,
+                                                             CMP_TAG, LEVEL_TAG))
 if REF == "l2":
     TYPES = ["B naive", "B memory", "Plasmablast", "CD4 Naive", "CD4 TM", "Treg", "CD4 CTL", "CD8 Naive", "CD8 TM",
              "MAIT", "OtherT", "NK", "CD14 Mono", "CD16 Mono", "cDC", "pDC", "Neutro"]
@@ -55,7 +67,6 @@ elif REF == "combat":
 else:
     TYPES = ["B", "CD4 T", "CD8 T", "NK", "CD14 Mono", "CD16 Mono", "DC", "Neutro"]
     REF_FILE, MIN_CELLS = "pbmc_neutro_pseudobulk.h5ad", 20
-CMP = "cmp1_PTB_vs_Healthy"
 
 
 def _frame(a):
@@ -92,7 +103,12 @@ def main():
     genes = [g for g in ref.genes if g in set(a.var_names)]
     Y = _frame(a).loc[genes]
     T = a.obs[CMP].astype(int).values
-    info = dict(run_correction=None, offsets=OFFSET, reference=REF, programs=PROG, cell_types=TYPES, n_ptb=int(T.sum()), n_healthy=int((T == 0).sum()), n_genes_shared=len(genes),
+    X = None
+    if COV:
+        X = pd.get_dummies(a.obs[COV].astype(str), drop_first=True).astype(float).values
+    info = dict(level=LEVEL, comparison=CMP, covariate=COV or None, n_cov_levels=None if X is None else X.shape[1] + 1,
+                cov_by_group=None if not COV else pd.crosstab(a.obs[CMP].astype(int), a.obs[COV]).to_dict(),
+                run_correction=None, offsets=OFFSET, reference=REF, programs=PROG, cell_types=TYPES, n_ptb=int(T.sum()), n_healthy=int((T == 0).sum()), n_genes_shared=len(genes),
                 runs=pd.crosstab(a.obs[CMP].astype(int), a.obs.run).to_dict())
     if OFFSET == "anchored":
         assert REF in ("combat", "combat5"), "anchored offsets are fitted for the COMBAT references"
@@ -114,11 +130,18 @@ def main():
     est = EST
     kw = dict(v4_kw=dict(frac_sd=FRAC_SD_REAL_BULK["platform_corrected"])) if est == "v4gated" else {}
     r = pb.program_deconvolution(inp, cal, engine="lite", treatment=np.asarray(inp.T), estimator=est,
-                                 decompose=True, seed=0, **kw)
+                                 decompose=True, seed=0, covariates=X, level=LEVEL, **kw)
     tab = r.table("effects")
     tab.to_csv(os.path.join(OUT, "effects.csv"), index=False)
+    # per-type decomposition with sample-bootstrap intervals for the parts and their sum (ptb_decomp.py; 2026-11-25),
+    # and the result + inputs for later figures (as explain_rebuild.pkl)
+    import pickle
+    from ptb_decomp import decomposition_table
+    decomposition_table(r, inp, covariates=X, level=LEVEL).to_csv(os.path.join(OUT, "decomposition.csv"), index=False)
+    pickle.dump((r, inp), open(os.path.join(OUT, "result.pkl"), "wb"))
     fr = pd.DataFrame(r.fractions, index=Yc.columns, columns=r.cell_types)
-    fr.insert(0, "group", np.where(np.asarray(inp.T) == 1, "PTB", "Healthy"))
+    g1, g0 = ("MDR", "DS") if CMP.startswith("cmp2") else ("PTB", "Healthy")
+    fr.insert(0, "group", np.where(np.asarray(inp.T) == 1, g1, g0))
     fr.to_csv(os.path.join(OUT, "fractions.csv"))
     g = r.info.get("gate", {})
     info.update(gate={k: (v if isinstance(v, (str, bool, int, float)) else float(np.asarray(v)))
