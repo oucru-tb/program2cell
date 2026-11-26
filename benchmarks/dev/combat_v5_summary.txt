@@ -1,0 +1,10 @@
+COMBAT sepsis, 10 splits; per-split means (calls are counts of 49)
+bulk             est       within      r  slope  calls  null wrong rightbig   cov  width  retention
+sc               v2          0.78   0.63   0.46    0.6   0.3   0.0    0.3  0.98   0.41       1.00
+sc               v5          0.78   0.63   0.46    1.5   0.5   0.0    1.0  0.97   0.30       1.00
+real             v2          0.50   0.05   0.05    0.1   0.0   0.1    0.0  0.97   0.57       0.64
+real             v5          0.50   0.05   0.05    0.8   0.1   0.3    0.4  0.93   0.40       0.64
+real_offset      v2          0.62   0.43   0.65    0.5   0.1   0.0    0.4  1.00   0.84       0.79
+real_offset      v5          0.62   0.43   0.65    1.8   0.7   0.1    1.0  0.98   0.60       0.79
+real_selfoffset  v2          0.27   0.25   0.35    1.1   0.1   0.1    0.8  0.99   0.73       0.35
+real_selfoffset  v5          0.27   0.25   0.35    2.1   0.5   0.1    1.3  0.98   0.61       0.35

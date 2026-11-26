@@ -1,0 +1,86 @@
+Fraction accuracy, held-out splits 30-39 (dev_bench outputs); rows with fraction metrics
+method          row              
+cibersort       model                130
+instaprism      model                130
+                realloc              130
+joint nb        EM realloc            40
+                design beta           40
+                iter realloc          40
+                model                 40
+                posterior realloc     40
+                realloc + alloc       40
+                stage-1 mode          40
+naive_two_step  model                130
+oracle realloc  model                130
+reallocation    model                130
+tca             model                 10
+toast           model                 10
+
+== rmse
+method       cibersort  instaprism  joint nb  naive_two_step  oracle realloc  reallocation    tca  toast
+ds                                                                                                      
+kang             0.073       0.053     0.020           0.102             0.0         0.102    NaN    NaN
+mcf_ida          0.023       0.023     0.024           0.034             0.0         0.034  0.034  0.034
+mcf_tram         0.017       0.010     0.018           0.053             0.0         0.053    NaN    NaN
+parse_gmcsf      0.105       0.101       NaN           0.145             0.0         0.145    NaN    NaN
+parse_ifnb       0.119       0.120       NaN           0.141             0.0         0.141    NaN    NaN
+parse_ifng       0.123       0.122       NaN           0.159             0.0         0.159    NaN    NaN
+parse_il4        0.093       0.087       NaN           0.128             0.0         0.128    NaN    NaN
+parse_tnf        0.089       0.096       NaN           0.136             0.0         0.136    NaN    NaN
+tahoe_enc        0.019       0.016       NaN           0.026             0.0         0.026    NaN    NaN
+tahoe_gem        0.018       0.015       NaN           0.023             0.0         0.023    NaN    NaN
+tahoe_rmc        0.031       0.025       NaN           0.034             0.0         0.034    NaN    NaN
+tahoe_tram       0.031       0.025       NaN           0.040             0.0         0.040    NaN    NaN
+zhang            0.090       0.088     0.061           0.091             0.0         0.091    NaN    NaN
+
+== r_type
+method       cibersort  instaprism  joint nb  naive_two_step  oracle realloc  reallocation    tca  toast
+ds                                                                                                      
+kang             0.513       0.607     0.748           0.425             1.0         0.425    NaN    NaN
+mcf_ida          0.965       0.975     0.947           0.953             1.0         0.953  0.953  0.953
+mcf_tram         0.987       0.995     0.981           0.901             1.0         0.901    NaN    NaN
+parse_gmcsf      0.722       0.797       NaN           0.541             1.0         0.541    NaN    NaN
+parse_ifnb       0.648       0.649       NaN           0.602             1.0         0.602    NaN    NaN
+parse_ifng       0.716       0.761       NaN           0.614             1.0         0.614    NaN    NaN
+parse_il4        0.743       0.797       NaN           0.626             1.0         0.626    NaN    NaN
+parse_tnf        0.771       0.805       NaN           0.572             1.0         0.572    NaN    NaN
+tahoe_enc        0.970       0.980       NaN           0.950             1.0         0.950    NaN    NaN
+tahoe_gem        0.970       0.977       NaN           0.952             1.0         0.952    NaN    NaN
+tahoe_rmc        0.939       0.949       NaN           0.930             1.0         0.930    NaN    NaN
+tahoe_tram       0.937       0.946       NaN           0.889             1.0         0.889    NaN    NaN
+zhang            0.850       0.826     0.912           0.838             1.0         0.838    NaN    NaN
+
+== cov90
+method       cibersort  instaprism  joint nb  naive_two_step  oracle realloc  reallocation  tca  toast
+ds                                                                                                    
+kang               NaN         NaN     0.597             NaN             NaN           NaN  NaN    NaN
+mcf_ida            NaN         NaN     0.680             NaN             NaN           NaN  NaN    NaN
+mcf_tram           NaN         NaN     0.747             NaN             NaN           NaN  NaN    NaN
+parse_gmcsf        NaN         NaN       NaN             NaN             NaN           NaN  NaN    NaN
+parse_ifnb         NaN         NaN       NaN             NaN             NaN           NaN  NaN    NaN
+parse_ifng         NaN         NaN       NaN             NaN             NaN           NaN  NaN    NaN
+parse_il4          NaN         NaN       NaN             NaN             NaN           NaN  NaN    NaN
+parse_tnf          NaN         NaN       NaN             NaN             NaN           NaN  NaN    NaN
+tahoe_enc          NaN         NaN       NaN             NaN             NaN           NaN  NaN    NaN
+tahoe_gem          NaN         NaN       NaN             NaN             NaN           NaN  NaN    NaN
+tahoe_rmc          NaN         NaN       NaN             NaN             NaN           NaN  NaN    NaN
+tahoe_tram         NaN         NaN       NaN             NaN             NaN           NaN  NaN    NaN
+zhang              NaN         NaN     0.445             NaN             NaN           NaN  NaN    NaN
+
+== by group (means over dataset x split)
+                            rmse      r  r_type  cov90
+group      method                                     
+PBMC       cibersort       0.099  0.724   0.709    NaN
+           instaprism      0.095  0.709   0.749    NaN
+           joint nb        0.041  0.964   0.830  0.521
+           naive_two_step  0.129  0.576   0.603    NaN
+           oracle realloc  0.000  1.000   1.000    NaN
+           reallocation    0.129  0.576   0.603    NaN
+cell lines cibersort       0.023  0.952   0.961    NaN
+           instaprism      0.019  0.961   0.970    NaN
+           joint nb        0.021  0.965   0.964  0.714
+           naive_two_step  0.035  0.898   0.929    NaN
+           oracle realloc  0.000  1.000   1.000    NaN
+           reallocation    0.035  0.898   0.929    NaN
+           tca             0.034  0.949   0.953    NaN
+           toast           0.034  0.949   0.953    NaN

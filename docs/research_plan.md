@@ -18,7 +18,7 @@ Strategy: **two papers sharing one core library.**
 | What | The Bayesian method (program2cell) | A fast model trained on real data (BulkFormer-based), plus a public atlas and a large-scale finding |
 | Role | Defines and validates the quantities; gold standard | Makes them available for every public bulk sample in milliseconds |
 | Status | Nearly done (Phase 0) | New project (Phases 1–4) |
-| Target | Genome Biology / Nature Communications | Nature Methods / Nature Biotechnology (Genome Biology fallback) |
+| Target | **Nature Methods Brief Communication** (decided 2026-11-23; `docs/paper1_brief_communication_plan.md`); earlier: Genome Biology / Nature Communications | **Nature Methods Article** (§4.0); Nature Biotechnology / Genome Biology fallback |
 | Time | ~2–4 months to submission | ~9–13 months |
 
 Why two papers: earlier output, lower risk (Paper 1 stands even if Paper 2 fails), and Paper 2 needs a published, validated reference to show its fast answers are right.
@@ -559,6 +559,69 @@ cores; ask before starting.
 
 ## 4. Paper 2: fast, real-data-trained model
 
+### 4.0 Strategy update (2026-11-23)
+
+Paper 1 goes to Nature Methods as a **Brief Communication** (`docs/paper1_brief_communication_plan.md`). Paper 2 is
+a full Nature Methods **Article**. Sections 4.1-4.7 below are the October plan; where they differ, this section
+holds. The detailed method plan is `docs/dl_plan_2026-11-16.md` (amortized neural posterior estimation, set
+transformer over samples, teachers T0-T2, steps D0-D6).
+
+**Why the main claim changes.** The November experiments show that every global fix of the independent fit fails
+the same way (exclusive-gene fit, held-out 90-99; term-graph pooling and leakage recalibration, development;
+`docs/prior_knowledge_plan_2026-11-18.md` §6b): its intervals are near honest in cell lines and 2-3x too wide in
+PBMC, so a fix that gains power in one setting breaks safety in the other. Freeze v5 (joint) is safe but also
+conservative in PBMC. A study-adaptive error model is what is missing, and it can only be learned from many
+studies with known truth. That is what an amortized model does.
+
+**Claims, in priority order**
+
+1. **Calibrated per-study uncertainty:** coverage near nominal in both cell lines and blood, without the over-wide
+   PBMC intervals; more power than freeze v5 at equal safety (S1-S3 rules as in the freeze protocols).
+2. **Screens of many overlapping programs** (bulk DEA -> GO / Hallmark -> PALM, the user's workflow): independent
+   effects for hundreds of terms with usable power; the learned priors of the prior-knowledge plan (M3, M4) belong
+   here.
+3. **Speed:** seconds per study, enabling atlas-scale reanalysis.
+4. **Transport:** tissues, platforms and perturbations never seen in training.
+
+**Reference method.** Freeze v5 (Paper 1) is the comparator and the gold standard. Paper 2 never redefines the
+estimands (joint and independent program effects as in `method_spec.md`).
+
+**Steps** (dl_plan D-numbering; each a go/no-go)
+
+| Step | Work | Go / no-go |
+|---|---|---|
+| D0 | DL fractions into PALM | as dl_plan |
+| D1 | Simulator (PALM-uni terms) + amortized machinery; simulation-based calibration (SBC) | SBC passes on simulated studies |
+| **D1b** | **Learned error model** (spec below): predict each study's actual error from study-level summaries | |error| / SE 0.7-0.9 on **every** benchmark dataset, leave-one-dataset-out, null calls <= 0.10 per dataset. Fails -> claim 1 fails; rethink before D3 |
+| D3 | Atlas teacher (Tahoe-100M, Parse 10M, CELLxGENE) under the leakage exclusions | beats D1 on development splits |
+| D4 | Real bulk (BulkFormer; COMBAT 125 paired samples evaluation only) | real-bulk coverage holds |
+| D5, D6 | FM footprints, narrow OT | optional; expected cuts |
+| Held-out | Pre-registered, splits 70-79 + transport datasets never used | S1-S3 every dataset; power > freeze v5 |
+
+**D1b specification (cheap, decisive; development only).**
+- Target: for each (study, cell type, program) the actual error e - beta of the calibrated route (independent and
+  joint), or its scale.
+- Features, truth-free and available on any study: the design-check outputs already captured by
+  `scripts/experiments/term_pool_bench.py` (simulated leakage quantile and RMSE per type and program, slope,
+  bootstrap noise SE), reference separability (condition of the leakage operator, marker overlap of types), type
+  fractions and their spread, number of samples and units, program size and overlap, effect size of the study.
+- Training studies: atlas pseudobulk studies built under the dl_plan leakage exclusions (none of the 13 benchmark
+  perturbations, cell lines or donors); the 13 benchmark datasets (splits 20-24) are the leave-one-dataset-out test.
+- Models: (i) a monotone regression of log |error| on the features (interpretable baseline); (ii) the amortized
+  network's own posterior when D1 exists.
+- Read-out per dataset: |error| / SE, coverage, null calls, power, against freeze v5 and the independent fit.
+  Cell lines (McFarland, Tahoe) and PBMC (Kang, Parse, Zhang) are reported separately: the regime split is the
+  failure mode to beat.
+
+**Kill or narrow.**
+- PALM-uni R2: if U0 fails its gate (coverage >= 0.90 of the model's own beta on Kang, McFarland, Zhang), drop R2
+  as a route; its terms stay in the simulator only.
+- Real-data showcase: PTB is confounded with sequencing run and cannot lead. Paper 2 needs a clean real
+  application: a paired bulk + single-cell cohort, or a known perturbation in a new tissue.
+
+**Held-out blocks.** 70-79 (Paper 2), 80-89 (unused; was prior-knowledge), 50-59 (association section),
+60-69 (PALM-uni, if it survives). Used: 10-12, 20-49, 90-99.
+
 ### 4.1 Idea
 
 Train a network once so it outputs, for any bulk sample, per-cell-type fractions and program activity **with uncertainty**, in milliseconds. This enables analysis of all public bulk data (~1 million samples: GTEx, TCGA, ARCHS4).
@@ -697,7 +760,7 @@ pseudo-ROIs per niche. The per-cell-type truth comes from the other half of the 
 - [ ] Number of donors and samples in the paired tissue cohort (cross-fitting needs ~6–10 donors)
 - [ ] Whether the paired cohort includes a treatment or condition (needed to validate the effect split)
 - [ ] Format of the in-house raw data (FASTQ vs count matrices)
-- [ ] Final journal choice for Paper 1 after E2–E4 results
+- [x] Final journal choice for Paper 1: Nature Methods Brief Communication (2026-11-23)
 
 ## 9. Key references
 

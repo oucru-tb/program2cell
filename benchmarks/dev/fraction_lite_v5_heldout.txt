@@ -1,0 +1,16 @@
+PALM-lite (multinomial EM) fractions, held-out splits 30-39
+              rmse  r_type
+ds                        
+kang         0.047   0.660
+mcf_ida      0.025   0.976
+mcf_tram     0.026   0.977
+parse_gmcsf  0.133   0.749
+parse_ifnb   0.147   0.665
+parse_ifng   0.160   0.718
+parse_il4    0.110   0.745
+parse_tnf    0.128   0.718
+tahoe_enc    0.016   0.979
+tahoe_gem    0.014   0.979
+tahoe_rmc    0.025   0.956
+tahoe_tram   0.026   0.948
+zhang        0.049   0.939

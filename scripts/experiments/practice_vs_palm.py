@@ -173,7 +173,9 @@ def _palm_rows():
 def summary(heldout=False):
     """Development splits (< 10) or, with heldout=True, the held-out splits only."""
     from program2cell.compare import known_answer as ka
-    rows = [r for f in sorted(glob.glob(os.path.join(OUT, "*.json"))) for r in json.load(open(f))] + _palm_rows()
+    # only this script's rows (the folder also holds other experiments' *__palm_v2.json, which are dicts)
+    rows = [r for f in sorted(glob.glob(os.path.join(OUT, "*.json")))
+            if f.endswith(("__practice.json", "__palm_module.json")) for r in json.load(open(f))] + _palm_rows()
     df = pd.DataFrame(rows)
     df = cl._split_set(df, heldout)
     df = df[df.split.isin(sorted(set(df[df.kind != "palm"].split)))]

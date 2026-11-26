@@ -302,7 +302,7 @@ NOTE_REACTOME = ("Programs: Reactome member sets (TLR, NLR, IFN), Hallmark respo
 
 
 def fig_innate7(d="combat_immune_response7_anchored", name="anchored_decomposition_innate_ifn", progs=None,
-                keys=None, note=None):
+                keys=None, note=None, split=False):
     """Slide figure: per innate program, each cell type's part of the PTB − Healthy bulk change, split into cells
     changed and more cells; panel title = program, its gene count in the model and 3 key member genes."""
     from matplotlib.ticker import MaxNLocator
@@ -319,9 +319,15 @@ def fig_innate7(d="combat_immune_response7_anchored", name="anchored_decompositi
     for ax, (p, label, src) in zip(axes, progs):
         t = tab[tab.program == p].set_index("cell_type").reindex(types)
         I, K = t["intrinsic"].fillna(0).values, t["composition"].fillna(0).values
-        same = np.sign(I) == np.sign(K)
-        ax.barh(y, K, color=MORE, height=0.72, edgecolor="white", linewidth=0.6)
-        ax.barh(y, I, left=np.where(same, K, 0), color=CHANGED, height=0.72, edgecolor="white", linewidth=0.6)
+        if split:                           # 2026-11-25: the two parts in their own rows, each from 0, not stacked
+            ax.barh(y - 0.19, K, color=MORE, height=0.36, edgecolor="white", linewidth=0.6)
+            ax.barh(y + 0.19, I, color=CHANGED, height=0.36, edgecolor="white", linewidth=0.6)
+            for k in range(len(types) - 1):
+                ax.axhline(k + 0.5, color=GRID, lw=0.4, zorder=0)
+        else:
+            same = np.sign(I) == np.sign(K)
+            ax.barh(y, K, color=MORE, height=0.72, edgecolor="white", linewidth=0.6)
+            ax.barh(y, I, left=np.where(same, K, 0), color=CHANGED, height=0.72, edgecolor="white", linewidth=0.6)
         ax.axvline(0, color=MUTED, lw=0.6)
         kg = (keys or KEY_GENES)[p]
         kshow = [g for g in kg if g in set(glist.get(p, kg))][:3]
@@ -352,20 +358,307 @@ def fig_innate7(d="combat_immune_response7_anchored", name="anchored_decompositi
         return
     # sixth slot: legend and the inputs
     lx = axes[5]; lx.axis("off")
-    lx.legend([Patch(color=CHANGED), Patch(color=MORE)], ["cells changed\n(activity per cell)",
-                                                           "more cells\n(composition)"],
+    lh = [(Patch(color=CHANGED), "cells changed\n(activity per cell)"), (Patch(color=MORE), "more cells\n(composition)")]
+    if split:                               # same order as the bars: more cells on top
+        lh = lh[::-1]
+    lx.legend([h for h, _ in lh], [t for _, t in lh],
               loc="upper left", frameon=False, fontsize=10, handlelength=1.4, handleheight=1.4, labelspacing=1.0)
     src = ("Reactome member sets (TLR, NLR, IFN)\nand a Hallmark response set (TNF)." if note else
            "Reactome member sets (TLR, NLR)\nand Hallmark response sets (TNF, IFN).")
     lx.text(0.0, 0.32, "Programs: %s\nGene count: program genes in the model.\nType I IFN and IFN-γ share %d genes\n"
             "in the model." % (src, len(set(glist.get("IFNI", [])) & set(glist.get("IFNg", [])))),
             transform=lx.transAxes, fontsize=8, color=INK2, va="top", linespacing=1.4)
-    fig.text(0.0, -0.01, "PTB − Healthy, anchored offsets, 8-type reference. Each bar: that cell type's part of the "
+    fig.text(0.0, -0.01, ("PTB − Healthy, anchored offsets, 8-type reference. For each cell type, two bars from 0: "
+             "its part of the bulk program change that comes from how many cells there are (top) and from a change "
+             "of activity within the cells (bottom); the cell type's total is their sum. " if split else
+             "PTB − Healthy, anchored offsets, 8-type reference. Each bar: that cell type's part of the "
              "bulk program change, split into a change of activity within the cells and a change in how many cells "
-             "there are.", fontsize=7.5, color=INK2, va="top", wrap=True)
+             "there are. ") + "All PTB samples are sequencing run 1 and all healthy samples run 2: every difference "
+             "includes any run 1 vs run 2 technical difference.", fontsize=7.5, color=INK2, va="top", wrap=True)
     fig.tight_layout(h_pad=2.6)
     save(fig, name)
 
+
+
+def fig_forest(d="combat_immune_reactome_ifn7_anchored", name="anchored_forest_innate_ifn_reactome", progs=None,
+               keys=None, groups=("PTB", "Healthy"), context="PTB − Healthy, anchored offsets, 8-type reference.",
+               caveat="All PTB samples are sequencing run 1 and all healthy samples run 2: every difference here "
+                      "includes any run 1 vs run 2 technical difference."):
+    """Option 2 of the decomposition display (2026-11-25): per program (row), three aligned dot-and-interval panels
+    sharing one x-axis -- each cell type's part of the bulk program change (total), its composition part ("more
+    cells") and its intrinsic part ("cells changed"). Parts with opposite signs are marked; nothing is stacked.
+    Needs <d>/decomposition.csv (ptb_decomp.py); intervals are 90% sample-bootstrap intervals (sampling only)."""
+    from matplotlib.ticker import MaxNLocator
+    p_ = os.path.join(BASE, d)
+    dec = pd.read_csv(os.path.join(p_, "decomposition.csv"))
+    eff = pd.read_csv(os.path.join(p_, "effects.csv"))
+    info = json.load(open(os.path.join(p_, "info.json")))
+    ngen, glist = info.get("program_genes", {}), info.get("program_genes_list", {})
+    progs = progs or (INNATE7[:3] + [("IFNI", "Type I IFN (α/β)", "Reactome"), ("IFNg", "IFN-γ", "Reactome")])
+    keys = keys or dict(KEY_GENES_R, IFNI=["ISG15", "IFIT1", "MX1", "STAT1"], IFNg=["CIITA", "GBP1", "IRF1", "STAT1"])
+    types = list(dict.fromkeys(dec.cell_type))
+    cols = [("total", "Total", "= more cells + cells changed", INK, "D"),
+            ("composition", "More cells", "composition", MORE, "o"),
+            ("intrinsic", "Cells changed", "activity per cell", CHANGED, "o")]
+    nr = len(progs)
+    fig, axes = plt.subplots(nr, 3, figsize=(9.2, 1.62 * nr + 0.9), sharey=True, squeeze=False)
+    y = np.arange(len(types))
+    n_opp = 0
+    for i, (p, label, _) in enumerate(progs):
+        t = dec[dec.program == p].set_index("cell_type").reindex(types)
+        lim = np.nanmax(np.abs(t[[c + s for c, *_ in cols for s in ("_lo", "_hi")]].values)) * 1.08
+        I, K = t["intrinsic"].values, t["composition"].values
+        big, small = np.maximum(np.abs(I), np.abs(K)), np.minimum(np.abs(I), np.abs(K))
+        opp = (np.sign(I) != np.sign(K)) & (small >= 0.2 * big)          # parts pull in opposite directions
+        n_opp += int(opp.sum())
+        for j, (c, head, sub, col, mk) in enumerate(cols):
+            ax = axes[i, j]
+            ax.axvline(0, color=MUTED, lw=0.7, zorder=1)
+            ax.grid(axis="x", color=GRID, lw=0.5)
+            for k in range(len(types)):
+                if opp[k]:
+                    ax.axhspan(k - 0.5, k + 0.5, color="#f4f3ef", zorder=0, lw=0)
+            ax.hlines(y, t[c + "_lo"], t[c + "_hi"], color=col, lw=1.6, alpha=0.45, zorder=2)
+            ax.scatter(t[c], y, s=30 if mk == "o" else 26, marker=mk, color=col, edgecolor="white", lw=0.7, zorder=3)
+            ax.set_xlim(-lim, lim)
+            ax.xaxis.set_major_locator(MaxNLocator(3, symmetric=True))
+            ax.tick_params(axis="x", labelsize=7, colors=INK2)
+            ax.tick_params(axis="y", length=0)
+            if j == 0:
+                kg = [g for g in keys[p] if g in set(glist.get(p, keys[p]))][:3]
+                ax.set_title(label, fontsize=10.5, color=INK, loc="left", fontweight="bold", pad=13)
+                ax.text(0, 1.02, "%s genes · %s, …" % (ngen.get(p, "?"), ", ".join(kg)), transform=ax.transAxes,
+                        fontsize=7.5, color=INK2, va="bottom", style="italic")
+        for j in range(3):
+            axes[i, j].spines["left"].set_visible(j == 0)
+        if i == nr - 1:
+            for ax in axes[i]:
+                for x, txt, cc, ha in ((0.0, "← higher in %s" % groups[1], HV_C, "left"),
+                                       (1.0, "higher in %s →" % groups[0], PTB_C, "right")):
+                    ax.annotate(txt, (x, 0), xycoords="axes fraction", xytext=(0, -18), textcoords="offset points",
+                                fontsize=7, color=cc, ha=ha, va="top")
+    axes[0, 0].set_yticks(y); axes[0, 0].set_yticklabels(types, fontsize=8.5)
+    axes[0, 0].set_ylim(len(types) - 0.5, -0.5)
+    n_called = int(eff[eff.program.isin([p for p, *_ in progs])].called.sum())
+    fig.text(0.0, 0.0,
+             "%s Each row of dots: that cell type's part of the bulk program change (Total, black) and its split into "
+             "a change in how many cells there are (More cells) and a change of activity within the cells (Cells "
+             "changed); one x-axis per program. Grey band: the two parts pull in opposite directions (the "
+             "smaller at least 20%% of the larger), so the total is smaller than either. Lines: 90%% bootstrap "
+             "intervals over samples (sampling only; they leave out deconvolution and leakage error, so they are "
+             "narrower than PALM's calibrated intervals, under which %d of %d cell type x program effects here "
+             "exclude 0). %s"
+             % (context, n_called, len(types) * nr, caveat), fontsize=7, color=INK2, va="top", wrap=True)
+    fig.tight_layout(rect=(0, 0.03, 1, 0.955), h_pad=1.6, w_pad=1.0)
+    for j, (c, head, sub, col, mk) in enumerate(cols):        # column headers above the first row's titles
+        x0 = axes[0, j].get_position().x0
+        fig.text(x0, 0.995, head, fontsize=11.5, color=col if j else INK, fontweight="bold", va="top")
+        fig.text(x0, 0.973, sub, fontsize=8, color=INK2, va="top", style="italic")
+    save(fig, name)
+    return n_opp
+
+
+def fig_arrows(d="combat_immune_reactome_ifn7_anchored", name="anchored_arrows_innate_ifn_reactome", progs=None,
+               keys=None, groups=("PTB", "Healthy"), context="PTB − Healthy, anchored offsets, 8-type reference.",
+               caveat="All PTB samples are sequencing run 1 and all healthy samples run 2: every difference here "
+                      "includes any run 1 vs run 2 technical difference."):
+    """Option 1 of the decomposition display (2026-11-25): arrow chain per cell type. The blue arrow runs from 0 to
+    the composition part ("more cells"); the orange arrow continues from there by the intrinsic part ("cells
+    changed"); the black diamond is where they end, the cell type's total. Opposite parts show as the orange arrow
+    turning back. Same 2 x 3 layout as fig_innate7."""
+    from matplotlib.ticker import MaxNLocator
+    p_ = os.path.join(BASE, d)
+    tab = pd.read_csv(os.path.join(p_, "effects.csv"))
+    info = json.load(open(os.path.join(p_, "info.json")))
+    ngen, glist = info.get("program_genes", {}), info.get("program_genes_list", {})
+    progs = progs or (INNATE7[:3] + [("IFNI", "Type I IFN (α/β)", "Reactome"), ("IFNg", "IFN-γ", "Reactome")])
+    keys = keys or dict(KEY_GENES_R, IFNI=["ISG15", "IFIT1", "MX1", "STAT1"], IFNg=["CIITA", "GBP1", "IRF1", "STAT1"])
+    types = list(dict.fromkeys(tab.cell_type))
+    fig, axes = plt.subplots(2, 3, figsize=(10.5, 6.8), sharey=True)
+    axes = axes.ravel()
+    y = np.arange(len(types))
+
+    def arrow(ax, x0, x1, yy, col, span):
+        if abs(x1 - x0) < 0.025 * span:                     # too short for a head: a short bar
+            ax.plot([x0, x1], [yy, yy], color=col, lw=2.4, solid_capstyle="butt", zorder=3)
+            return
+        ax.annotate("", xy=(x1, yy), xytext=(x0, yy), zorder=3,
+                    arrowprops=dict(arrowstyle="-|>,head_length=0.45,head_width=0.28", color=col, lw=2.2,
+                                    shrinkA=0, shrinkB=0))
+
+    for ax, (p, label, _) in zip(axes, progs):
+        t = tab[tab.program == p].set_index("cell_type").reindex(types)
+        I, K = t["intrinsic"].fillna(0).values, t["composition"].fillna(0).values
+        tot = I + K
+        m = max(np.abs(K).max(), np.abs(tot).max(), np.abs(K + np.minimum(I, 0)).max(), np.abs(K + np.maximum(I, 0)).max())
+        m *= 1.12
+        ax.set_xlim(-m, m)
+        ax.axvline(0, color=MUTED, lw=0.7, zorder=1)
+        ax.grid(axis="x", color=GRID, lw=0.5)
+        for k in range(len(types)):
+            opp = np.sign(I[k]) != np.sign(K[k]) and min(abs(I[k]), abs(K[k])) >= 0.2 * max(abs(I[k]), abs(K[k]))
+            if opp:
+                ax.axhspan(k - 0.5, k + 0.5, color="#f4f3ef", zorder=0, lw=0)
+            arrow(ax, 0, K[k], k - 0.13, MORE, 2 * m)
+            arrow(ax, K[k], tot[k], k + 0.13, CHANGED, 2 * m)
+            ax.plot([K[k], K[k]], [k - 0.13, k + 0.13], color=MUTED, lw=0.6, zorder=2)     # hand-over point
+            ax.plot([tot[k], tot[k]], [k - 0.36, k + 0.36], color=INK, lw=1.8, zorder=4,
+                    solid_capstyle="butt")                                                   # the total
+        kg = [g for g in keys[p] if g in set(glist.get(p, keys[p]))][:3]
+        ax.set_title(label, fontsize=11.5, color=INK, loc="left", fontweight="bold", pad=20)
+        ax.text(0, 1.015, "%s genes · %s, …" % (ngen.get(p, "?"), ", ".join(kg)), transform=ax.transAxes,
+                fontsize=8.5, color=INK2, va="bottom", style="italic")
+        ax.tick_params(axis="x", labelsize=7.5, colors=INK2)
+        ax.tick_params(axis="y", length=0)
+        ax.xaxis.set_major_locator(MaxNLocator(3, symmetric=True))
+        for x, txt, col, ha in ((0.0, "← higher in %s" % groups[1], HV_C, "left"),
+                                (1.0, "higher in %s →" % groups[0], PTB_C, "right")):
+            ax.annotate(txt, (x, 0), xycoords="axes fraction", xytext=(0, -20), textcoords="offset points",
+                        fontsize=7.5, color=col, ha=ha, va="top")
+    axes[0].set_yticks(y); axes[0].set_yticklabels(types, fontsize=9)
+    axes[0].set_ylim(len(types) - 0.5, -0.5)
+    axes[3].tick_params(axis="y", labelleft=True)
+    lx = axes[5]; lx.axis("off")
+    handles = [Line2D([0], [0], color=MORE, lw=2.2, marker=">", markersize=6),
+               Line2D([0], [0], color=CHANGED, lw=2.2, marker=">", markersize=6),
+               Line2D([0], [0], color=INK, lw=0, marker="|", markersize=13, markeredgewidth=1.8),
+               Patch(color="#f4f3ef")]
+    lx.legend(handles, ["more cells (composition):\nfrom 0", "cells changed (activity per cell):\nadded on",
+                        "total for the cell type", "the two parts pull in\nopposite directions"],
+              loc="upper left", frameon=False, fontsize=9.5, handlelength=2.0, labelspacing=1.1)
+    n_called = int(tab[tab.program.isin([p for p, *_ in progs])].called.sum())
+    fig.text(0.0, -0.01,
+             "%s Read each row left to right from 0: the blue arrow is the change from how many cells there are, the "
+             "orange arrow adds the change of activity within the cells, the black tick is that cell type's part of the "
+             "bulk program change. Grey band: the smaller part is at least 20%% of the larger and of opposite sign. "
+             "Point estimates; under PALM's calibrated intervals %d of %d cell type x program effects here exclude 0. %s"
+             % (context, n_called, len(types) * len(progs), caveat), fontsize=7.5, color=INK2, va="top", wrap=True)
+    fig.tight_layout(h_pad=2.6)
+    save(fig, name)
+
+
+PTB_PROGS_R = INNATE7[:3] + [("IFNI", "Type I IFN (α/β)", "Reactome"), ("IFNg", "IFN-γ", "Reactome")]
+PTB_KEYS_R = dict(KEY_GENES_R, IFNI=["ISG15", "IFIT1", "MX1", "STAT1"], IFNg=["CIITA", "GBP1", "IRF1", "STAT1"])
+PTB_CTX = "PTB − Healthy, anchored offsets, 8-type reference."
+PTB_RUN = ("All PTB samples are sequencing run 1 and all healthy samples run 2: every difference here includes any "
+           "run 1 vs run 2 technical difference.")
+# 8 cell types, fixed order (Okabe-Ito, colour-blind safe); identity is also given by direct labels
+TYPE_COL = {"B": "#E69F00", "CD4 T": "#56B4E9", "CD8 T": "#0072B2", "NK": "#009E73", "CD14 Mono": "#D55E00",
+            "CD16 Mono": "#CC79A7", "DC": "#8c7a00", "Neutro": "#000000"}
+
+
+def _prog_header(ax, p, label, ngen, glist, keys, pad=20):
+    kg = [g for g in keys[p] if g in set(glist.get(p, keys[p]))][:3]
+    ax.set_title(label, fontsize=11.5, color=INK, loc="left", fontweight="bold", pad=pad)
+    ax.text(0, 1.015, "%s genes · %s, …" % (ngen.get(p, "?"), ", ".join(kg)), transform=ax.transAxes,
+            fontsize=8.5, color=INK2, va="bottom", style="italic")
+
+
+def fig_parts_scatter(d="combat_immune_reactome_ifn7_anchored", name="anchored_scatter_innate_ifn_reactome",
+                      progs=None, keys=None, groups=("PTB", "Healthy"), context=PTB_CTX, caveat=PTB_RUN):
+    """Option 3 (2026-11-25): per program, one point per cell type at (more cells, cells changed), equal axes.
+    Dotted diagonals: constant total (x + y). Points in the shaded quadrants (top-left, bottom-right) have parts of
+    opposite sign. The total is read as the signed distance along the diagonal (also printed in the label)."""
+    p_ = os.path.join(BASE, d)
+    tab = pd.read_csv(os.path.join(p_, "effects.csv"))
+    info = json.load(open(os.path.join(p_, "info.json")))
+    ngen, glist = info.get("program_genes", {}), info.get("program_genes_list", {})
+    progs, keys = progs or PTB_PROGS_R, keys or PTB_KEYS_R
+    types = list(dict.fromkeys(tab.cell_type))
+    fig, axes = plt.subplots(2, 3, figsize=(10.5, 7.4))
+    axes = axes.ravel()
+    for ax, (p, label, _) in zip(axes, progs):
+        t = tab[tab.program == p].set_index("cell_type").reindex(types)
+        K, I = t["composition"].values, t["intrinsic"].values
+        m = max(np.abs(K).max(), np.abs(I).max()) * 1.25
+        ax.set_xlim(-m, m); ax.set_ylim(-m, m); ax.set_aspect("equal")
+        for xs, ys in (((-m, 0), (0, m)), ((0, m), (-m, 0))):           # opposite-sign quadrants
+            ax.fill_between(xs, *ys, color="#f4f3ef", zorder=0, lw=0)
+        for c in np.linspace(-2 * m, 2 * m, 9):                          # constant total lines
+            ax.plot([-m, m], [c + m, c - m], color=GRID, lw=0.6, ls=(0, (2, 2)), zorder=1)
+        ax.axhline(0, color=MUTED, lw=0.7, zorder=1); ax.axvline(0, color=MUTED, lw=0.7, zorder=1)
+        ax.scatter(K, I, s=42, c=[TYPE_COL.get(ct, INK) for ct in types], edgecolor="white", lw=0.8, zorder=3)
+        far = np.argsort(-np.hypot(K, I))[:3]                            # label the 3 farthest from the origin
+        for n, k in enumerate(sorted(far, key=lambda k: I[k])):
+            ax.annotate("%s (%+.3f)" % (types[k], K[k] + I[k]), (K[k], I[k]),
+                        xytext=(0, -13 if n == 0 else 7 + 0 * n), textcoords="offset points",
+                        ha="right" if K[k] > 0 else "left", fontsize=7, color=INK2, zorder=4)
+        _prog_header(ax, p, label, ngen, glist, keys)
+        ax.tick_params(labelsize=7, colors=INK2)
+        ax.locator_params(nbins=4)
+        ax.set_xlabel("more cells (composition) →  higher in %s" % groups[0], fontsize=7.5, color=MORE)
+        ax.set_ylabel("cells changed (per cell) →  higher in %s" % groups[0], fontsize=7.5, color=CHANGED)
+    lx = axes[5]; lx.axis("off")
+    hs = [Line2D([0], [0], lw=0, marker="o", markersize=7, markerfacecolor=TYPE_COL[ct], markeredgecolor="white")
+          for ct in types] + [Patch(color="#f4f3ef"), Line2D([0], [0], color=GRID, lw=1, ls=(0, (2, 2)))]
+    lx.legend(hs, types + ["parts of opposite sign", "equal total (x + y)"], loc="upper left", frameon=False,
+              fontsize=9, ncol=1, labelspacing=0.7)
+    n_called = int(tab[tab.program.isin([p for p, *_ in progs])].called.sum())
+    fig.text(0.0, -0.01,
+             "%s One point per cell type: x = its part of the bulk program change from how many cells there are, y = "
+             "from the change of activity within the cells; equal scales, so points on one dotted line have the same "
+             "total. Labels (the 3 points farthest from the origin): cell type (total); colours give every cell type. Shaded quadrants: the two parts have "
+             "opposite signs. Point estimates; under PALM's calibrated intervals %d of %d cell type x program effects "
+             "here exclude 0. %s" % (context, n_called, len(types) * len(progs), caveat),
+             fontsize=7.5, color=INK2, va="top", wrap=True)
+    fig.tight_layout(h_pad=2.0)
+    save(fig, name)
+
+
+def fig_parts_grouped(d="combat_immune_reactome_ifn7_anchored", name="anchored_grouped_innate_ifn_reactome",
+                      progs=None, keys=None, groups=("PTB", "Healthy"), context=PTB_CTX, caveat=PTB_RUN):
+    """Option 4 (2026-11-25): per cell type three thin bars from 0, side by side (not stacked): total (dark),
+    more cells (blue), cells changed (orange). Opposite signs are bars on opposite sides of 0."""
+    from matplotlib.ticker import MaxNLocator
+    p_ = os.path.join(BASE, d)
+    tab = pd.read_csv(os.path.join(p_, "effects.csv"))
+    info = json.load(open(os.path.join(p_, "info.json")))
+    ngen, glist = info.get("program_genes", {}), info.get("program_genes_list", {})
+    progs, keys = progs or PTB_PROGS_R, keys or PTB_KEYS_R
+    types = list(dict.fromkeys(tab.cell_type))
+    fig, axes = plt.subplots(2, 3, figsize=(10.5, 7.4), sharey=True)
+    axes = axes.ravel()
+    y = np.arange(len(types))
+    h = 0.24
+    for ax, (p, label, _) in zip(axes, progs):
+        t = tab[tab.program == p].set_index("cell_type").reindex(types)
+        I, K = t["intrinsic"].fillna(0).values, t["composition"].fillna(0).values
+        for k in range(len(types)):
+            if np.sign(I[k]) != np.sign(K[k]) and min(abs(I[k]), abs(K[k])) >= 0.2 * max(abs(I[k]), abs(K[k])):
+                ax.axhspan(k - 0.5, k + 0.5, color="#f4f3ef", zorder=0, lw=0)
+        ax.barh(y - h, I + K, height=h, color="#3d3c39", zorder=2)
+        ax.barh(y, K, height=h, color=MORE, zorder=2)
+        ax.barh(y + h, I, height=h, color=CHANGED, zorder=2)
+        ax.axvline(0, color=MUTED, lw=0.7, zorder=3)
+        ax.grid(axis="x", color=GRID, lw=0.5, zorder=1)
+        lo, hi = ax.get_xlim(); m = max(abs(lo), abs(hi)); ax.set_xlim(-m, m)
+        for k in range(len(types) - 1):
+            ax.axhline(k + 0.5, color=GRID, lw=0.4, zorder=1)
+        _prog_header(ax, p, label, ngen, glist, keys)
+        ax.tick_params(axis="x", labelsize=7.5, colors=INK2)
+        ax.tick_params(axis="y", length=0)
+        ax.xaxis.set_major_locator(MaxNLocator(4, symmetric=True))
+        for x, txt, col, ha in ((0.0, "← higher in %s" % groups[1], HV_C, "left"),
+                                (1.0, "higher in %s →" % groups[0], PTB_C, "right")):
+            ax.annotate(txt, (x, 0), xycoords="axes fraction", xytext=(0, -20), textcoords="offset points",
+                        fontsize=7.5, color=col, ha=ha, va="top")
+    axes[0].set_yticks(y); axes[0].set_yticklabels(types, fontsize=9)
+    axes[0].set_ylim(len(types) - 0.5, -0.5)
+    axes[3].tick_params(axis="y", labelleft=True)
+    lx = axes[5]; lx.axis("off")
+    lx.legend([Patch(color="#3d3c39"), Patch(color=MORE), Patch(color=CHANGED), Patch(color="#f4f3ef")],
+              ["total (= more cells + cells changed)", "more cells (composition)", "cells changed (activity per cell)",
+               "the two parts have opposite signs"], loc="upper left", frameon=False, fontsize=9.5,
+              handlelength=1.4, handleheight=1.2, labelspacing=1.0)
+    n_called = int(tab[tab.program.isin([p for p, *_ in progs])].called.sum())
+    fig.text(0.0, -0.01,
+             "%s For each cell type, three bars from 0: its part of the bulk program change (total) and the two parts "
+             "it is made of, drawn side by side, not stacked. Grey band: the smaller part is at least 20%% of the larger "
+             "and of opposite sign. Point estimates; under PALM's calibrated intervals %d of %d cell type x program "
+             "effects here exclude 0. %s" % (context, n_called, len(types) * len(progs), caveat),
+             fontsize=7.5, color=INK2, va="top", wrap=True)
+    fig.tight_layout(h_pad=2.6)
+    save(fig, name)
 
 
 def fig_heatmap_innate(d="combat_immune_reactome_ifn7_anchored", name="anchored_heatmap_innate_ifn_reactome",
@@ -413,10 +706,21 @@ def fig_heatmap_innate(d="combat_immune_reactome_ifn7_anchored", name="anchored_
 
 
 if __name__ == "__main__":
-    if "innate7" in sys.argv:              # FIGSET=response python ptb_figures.py innate7
+    if "arrows7r" in sys.argv:             # FIGSET=response: option-1 arrow chain
+        fig_arrows()
+    elif "forest7r" in sys.argv:            # FIGSET=response: option-2 decomposition (needs decomposition.csv)
+        fig_forest()
+    elif "innate7" in sys.argv:            # FIGSET=response python ptb_figures.py innate7
         fig_innate7()
     elif "heat7r" in sys.argv:             # heatmap for the whole-Reactome-IFN run
         fig_heatmap_innate()
+    elif "split7r" in sys.argv:            # innate7r with the two parts in separate rows
+        fig_innate7("combat_immune_reactome_ifn7_anchored", "anchored_decomposition_innate_ifn_reactome_split",
+                    INNATE7[:3] + [("IFNI", "Type I IFN (α/β)", "Reactome"), ("IFNg", "IFN-γ", "Reactome")],
+                    dict(KEY_GENES_R, IFNI=["ISG15", "IFIT1", "MX1", "STAT1"], IFNg=["CIITA", "GBP1", "IRF1", "STAT1"]),
+                    "Programs: Reactome member sets (TLR, NLR, IFN α/β signaling, IFN-γ signaling), Hallmark response "
+                    "set (TNF). The two IFN sets are used whole and share 28 genes. Gene count: program genes in the "
+                    "model.", split=True)
     elif "innate7r" in sys.argv:           # whole Reactome IFN sets, not split (immune_reactome_ifn7)
         fig_innate7("combat_immune_reactome_ifn7_anchored", "anchored_decomposition_innate_ifn_reactome",
                     INNATE7[:3] + [("IFNI", "Type I IFN (α/β)", "Reactome"), ("IFNg", "IFN-γ", "Reactome")],
